@@ -1,0 +1,27 @@
+# -*- coding: utf-8 -*-
+
+notifications:
+  email: false
+
+sudo: true
+
+language: python
+
+cache:
+  - pip
+
+python:
+  - "3.5"
+
+before_install:
+  - travis_retry pip install --upgrade pip setuptools py
+  - travis_retry pip install twine wheel coveralls
+
+install:
+  - travis_retry pip install -e .[all]
+
+script:
+  - ./run-tests.sh
+
+after_success:
+  - coveralls
