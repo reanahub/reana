@@ -4,125 +4,87 @@ Usage
 Create a Kubernetes cluster
 ---------------------------
 
-Run OpenStack magnum docker client:
+In order to create a Kubernetes cluster using OpenStack infrastructure,
+we need to run the magnum command, which we can have available running
+the magnum docker client:
 
-::
+.. code-block:: console
 
-$ docker login gitlab-registry.cern.ch
-$ sudo docker run -it gitlab-registry.cern.ch/cloud/ciadm /bin/bash
+  $ docker login gitlab-registry.cern.ch
+  $ sudo docker run -it gitlab-registry.cern.ch/cloud/ciadm /bin/bash
 
-Once this is done, follow the `Cloud
-Docs <http://clouddocs.web.cern.ch/clouddocs/containers/quickstart.html#create-a-cluster>`__
-to create a Kubernetes cluster.
+Or logging into `lxplus-cloud`:
 
-Download the code
------------------
-Get git repo.
+.. code-block:: console
 
-``git clone --recursive https://github.com/focilo/focilo.git``
+  $ ssh lxplus-cloud.cern.ch
 
-And change Kubernetes service account token in step-broker node.
-::
+Once we have it available we are ready to create the cluster:
 
-    $ kubectl get secrets
-    NAME                  TYPE                                  DATA      AGE
-    default-token-XXXXX   kubernetes.io/service-account-token   3         13d
-    $ sed 's/default-token-02p0z/default-token-XXXXX/' -i kubernetes-cluster/deployments/cap-system/step-broker-rc.yaml
+.. code-block:: console
+
+  $ magnum cluster-create --name reana-cluster --keypair-id reanakey \
+                          --cluster-template kubernetes --node-count 2
+
+Lastly, we must load the cluster configuration into the Kubernetes
+client:
+
+.. code-block:: console
+
+  $ $(magnum cluster-config reana-cluster)
+
+It is at this point that we will have the `kubectl` command available
+to manage our brand new cluster.
+
+For more information on Kubernetes/OpenStack, please see
+`CERN Cloud Docs <http://clouddocs.web.cern.ch/clouddocs/containers/quickstart.html#create-a-cluster>`__.
 
 Create the Kubernetes resources using manifest files
 ----------------------------------------------------
+- Clone `reana-resources-k8s <https://github.com/reanahub/reana-resources-k8s>`__:
 
--  Cap system instances:
+  ``git clone https://github.com/reanahub/reana-resources-k8s.git``
 
-   ``kubectl create -f kubernetes-cluster/deployments/cap-system``
+- Change Kubernetes service account token in `reana-job-controller` node configuration file:
 
--  Yadage workers (currently only one):
+.. code-block:: console
+ 
+     $ kubectl get secrets
+     NAME                  TYPE                                  DATA      AGE
+     default-token-XXXXX   kubernetes.io/service-account-token   3         13d
+     $ sed 's/default-token-02p0z/default-token-XXXXX/' -i reana-resources-k8s/deployments/reana-system/job-controller.yaml
 
-   ``kubectl create -f kubernetes-cluster/deployments/yadage-workers/``
+-  Create REANA system instances:
 
--  Fibonacci worker (Since Yadage workers are not launching jobs yet, add a fibonacci worker to see how it works).
+   ``kubectl create -f reana-resources-k8s/deployments/reana-system``
 
-   ``kubectl create -f kubernetes-cluster/deployments/fibonacci-workers/alice-worker-rc.yaml``
+-  Yadage workers:
+
+   ``kubectl create -f reana-resources-k8s/deployments/yadage-workers``
 
 -  Services:
 
-   ``kubectl create -f kubernetes-cluster/services/``
+   ``kubectl create -f reana-resources-k8s/services/``
 
--  Secrets:
+-  Secrets (you should provide your own CephFS secret):
 
-   ``kubectl create -f kubernetes-cluster/secrets/``
+   ``kubectl create -f reana-resources-k8s/secrets/``
 
-Get the Workflow Controller (web node) ip address and port
-----------------------------------------------------------
-::
+Get the Workflow Controller ip address and port
+-----------------------------------------------
+.. code-block:: console
 
-    $ kubectl describe services workflow-execution-cont | grep NodePort
+    $ kubectl describe services workflow-controller | grep NodePort
     NodePort:                  http                    32313/TCP
-    $ kubectl get pods | grep workflow-execution-controller | cut -d" " -f 1 | xargs kubectl describe pod | grep 'Node:'
+    $ kubectl get pods | grep workflow-controller | cut -d" " -f 1 | xargs kubectl describe pod | grep 'Node:'
     Node:        192.168.99.100,192.168.99.100
 
-So this web server container can be accesses through ``192.168.99.100:32313``.
+So the Workflow Controller component can be accessed through ``192.168.99.100:32313``.
 
-``sed 's/137.138.7.46:32331/192.168.99.100:32313/' -i workflow-execution-controller/cli-client/cli.py``
-
-Launch jobs against the API
----------------------------
-
-Launch fibonacci workflows
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Enter the ``tests`` directory and call cli.py (requires ``click`` and
-``requests`` packages) with the following parameters (you can do this
-out of the OpenStack client it is just a call to the public API):
-
-``python cli.py fibonacci -f fib_file -e alice``
-
-Once you run the command you should start seeing that Kubernetes has
-launched some jobs.
-
-::
-
-    kubectl get jobs --all-namespaces
-
-    NAMESPACE NAME DESIRED SUCCESSFUL AGE default
-    bdfdbb1d-e832-46e3-9bf6-6e1ab8d57624-0 1 0 1m default
-    bdfdbb1d-e832-46e3-9bf6-6e1ab8d57624-1 1 0 1m default
-    bdfdbb1d-e832-46e3-9bf6-6e1ab8d57624-2 1 0 1m default
-    bdfdbb1d-e832-46e3-9bf6-6e1ab8d57624-3 1 0 1m default
-    bdfdbb1d-e832-46e3-9bf6-6e1ab8d57624-4 1 0 1m
-
-For checking the results you can connect to node the``\ storage-admin\`
-node which is hosting all the nodes:
-
-::
-
-    $ kubectl exec -ti storage-admin bash
-    ~ cd /mnt/ceph/alice
-    ~ ls -lrt``
-
-An example could be:
-::
-
-    /bdfdbb1d-e832-46e3-9bf6-6e1ab8d57624/0/input.dat
-    /bdfdbb1d-e832-46e3-9bf6-6e1ab8d57624/0/output.dat
-
-Where you can have a look on the input and output data for the step 0 of
-the workflow bdfdbb1d-e832-46e3-9bf6-6e1ab8d57624.
+Launch workflows
+----------------
 
 Launch Yadage workflows
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Enter the ``tests`` directory and call cli.py (requires ``click`` and
-``requests`` packages) with the following parameters (you can do this
-out of the OpenStack client it is just a call to the public API):
-
-``python cli.py yadage --experiment cms --toplevel some-text --workflow some-text --parameters '{"par1" : "val1"}'``
-
-::
-
-    $ kubectl get pods | grep cms-yadage-workflow-controller | cut -d" " -f1 | xargs kubectl logs
-    [2016-11-18 09:40:41,251: INFO/MainProcess] Received task: tasks.run_yadage_workflow[dddde31a-ce2f-46f8-b4dc-46a8a1e4f5f9]
-    [2016-11-18 09:40:41,256: WARNING/Worker-1] some-text
-    [2016-11-18 09:40:41,256: WARNING/Worker-1] some-text
-    [2016-11-18 09:40:41,256: WARNING/Worker-1] {"par1" : "val1"}
-    [2016-11-18 09:40:41,259: INFO/MainProcess] Task tasks.run_yadage_workflow[dddde31a-ce2f-46f8-b4dc-46a8a1e4f5f9] succeeded in 0.00235133804381s: None
+FIXME
