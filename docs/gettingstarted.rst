@@ -1,5 +1,5 @@
-Usage
-=====
+Getting started
+===============
 
 Create a Kubernetes cluster
 ---------------------------
@@ -48,7 +48,7 @@ Create the Kubernetes resources using manifest files
 - Change Kubernetes service account token in `reana-job-controller` node configuration file:
 
 .. code-block:: console
- 
+
      $ kubectl get secrets
      NAME                  TYPE                                  DATA      AGE
      default-token-XXXXX   kubernetes.io/service-account-token   3         13d
@@ -88,3 +88,9 @@ Launch Yadage workflows
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 FIXME
+
+.. admonition:: CAVEAT LECTOR
+
+   The "Getting started" guide will be expanded to cover how to launch workflows
+   and jobs, how to monitor workflows, how to initialise the workflow work space
+   and how to obtain the results back.
