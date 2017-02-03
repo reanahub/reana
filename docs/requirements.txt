@@ -18,12 +18,4 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 
-include COPYING
-include *.rst
-include *.sh
-include pytest.ini
-recursive-include docs *.py
-recursive-include docs *.png
-recursive-include docs *.rst
-recursive-include docs *.txt
-recursive-include tests *.py
+-e .[all]
