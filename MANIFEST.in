@@ -22,8 +22,10 @@ include COPYING
 include *.rst
 include *.sh
 include pytest.ini
+prune docs/_build
 recursive-include docs *.py
 recursive-include docs *.png
 recursive-include docs *.rst
 recursive-include docs *.txt
+recursive-include scripts reana
 recursive-include tests *.py

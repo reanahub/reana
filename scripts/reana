@@ -1,0 +1,159 @@
+#!/bin/sh
+#
+# This file is part of REANA.
+# Copyright (C) 2017 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# REANA is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# REANA; if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+# Suite 330, Boston, MA 02111-1307, USA.
+#
+# In applying this license, CERN does not waive the privileges and immunities
+# granted to it by virtue of its status as an Intergovernmental Organization or
+# submit itself to any jurisdiction.
+
+reana_components="reana-job-controller
+reana-workflow-controller
+reana-workflow-monitor
+reana-message-broker
+reana-workflow-engine-yadage"
+
+install_initialize_minikube () {
+    # Check whether the OS is supported
+    if ! echo "darwin linux" | grep -F -q -w -i "$(uname -s)"
+    then
+        echo 'Your OS is not supported.'
+        exit 1
+    else
+        OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+    fi
+
+    # Install tools `kubectl` and `minikube` if necessary
+    if ! command -v kubectl > /dev/null 2>&1
+    then
+        echo 'Installing latest kubectl ...'
+        curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/$OS/amd64/kubectl"
+        chmod +x ./kubectl
+        sudo mv ./kubectl /usr/local/bin/kubectl
+    fi
+
+    if ! command -v minikube > /dev/null 2>&1
+    then
+        echo 'Installing minikube ...'
+        curl -Lo minikube "https://storage.googleapis.com/minikube/releases/v0.17.1/minikube-$OS-amd64"
+        chmod +x minikube
+        sudo mv minikube /usr/local/bin/
+    fi
+    # Start `minikube`
+    minikube start || echo 'Error while starting minikube' && exit 1
+
+    # Use minikube Docker daemon, so local images will be used instead
+    # of pulling from registry
+    echo 'Using minikube Docker daemon ...'
+    eval "$(minikube docker-env)"
+}
+
+pull () {
+    # Pull all REANA components images and retag for local `dev`
+    echo 'Pulling REANA components images ...'
+    for component in $reana_components
+    do
+        docker pull "reanahub/$component"
+        docker tag "reanahub/$component" "$component"
+    done
+}
+
+prepare () {
+    # FIXME: `extras_require` does not support not PyPI deps
+    # and `dependency_links` does not to work. Remove when
+    # `pip install reana[backend]` available.
+    pip install -e 'git+https://github.com/reanahub/reana-resources-k8s.git@master#egg=reana-resources-k8s'
+    # Generate Kubernetes manifests
+    echo 'Building REANA configuration manifests ...'
+    reana-resources-k8s build-manifests
+    # Set current cluster secret for `reana-job-controller` component
+    current_cluster_secret=$(kubectl get secrets | grep 'service-account-token' | cut -d ' ' -f 1)
+    sed -i'' -e "s/default-token-8p260/$current_cluster_secret/" configuration-manifests/deployments/job-controller.yaml
+}
+
+deploy () {
+    # Deploy system
+    echo 'Deploying REANA  ...'
+    kubectl create -Rf configuration-manifests
+}
+
+init () {
+    # FIXME more logic should be added in order to avoid pulling images locally
+    # when deployment is not local.
+    # e.g. if `producton` desired, `pull` should be skipped and
+    # reana-resources-k8s templates/config.yaml should be updated accordingly.
+    pull
+    prepare
+    deploy
+}
+
+down () {
+    kubectl delete -Rf configuration-manifests
+}
+
+get () {
+    component=$1
+    if [ "$component" != "" ]
+    then
+        if echo "$reana_components" | grep -qE "^$component$"
+        then
+            component_without_namespace=$(printf '%s' "$component" | sed -e "s/reana-//g")
+            if minikube ip > /dev/null 2>&1
+            then
+                ip=$(minikube ip)
+            else
+                ip=$(kubectl describe pod --selector=app="$component_without_namespace" | grep IP | cut -f 3)
+            fi
+            port=$(kubectl describe service "$component_without_namespace" | grep 'NodePort:' | cut -f 4 | sed -e "s@/TCP@@")
+            echo "$ip":"$port"
+        else
+            echo 'Unknown component. Check the available components list:'
+            echo "$reana_components"
+        fi
+    else
+        usage
+    fi
+}
+
+usage () {
+    echo "${0##*/} manages REANA system operations"
+    echo ""
+    echo "Usage:"
+    echo "  install-minikube    Installs and starts local minikube instance"
+    echo "  init                Initialize REANA system"
+    echo "  down                Delete REANA components"
+    echo "  get [component]     Outputs the component IP address and port"
+    echo "  -h                  Help"
+}
+
+if [ "$1" != "" ]
+then
+    case $1 in
+        install-minikube)  install_initialize_minikube
+                           ;;
+        init)              init
+                           ;;
+        down)              down
+                           ;;
+        get)               get "$2"
+                           ;;
+        -h | --help )      usage
+                           exit
+                           ;;
+    esac
+else
+    usage
+fi

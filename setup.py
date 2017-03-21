@@ -84,6 +84,7 @@ setup(
     extras_require=extras_require,
     setup_requires=setup_requires,
     tests_require=tests_require,
+    scripts=['scripts/reana'],
     classifiers=[
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
