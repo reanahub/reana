@@ -26,6 +26,11 @@ reana-workflow-monitor
 reana-message-broker
 reana-workflow-engine-yadage"
 
+experiment_list="alice
+lhcb
+atlas
+cms"
+
 install_initialize_minikube () {
     # Check whether the OS is supported
     if ! echo "darwin linux" | grep -F -q -w -i "$(uname -s)"
@@ -93,7 +98,7 @@ deploy () {
 init () {
     # FIXME more logic should be added in order to avoid pulling images locally
     # when deployment is not local.
-    # e.g. if `producton` desired, `pull` should be skipped and
+    # e.g. if `production` desired, `pull` should be skipped and
     # reana-resources-k8s templates/config.yaml should be updated accordingly.
     pull
     prepare
@@ -102,6 +107,146 @@ init () {
 
 down () {
     kubectl delete -Rf configuration-manifests
+}
+
+helloworld () {
+
+    # Get URL of reana-workflow-controller
+    controller_url=$(reana get reana-workflow-monitor)
+
+    # Submit a -workflow job to workflow-controller
+    workflow_id=$(curl --fail --silent \
+                    -H "Content-Type: application/json" \
+                    -X POST -d \
+                    "{\"experiment\":\"$experiment\",
+                      \"toplevel\":\"github:reanahub/reana-demo-helloworld\",
+                      \"workflow\": \"hello.yaml\",
+                      \"nparallel\": \"10\",
+                      \"preset_pars\": {\"name\": \"J.Doe\", \"delay\": \"2\"}
+                    }" \
+                    http://"$(reana get reana-workflow-controller)"/yadage \
+                    | grep -oE '"workflow_id"\:[[:space:]]*\"[^\"]*\"'| cut -d ":" -f 2 | tr -d \"[[:space:]]\")
+
+#                    | grep -oP '(?<="workflow_id": ")[^"]*')
+
+#    status_code=$(curl --write-out %{http_code} --fail --silent \
+#                    -H "Content-Type: application/json" \
+#                    -X POST -d \
+#                    "{\"experiment\":\"$experiment\",
+#                      \"toplevel\":\"github:reanahub/reana-demo-helloworld\",
+#                      \"workflow\": \"hello.yaml\",
+#                      \"nparallel\": \"10\",
+#                      \"preset_pars\": {\"name\": \"J.Doe\", \"delay\": \"2\"}
+#                    }" \
+#                    http://"$(reana get reana-workflow-controller)"/yadage)
+    # Check for successful execution of curl
+    # https://unix.stackexchange.com/a/204790
+    # Note that checking with '$?' might fail on some corner cases
+    # AND especially when authentication is involved (response codes 401 and 407)
+    submit_status=$?
+
+    if [ "$submit_status" = "0" ]; then
+
+        if [ "$flag_verbose" != "" ]; then
+            echo "[INFO] Open http://$controller_url/$workflow_id to see visual representation of your workflow and it's progress."
+            echo "[INFO] You can 'cat' or 'tail' /reana/$experiment/$workflow_id/yadage/helloworld/greetings.txt -file"
+            echo "       from shared storage of REANA cluster to see how helloworld workflow progresses."
+            echo "[INFO] (e.g. minikube ssh \"tail -c+1 -F /reana/$experiment/$workflow_id/yadage/helloworld/greetings.txt\")"
+        fi
+
+        echo ""
+        echo "Workflow_id: $workflow_id"
+        echo "Monitor: http://$controller_url/$workflow_id"
+        echo "Output:  /reana/$experiment/$workflow_id/yadage/helloworld/greetings.txt"
+        echo ""
+
+        if [ "$flag_devel" != "" ]; then
+            # Start tailing of job-controller logs
+            #kubectl logs -f $(kubectl get pods | grep -Po 'job-controller[^ ]+')
+
+            # Start tailing of yadage-atlas-worker logs
+            #kubectl logs -f $(kubectl get pods | grep -Po 'yadage-atlas-worker[^ ]+')
+
+            # Open workflow-monitor web-interface
+            # Inspired by http://stackoverflow.com/a/27776822
+            os_type=$(uname -s)
+            if [ "$os_type" = "Darwin" ]; then
+                open "http://$controller_url/$workflow_id"
+            elif [ "$os_type" = "Linux" ] ; then
+                xdg-open "http://$controller_url/$workflow_id"
+            fi
+
+            # Tail output-file of the workflow
+            echo "[INFO] Tailing outputfile...hit Ctrl+C when done."
+            echo ""
+            minikube ssh "tail -c+1 -F /reana/$experiment/$workflow_id/yadage/helloworld/greetings.txt"
+        fi
+
+        retval=0
+    else
+        retval=1
+    fi
+
+    return $retval
+}
+
+run () {
+    # Used to start workflows on REANA cluster
+    # Currently hardcoded to run REANA helloworld demo workflow (L223).
+    # (L218) Experiment hardcoded to 'atlas' for now because of
+    # reanahub/reana-workflow-engine-yadage/issues/20
+
+    if [ "$3" = "-e" ]; then
+        experiment=$4
+    else
+        experiment=${REANA_EXPERIMENT:-}
+    fi
+
+    workflow=$2
+
+    # The code to check for flags is from http://stackoverflow.com/q/2875424
+    # Not sure if this is a good way (POSIX compliant?) or not.
+    flag_verbose=$(echo "$@" | grep -oe "--\<verbose\>")
+    flag_devel=$(echo "$@" | grep -oe "--\<devel\>")
+
+    # Check for required parameters
+    if [ "$workflow" != "" ] && [ "$experiment" != "" ]; then
+        #Check that there exists such experiment as inputted by user.
+        if echo "$experiment_list" | grep -qE "^$experiment$"
+            then
+
+            # reanahub/reana-workflow-engine-yadage/issues/20
+            experiment="atlas"
+
+            # FIXME: Should check REANA cluster is accessible?
+            # Simple ping/pong, or interaction with kubectl?
+
+            if [ "$workflow" = "helloworld" ]; then
+
+                helloworld $experiment
+                retval=$?
+
+                if [ "$retval" != 0  ]; then
+                    echo "[ERROR] Couldn't submit the demo job to workflow-controller."
+                    echo "[ERROR] Check that your REANA cluster is deployed and in a state where jobs can be run."
+                fi
+
+            else
+                echo "[INFO] Support for arbitary workflows is not implemented!"
+                echo "[INFO] Run 'reana run helloworld -e [experiment] for demo."
+            fi
+
+        else
+            printf "[ERROR] Unknown experiment. Available experiments:\n\n"
+            for experiment in $experiment_list
+                do
+                    printf "\t%s\n" "$experiment"
+                done
+            echo ""
+        fi
+    else
+        usage
+    fi
 }
 
 get () {
@@ -132,11 +277,19 @@ usage () {
     echo "${0##*/} manages REANA system operations"
     echo ""
     echo "Usage:"
-    echo "  install-minikube    Installs and starts local minikube instance"
-    echo "  init                Initialize REANA system"
-    echo "  down                Delete REANA components"
-    echo "  get [component]     Outputs the component IP address and port"
-    echo "  -h                  Help"
+    echo "  install-minikube       Installs and starts local minikube instance"
+    echo "  init                   Initialize REANA system"
+    echo "  down                   Delete REANA components"
+    echo "  run [workflow] -e [experiment]"
+    echo "                         Run specified workflow in namespace of"
+    echo "                         of specified experiment."
+    echo "  run helloworld -e [experiment]"
+    echo "                         Runs a helloworld demo in namespace of"
+    echo "                         specified experiment (e.g. '-e atlas')."
+    echo "                         Specify experiment with '-e' flag or "
+    echo '                         $REANA_EXPERIMENT environment variable.'
+    echo "  get [component]        Outputs the component IP address and port"
+    echo "  -h                     Help"
 }
 
 if [ "$1" != "" ]
@@ -147,6 +300,8 @@ then
         init)              init
                            ;;
         down)              down
+                           ;;
+        run)               run "$@"
                            ;;
         get)               get "$2"
                            ;;

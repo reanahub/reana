@@ -78,3 +78,7 @@ target/
 
 # Vagrant
 .vagrant
+
+# IntelliJ project files
+.idea
+*.iml
