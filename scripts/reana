@@ -192,9 +192,14 @@ helloworld () {
 
 run () {
     # Used to start workflows on REANA cluster
-    # Currently hardcoded to run REANA helloworld demo workflow (L223).
-    # (L218) Experiment hardcoded to 'atlas' for now because of
+    # Experiment hardcoded to 'atlas' for now because of
     # reanahub/reana-workflow-engine-yadage/issues/20
+
+    # Worflow should be a github repository identifier
+    # (e.g. hjhsalo/reana-demo-helloworld)
+    # Repository should contain at least REANA specifications file (reana.yaml)
+    # in the root of repo.
+    workflow=$2
 
     if [ "$3" = "-e" ]; then
         experiment=$4
@@ -202,7 +207,6 @@ run () {
         experiment=${REANA_EXPERIMENT:-}
     fi
 
-    workflow=$2
 
     # The code to check for flags is from http://stackoverflow.com/q/2875424
     # Not sure if this is a good way (POSIX compliant?) or not.
@@ -212,8 +216,7 @@ run () {
     # Check for required parameters
     if [ "$workflow" != "" ] && [ "$experiment" != "" ]; then
         #Check that there exists such experiment as inputted by user.
-        if echo "$experiment_list" | grep -qE "^$experiment$"
-            then
+        if echo "$experiment_list" | grep -qE "^$experiment$" ; then
 
             # reanahub/reana-workflow-engine-yadage/issues/20
             experiment="atlas"
@@ -221,6 +224,7 @@ run () {
             # FIXME: Should check REANA cluster is accessible?
             # Simple ping/pong, or interaction with kubectl?
 
+            # TODO: get rid of hardcoded helloworld case when run syntax works.
             if [ "$workflow" = "helloworld" ]; then
 
                 helloworld $experiment
@@ -232,8 +236,102 @@ run () {
                 fi
 
             else
-                echo "[INFO] Support for arbitary workflows is not implemented!"
-                echo "[INFO] Run 'reana run helloworld -e [experiment] for demo."
+                # Get REANA specification file (reana.yaml)
+                reanaspecfile=$(curl --fail --silent \
+                                -L https://raw.github.com/"$workflow"/reana.yaml)
+
+                echo $reanaspecfile
+
+                query_status=$?
+
+                if [ "$query_status" = "0" ]; then
+
+                    # FIXME: Use some real YAML parser!
+                    # Parse REANA specification file
+                    wftype=$(echo "reanaspecfile" | grep -oE 'workflow_type\:[[:space:]]*[^\"]*' | cut -d ":" -f 2 | tr -d \"[[:space:]]\")
+
+                    #TODO: Only take first match if reana.yaml contains identical keys
+                    # add '-m 1' to grep command and '| head -1' to pipeline
+                    # in order to select just the first matching pattern.
+                    # e.g. wfydgfile=$(echo "reanaspec" | grep -oE 'yadage_file\:[[:space:]]*[^\"]*' | head -1 |cut -d ":" -f 2 | tr -d \"[[:space:]]\")
+
+                    wfydgfile=$(echo "$reanaspecfile" | grep -oE 'yadage_file\:[[:space:]]*[^\"]*' | cut -d ":" -f 2 | tr -d [[:space:]])
+                    wfydgtoplevel=$(echo "$reanaspecfile" | grep -oE 'yadage_toplevel\:[[:space:]]*[^\"]*' | cut -d ":" -f 2-3 | tr -d [[:space:]])
+                    wfydgnparaller=$(echo "$reanaspecfile" | grep -oE 'yadage_nparallel\:[[:space:]]*[^\"]*' | cut -d ":" -f 2 | tr -d [[:space:]])
+                    wfydgparams=$(echo "$reanaspecfile" | grep -oE 'yadage_preset_parameters\:[[:space:]].*' | cut -d ":" -f 2- | tr -d [[:space:]])
+
+
+                    echo $wfydgfile
+                    echo $wfydgtoplevel
+                    echo $wfydgnparaller
+                    echo $wfydgparams
+
+                    # Get URL of reana-workflow-controller
+                    controller_url=$(reana get reana-workflow-monitor)
+
+                    # Submit a -workflow job to workflow-controller
+    #                    "{\"experiment\":\"$experiment\",
+    #                      \"toplevel\":\"github:reanahub/reana-demo-helloworld\",
+    #                      \"workflow\": \"hello.yaml\",
+    #                      \"nparallel\": \"10\",
+    #                      \"preset_pars\": {\"name\": \"J.Doe\", \"delay\": \"2\"}
+    #                    }"
+
+                    workflow_id=$(curl --fail --silent \
+                                    -H "Content-Type: application/json" \
+                                    -X POST -d \
+                                    "{\"experiment\":\"$experiment\",
+                                      \"toplevel\":\"$wfydgtoplevel\",
+                                      \"workflow\": \"$wfydgfile\",
+                                      \"nparallel\": \"$wfydgnparaller\",
+                                      \"preset_pars\": $wfydgparams
+                                    }" \
+                                    http://"$(reana get reana-workflow-controller)"/yadage \
+                                    | grep -oE '"workflow_id"\:[[:space:]]*\"[^\"]*\"'| cut -d ":" -f 2 | tr -d \"[[:space:]]\")
+    #                echo "[INFO] Support for arbitary workflows is not implemented!"
+    #                echo "[INFO] Run 'reana run helloworld -e [experiment] for demo."
+
+                    echo $workflow_id
+
+                    submit_status=$?
+
+                    if [ "$submit_status" = "0" ]; then
+
+                        if [ "$flag_verbose" != "" ]; then
+                            echo "[INFO] Open http://$controller_url/$workflow_id to see visual representation of your workflow and it's progress."
+                        fi
+
+                        echo ""
+                        echo "Workflow_id: $workflow_id"
+                        echo "Monitor: http://$controller_url/$workflow_id"
+                        echo ""
+
+                        if [ "$flag_devel" != "" ]; then
+                            # Start tailing of job-controller logs
+                            #kubectl logs -f $(kubectl get pods | grep -Po 'job-controller[^ ]+')
+
+                            # Start tailing of yadage-atlas-worker logs
+                            #kubectl logs -f $(kubectl get pods | grep -Po 'yadage-atlas-worker[^ ]+')
+
+                            # Open workflow-monitor web-interface
+                            # Inspired by http://stackoverflow.com/a/27776822
+                            os_type=$(uname -s)
+                            if [ "$os_type" = "Darwin" ]; then
+                                open "http://$controller_url/$workflow_id"
+                            elif [ "$os_type" = "Linux" ] ; then
+                                xdg-open "http://$controller_url/$workflow_id"
+                            fi
+                        fi
+
+                    else
+                        echo "[ERROR] Couldn't submit the workflow job to workflow-controller."
+                        echo "[ERROR] Check that your REANA cluster is deployed and in a state where jobs can be run."
+                    fi
+
+                else
+                    echo "[ERROR] Couldn't find reana.yaml from $workflow repository "
+                fi
+
             fi
 
         else
@@ -244,6 +342,7 @@ run () {
                 done
             echo ""
         fi
+
     else
         usage
     fi
