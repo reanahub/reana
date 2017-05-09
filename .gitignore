@@ -82,3 +82,6 @@ target/
 # IntelliJ project files
 .idea
 *.iml
+
+# K8S manifests
+configuration-manifests/

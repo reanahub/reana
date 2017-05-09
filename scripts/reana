@@ -238,7 +238,7 @@ run () {
             else
                 # Get REANA specification file (reana.yaml)
                 reanaspecfile=$(curl --fail --silent \
-                                -L https://raw.github.com/"$workflow"/reana.yaml)
+                                    -L https://raw.githubusercontent.com/"$workflow"/master/reana.yaml)
 
                 echo $reanaspecfile
 
@@ -260,11 +260,12 @@ run () {
                     wfydgnparaller=$(echo "$reanaspecfile" | grep -oE 'yadage_nparallel\:[[:space:]]*[^\"]*' | cut -d ":" -f 2 | tr -d [[:space:]])
                     wfydgparams=$(echo "$reanaspecfile" | grep -oE 'yadage_preset_parameters\:[[:space:]].*' | cut -d ":" -f 2- | tr -d [[:space:]])
 
-
-                    echo $wfydgfile
-                    echo $wfydgtoplevel
-                    echo $wfydgnparaller
-                    echo $wfydgparams
+                    if [ "$flag_verbose" != "" ]; then
+                        echo $wfydgfile
+                        echo $wfydgtoplevel
+                        echo $wfydgnparaller
+                        echo $wfydgparams
+                    fi
 
                     # Get URL of reana-workflow-controller
                     controller_url=$(reana get reana-workflow-monitor)
@@ -291,7 +292,9 @@ run () {
     #                echo "[INFO] Support for arbitary workflows is not implemented!"
     #                echo "[INFO] Run 'reana run helloworld -e [experiment] for demo."
 
-                    echo $workflow_id
+                    if [ "$flag_verbose" != "" ]; then
+                        echo $workflow_id
+                    fi
 
                     submit_status=$?
 
