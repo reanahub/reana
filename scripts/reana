@@ -120,9 +120,9 @@ helloworld () {
                     -X POST -d \
                     "{\"experiment\":\"$experiment\",
                       \"toplevel\":\"github:reanahub/reana-demo-helloworld\",
-                      \"workflow\": \"hello.yaml\",
+                      \"workflow\": \"helloworld.yaml\",
                       \"nparallel\": \"10\",
-                      \"preset_pars\": {\"name\": \"J.Doe\", \"delay\": \"2\"}
+                      \"preset_pars\": {\"name\": \"John Doe\", \"delay\": \"2\"}
                     }" \
                     http://"$(reana get reana-workflow-controller)"/yadage \
                     | grep -oE '"workflow_id"\:[[:space:]]*\"[^\"]*\"'| cut -d ":" -f 2 | tr -d \"[[:space:]]\")
@@ -134,9 +134,9 @@ helloworld () {
 #                    -X POST -d \
 #                    "{\"experiment\":\"$experiment\",
 #                      \"toplevel\":\"github:reanahub/reana-demo-helloworld\",
-#                      \"workflow\": \"hello.yaml\",
+#                      \"workflow\": \"helloworld.yaml\",
 #                      \"nparallel\": \"10\",
-#                      \"preset_pars\": {\"name\": \"J.Doe\", \"delay\": \"2\"}
+#                      \"preset_pars\": {\"name\": \"John Doe\", \"delay\": \"2\"}
 #                    }" \
 #                    http://"$(reana get reana-workflow-controller)"/yadage)
     # Check for successful execution of curl
@@ -273,9 +273,9 @@ run () {
                     # Submit a -workflow job to workflow-controller
     #                    "{\"experiment\":\"$experiment\",
     #                      \"toplevel\":\"github:reanahub/reana-demo-helloworld\",
-    #                      \"workflow\": \"hello.yaml\",
+    #                      \"workflow\": \"helloworld.yaml\",
     #                      \"nparallel\": \"10\",
-    #                      \"preset_pars\": {\"name\": \"J.Doe\", \"delay\": \"2\"}
+    #                      \"preset_pars\": {\"name\": \"John Doe\", \"delay\": \"2\"}
     #                    }"
 
                     workflow_id=$(curl --fail --silent \
