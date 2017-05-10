@@ -6,8 +6,8 @@
 
    introduction
    installation
-   backends
    gettingstarted
+   examples
    architecture
    components
    contributing

@@ -26,6 +26,16 @@ REANA component for defining computing cloud resources.
 - known issues: `<https://github.com/reanahub/reana-resources-k8s/issues>`_
 - documentation: `<https://reana-resources-k8s.readthedocs.io/>`_
 
+reana-message-broker
+--------------------
+
+REANA component for messaging needs.
+
+- source code: `<https://github.com/reanahub/reana-message-broker>`_
+- releases: `<https://hub.docker.com/r/reanahub/reana-message-broker/tags>`_
+- known issues: `<https://github.com/reanahub/reana-message-broker/issues>`_
+- documentation: `<https://reana-message-broker.readthedocs.io/>`_
+
 reana-workflow-controller
 -------------------------
 

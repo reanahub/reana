@@ -194,19 +194,13 @@ run () {
     # Used to start workflows on REANA cluster
     # Experiment hardcoded to 'atlas' for now because of
     # reanahub/reana-workflow-engine-yadage/issues/20
+    experiment='atlas'
 
     # Worflow should be a github repository identifier
     # (e.g. hjhsalo/reana-demo-helloworld)
     # Repository should contain at least REANA specifications file (reana.yaml)
     # in the root of repo.
     workflow=$2
-
-    if [ "$3" = "-e" ]; then
-        experiment=$4
-    else
-        experiment=${REANA_EXPERIMENT:-}
-    fi
-
 
     # The code to check for flags is from http://stackoverflow.com/q/2875424
     # Not sure if this is a good way (POSIX compliant?) or not.
@@ -217,9 +211,6 @@ run () {
     if [ "$workflow" != "" ] && [ "$experiment" != "" ]; then
         #Check that there exists such experiment as inputted by user.
         if echo "$experiment_list" | grep -qE "^$experiment$" ; then
-
-            # reanahub/reana-workflow-engine-yadage/issues/20
-            experiment="atlas"
 
             # FIXME: Should check REANA cluster is accessible?
             # Simple ping/pong, or interaction with kubectl?
