@@ -17,11 +17,11 @@ run on the REANA cloud.
 - sources: `<https://github.com/reanahub/reana-demo-helloworld/>`_
 - documentation: `<https://github.com/reanahub/reana-demo-helloworld/blob/master/README.rst>`_
 
-IPython notebook
+Jupyter notebook
 ----------------
 
 A "world population" research data analysis example that illustrates how to
-package an IPython Notebook type of analysis with a set of input and output
+package an Jupyter Notebook type of analysis with a set of input and output
 files.
 
 - sources: `<https://github.com/reanahub/reana-demo-worldpopulation/>`_
