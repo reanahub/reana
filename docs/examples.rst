@@ -26,3 +26,14 @@ files.
 
 - sources: `<https://github.com/reanahub/reana-demo-worldpopulation/>`_
 - documentation: `<https://github.com/reanahub/reana-demo-worldpopulation/blob/master/README.rst>`_
+
+ROOT and RooFit
+---------------
+
+A simplified particle physics analysis example using the `RooFit
+<https://root.cern.ch/roofit>`_ package of the `ROOT <https://root.cern.ch/>`_
+framework. The example mimics a typical particle physics analysis where the
+signal and background data is processed and fitted against a model.
+
+- sources: `<https://github.com/reanahub/reana-demo-root6-roofit/>`_
+- documentation: `<https://github.com/reanahub/reana-demo-root6-roofit/blob/master/README.rst>`_
