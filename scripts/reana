@@ -20,7 +20,10 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 
-reana_components="reana-job-controller
+version="v0.0.1"
+
+reana_components="reana-server
+reana-job-controller
 reana-workflow-controller
 reana-workflow-monitor
 reana-message-broker
@@ -71,8 +74,9 @@ pull () {
     echo 'Pulling REANA components images ...'
     for component in $reana_components
     do
-        docker pull "reanahub/$component"
-        docker tag "reanahub/$component" "$component"
+	      versioned_component="$component:$version"
+        docker pull "reanahub/$versioned_component"
+        docker tag "reanahub/$versioned_component" "$versioned_component"
     done
 }
 
@@ -83,7 +87,7 @@ prepare () {
     pip install -e 'git+https://github.com/reanahub/reana-resources-k8s.git@master#egg=reana-resources-k8s'
     # Generate Kubernetes manifests
     echo 'Building REANA configuration manifests ...'
-    reana-resources-k8s build-manifests
+    reana-resources-k8s build-manifests $version
     # Set current cluster secret for `reana-job-controller` component
     current_cluster_secret=$(kubectl get secrets | grep 'service-account-token' | cut -d ' ' -f 1)
     sed -i'' -e "s/default-token-8p260/$current_cluster_secret/" configuration-manifests/deployments/job-controller.yaml

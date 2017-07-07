@@ -80,7 +80,7 @@ images. Once it finishes, we can check the REANA cluster pods:
    NAME                                   READY     STATUS    RESTARTS   AGE
    job-controller-3834756890-xsw1x        1/1       Running   0          48s
    message-broker-1410199975-4fkgm        1/1       Running   0          48s
-   storage-admin                          1/1       Running   0          47s
+   server-4247597766-ptxz7                1/1       Running   0          47s
    workflow-controller-2689978795-lj59n   1/1       Running   0          47s
    workflow-monitor-1639319062-2hdt7      1/1       Running   0          47s
    yadage-alice-worker-2356735553-kg9m4   1/1       Running   0          47s

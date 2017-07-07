@@ -7,6 +7,16 @@ REANA system is composed of multiple separated components that are developed
 independently. The components are usually published as Docker images. The
 components collaborate via REST APIs.
 
+reana-server
+------------
+
+REANA component for managing analyses.
+
+- source code: `<https://github.com/reanahub/reana-server>`_
+- releases: `<https://hub.docker.com/r/reanahub/reana-server/tags>`_
+- known issues: `<https://github.com/reanahub/reana-server/issues>`_
+- documentation: `<https://reana-server.readthedocs.io/>`_
+
 reana-job-controller
 --------------------
 
