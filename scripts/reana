@@ -32,7 +32,8 @@ reana-workflow-engine-yadage"
 experiment_list="alice
 lhcb
 atlas
-cms"
+cms
+default"
 
 install_initialize_minikube () {
     # Check whether the OS is supported
@@ -122,13 +123,12 @@ helloworld () {
     workflow_id=$(curl --fail --silent \
                     -H "Content-Type: application/json" \
                     -X POST -d \
-                    "{\"experiment\":\"$experiment\",
-                      \"toplevel\":\"github:reanahub/reana-demo-helloworld\",
+                    "{\"toplevel\":\"github:reanahub/reana-demo-helloworld\",
                       \"workflow\": \"helloworld.yaml\",
                       \"nparallel\": \"10\",
                       \"preset_pars\": {\"name\": \"John Doe\", \"delay\": \"2\"}
                     }" \
-                    http://"$(reana get reana-workflow-controller)"/yadage \
+                    http://"$(reana get reana-workflow-controller)/api/yadage?organization=$experiment&user=00000000-0000-0000-0000-000000000000"
                     | grep -oE '"workflow_id"\:[[:space:]]*\"[^\"]*\"'| cut -d ":" -f 2 | tr -d \"[[:space:]]\")
 
 #                    | grep -oP '(?<="workflow_id": ")[^"]*')
@@ -142,7 +142,7 @@ helloworld () {
 #                      \"nparallel\": \"10\",
 #                      \"preset_pars\": {\"name\": \"John Doe\", \"delay\": \"2\"}
 #                    }" \
-#                    http://"$(reana get reana-workflow-controller)"/yadage)
+#                    http://"$(reana get reana-workflow-controller)/api/yadage?organization=default&user=00000000-0000-0000-0000-000000000000"
     # Check for successful execution of curl
     # https://unix.stackexchange.com/a/204790
     # Note that checking with '$?' might fail on some corner cases
@@ -153,15 +153,15 @@ helloworld () {
 
         if [ "$flag_verbose" != "" ]; then
             echo "[INFO] Open http://$controller_url/$workflow_id to see visual representation of your workflow and it's progress."
-            echo "[INFO] You can 'cat' or 'tail' /reana/$experiment/$workflow_id/yadage/helloworld/greetings.txt -file"
+            echo "[INFO] You can 'cat' or 'tail' /reana/$experiment/00000000-0000-0000-0000-000000000000/analyses/$workflow_id/workspace/yadage/helloworld/greetings.txt -file"
             echo "       from shared storage of REANA cluster to see how helloworld workflow progresses."
-            echo "[INFO] (e.g. minikube ssh \"tail -c+1 -F /reana/$experiment/$workflow_id/yadage/helloworld/greetings.txt\")"
+            echo "[INFO] (e.g. minikube ssh \"tail -c+1 -F /reana/$experiment/00000000-0000-0000-0000-000000000000/analyses/$workflow_id/workspace/yadage/helloworld/greetings.txt\")"
         fi
 
         echo ""
         echo "Workflow_id: $workflow_id"
         echo "Monitor: http://$controller_url/$workflow_id"
-        echo "Output:  /reana/$experiment/$workflow_id/yadage/helloworld/greetings.txt"
+        echo "Output: /reana/$experiment/00000000-0000-0000-0000-000000000000/analyses/$workflow_id/workspace/yadage/helloworld/greetings.txt"
         echo ""
 
         if [ "$flag_devel" != "" ]; then
@@ -183,7 +183,7 @@ helloworld () {
             # Tail output-file of the workflow
             echo "[INFO] Tailing outputfile...hit Ctrl+C when done."
             echo ""
-            minikube ssh "tail -c+1 -F /reana/$experiment/$workflow_id/yadage/helloworld/greetings.txt"
+            minikube ssh "tail -c+1 -F /reana/$experiment/00000000-0000-0000-0000-000000000000/analyses/$workflow_id/workspace/yadage/helloworld/greetings.txt"
         fi
 
         retval=0
@@ -195,10 +195,11 @@ helloworld () {
 }
 
 run () {
-    # Used to start workflows on REANA cluster
-    # Experiment hardcoded to 'atlas' for now because of
-    # reanahub/reana-workflow-engine-yadage/issues/20
-    experiment='atlas'
+    if [ "$3" = "-e" ]; then
+        experiment=$4
+    else
+        experiment=${REANA_EXPERIMENT:-default}
+    fi
 
     # Worflow should be a github repository identifier
     # (e.g. hjhsalo/reana-demo-helloworld)
@@ -266,23 +267,20 @@ run () {
                     controller_url=$(reana get reana-workflow-monitor)
 
                     # Submit a -workflow job to workflow-controller
-    #                    "{\"experiment\":\"$experiment\",
-    #                      \"toplevel\":\"github:reanahub/reana-demo-helloworld\",
+    #                    "{\"toplevel\":\"github:reanahub/reana-demo-helloworld\",
     #                      \"workflow\": \"helloworld.yaml\",
     #                      \"nparallel\": \"10\",
     #                      \"preset_pars\": {\"name\": \"John Doe\", \"delay\": \"2\"}
     #                    }"
-
                     workflow_id=$(curl --fail --silent \
                                     -H "Content-Type: application/json" \
                                     -X POST -d \
-                                    "{\"experiment\":\"$experiment\",
-                                      \"toplevel\":\"$wfydgtoplevel\",
+                                    "{\"toplevel\":\"$wfydgtoplevel\",
                                       \"workflow\": \"$wfydgfile\",
                                       \"nparallel\": \"$wfydgnparaller\",
                                       \"preset_pars\": $wfydgparams
                                     }" \
-                                    http://"$(reana get reana-workflow-controller)"/yadage \
+                                    http://"$(reana get reana-workflow-controller)/api/yadage?organization=$experiment&user=00000000-0000-0000-0000-000000000000" \
                                     | grep -oE '"workflow_id"\:[[:space:]]*\"[^\"]*\"'| cut -d ":" -f 2 | tr -d \"[[:space:]]\")
     #                echo "[INFO] Support for arbitary workflows is not implemented!"
     #                echo "[INFO] Run 'reana run helloworld -e [experiment] for demo."

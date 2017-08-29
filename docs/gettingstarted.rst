@@ -85,6 +85,7 @@ images. Once it finishes, we can check the REANA cluster pods:
    workflow-monitor-1639319062-2hdt7      1/1       Running   0          47s
    yadage-alice-worker-2356735553-kg9m4   1/1       Running   0          47s
    yadage-atlas-worker-1840967394-pcvfx   1/1       Running   0          47s
+   yadage-default-worker-2258005184-htnlq 1/1       Running   0          47s
    yadage-cms-worker-945219876-140gq      1/1       Running   0          47s
    yadage-lhcb-worker-1129769854-75m90    1/1       Running   0          47s
    zeromq-msg-proxy-1617754619-7v7jl      1/1       Running   0          47s
@@ -122,10 +123,10 @@ Let us verify whether it worked:
 .. code-block:: console
 
    $ minikube ssh
-   minikube> find /reana/atlas/ -name greetings.txt
-   /reana/atlas/a624f984-7d1d-4932-860a-fb4873af9563/yadage/helloworld/greetings.txt
-   minikube> cat /reana/atlas/a624f984-7d1d-4932-860a-fb4873af9563/yadage/helloworld/greetings.txt
-   minikube> Hello JohnDoe!
+   minikube> find /reana/default/ -name greetings.txt
+   /reana/default/00000000-0000-0000-0000-000000000000/analyses/a624f984-7d1d-4932-860a-fb4873af9563/workspace/yadage/helloworld/greetings.txt
+   minikube> cat /reana/default/00000000-0000-0000-0000-000000000000/analyses/a624f984-7d1d-4932-860a-fb4873af9563/workspace/yadage/helloworld/greetings.txt
+   Hello JohnDoe!
 
 Run "word population" example analysis
 --------------------------------------
@@ -143,8 +144,8 @@ Let us verify whether it worked:
 .. code-block:: console
 
    $ minikube ssh
-   minikube> find /reana/atlas/ -name world_population_analysis.html
-   /reana/atlas/8a73eea9-7cd7-42a0-91fd-fb3fb3c42a85/yadage/worldpopulation/world_population_analysis.html
+   minikube> find /reana/default/ -name world_population_analysis.html
+   /reana/default/00000000-0000-0000-0000-000000000000/analyses/8a73eea9-7cd7-42a0-91fd-fb3fb3c42a85/yadage/worldpopulation/world_population_analysis.html
 
 Washing our bowl
 ----------------
