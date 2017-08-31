@@ -95,9 +95,9 @@ Finally, we can test whether the REANA components are ready:
 .. code-block:: console
 
    # check workflows:
-   $ curl "http://$(reana get reana-workflow-controller)/workflows"
+   curl "http://$(reana get reana-workflow-controller)/api/workflows"
    {
-     "workflows": {}
+     "message": "An organization should be provided"
    }
    # check jobs:
    $ curl "http://$(reana get reana-job-controller)/jobs"
