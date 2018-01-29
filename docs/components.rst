@@ -1,4 +1,4 @@
-.. _list_of_components:
+.. _components:
 
 Components
 ==========

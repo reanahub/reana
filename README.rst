@@ -20,8 +20,36 @@
 .. image:: https://img.shields.io/github/license/reanahub/reana.svg
    :target: https://github.com/reanahub/reana/blob/master/COPYING
 
-REANA is a system that permits to instantiate research data analyses on the
-cloud. It uses container-based technologies and was born to target the use case
-of particle physics analyses in LHC collaborations. The system paves the way to
+About
+-----
+
+`REANA <http://reanahub.io/>`_ is a platform for reusable research data
+analyses. It permits researchers to structure their analysis data, code,
+environment and workflows in reusable manner. REANA command-line client allows
+users to instantiate and run computational research data analysis workflows on
+the cloud.
+
+REANA was born to target the use case of particle physics analyses, but is
+applicable to any scientific discipline. The system paves the way towards
 reusing and reinterpreting preserved data analyses even several years after the
-original analysis.
+original publication.
+
+Features
+--------
+
+- help to structure research data analysis in reusable manner
+- instantiate computational workflows on remote clouds
+- rerun analyses with modified input data or code
+- support for several compute clouds (Kubernetes/OpenStack)
+- support for several workflow specifications (CWL, Yadage)
+- support for several shared storage systems (Ceph, EOS)
+- support for several container technologies (Docker)
+
+Useful links
+------------
+
+- `REANA home page <https://reanahub.io/>`_
+- `REANA on ReadTheDocs <https://reana.readthedocs.io/>`_
+- `REANA on DockerHub <https://hub.docker.com/u/reanahub/>`_
+- `REANA on GitHub <https://github.com/reanahub/>`_
+- `REANA on Twitter <https://github.com/search?q=org%3Areanahub+is%3Aissue+is%3Aopen>`_

@@ -1,3 +1,5 @@
+.. _architecture:
+
 Architecture
 ============
 
@@ -5,12 +7,12 @@ Overview
 --------
 
 REANA system is composed of multiple separated components that permit to define
-and manage computing cloud resources and that run workflow queues and computing
-cloud jobs.
+and manage computing cloud resources that run computational workflows on the
+cloud.
 
 .. image:: /_static/reana-architecture.png
 
-For more information, see :ref:`list_of_components`.
+Please see the list of :ref:`components`.
 
 Technology
 ----------
@@ -21,4 +23,5 @@ Technology
 - `Kubernetes <https://kubernetes.io/>`_
 - `RabbitMQ <http://www.rabbitmq.com/>`_
 - `Yadage <https://github.com/diana-hep/yadage>`_
-- `CERN EOS <https://github.com/cern-eos/eos>`_
+- `CWL <http://www.commonwl.org/>`_
+- `EOS <https://github.com/cern-eos/eos>`_
