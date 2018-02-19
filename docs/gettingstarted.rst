@@ -20,7 +20,7 @@ Deploying REANA
 Are you an administrator who would you like to deploy and manage REANA cloud?
 
 You can start by deploying REANA locally on your laptop using `reana-cluster
-<https://reana-clusterreadthedocs.io/>`_ utility that uses Kubernetes and
+<https://reana-cluster.readthedocs.io/>`_ utility that uses Kubernetes and
 Minikube. For more information, please see the :ref:`administratorguide`.
 
 Developing REANA
