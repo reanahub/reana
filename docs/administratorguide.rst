@@ -11,16 +11,8 @@ Local deployment using Minikube
 
 REANA cloud uses `Kubernetes <https://kubernetes.io/>`_ container orchestration
 system. The best way to try it out locally is to set up `Minikube
-<https://kubernetes.io/docs/getting-started-guides/minikube/>`_. How to do this
-depends on your operating system. For example, on Arch Linux, you can install
-the following packages:
-
-- `virtualbox <https://www.archlinux.org/packages/community/x86_64/virtualbox/>`_
-- `virtualbox-guest-iso <https://www.archlinux.org/packages/community/x86_64/virtualbox-guest-iso/>`_
-- `virtualbox-host-modules-arch <https://www.archlinux.org/packages/community/x86_64/virtualbox-host-modules-arch/>`_
-- `docker <https://www.archlinux.org/packages/community/x86_64/docker/>`_
-- `minikube (AUR) <https://aur.archlinux.org/packages/minikube/>`_
-- `kubectl-bin (AUR) <https://aur.archlinux.org/packages/kubectl-bin/>`_
+<https://kubernetes.io/docs/getting-started-guides/minikube/>`_ (minikube version 0.23.0 is
+known to work the best).
 
 The minikube can be started as follows:
 
@@ -37,7 +29,7 @@ script. The typical usage scenario goes as follows:
    $ pip install reana-cluster
    $ reana-cluster init
    $ # wait several minutes...
-   $ kubectl get pods
+   $ reana-cluster status
 
 For more information, please see `reana-cluster documentation
 <https://reana-cluster.readthedocs.io/>`_.
