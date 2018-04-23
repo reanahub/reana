@@ -27,7 +27,7 @@ About
 analyses. It permits researchers to structure their analysis data, code,
 environment and workflows in reusable manner. REANA command-line client allows
 users to instantiate and run computational research data analysis workflows on
-the cloud.
+remote containerised compute clouds.
 
 REANA was born to target the use case of particle physics analyses, but is
 applicable to any scientific discipline. The system paves the way towards
@@ -39,7 +39,7 @@ Features
 
 - help to structure research data analysis in reusable manner
 - instantiate computational workflows on remote clouds
-- rerun analyses with modified input data or code
+- rerun analyses with modified input data, parameters or code
 - support for several compute clouds (Kubernetes/OpenStack)
 - support for several workflow specifications (CWL, Yadage)
 - support for several shared storage systems (Ceph, EOS)

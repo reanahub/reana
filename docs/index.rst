@@ -7,13 +7,10 @@
 
 .. toctree::
    :numbered:
+   :maxdepth: 2
 
    introduction
-   concepts
    gettingstarted
-   architecture
-   components
-   examples
    userguide
    administratorguide
    developerguide
