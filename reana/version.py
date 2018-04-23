@@ -27,4 +27,4 @@ This file is imported by ``reana.__init__`` and parsed by ``setup.py``.
 
 from __future__ import absolute_import, print_function
 
-__version__ = "0.1.0.dev20180201"
+__version__ = "0.2.0"
