@@ -51,4 +51,4 @@ Useful links
 - `REANA on DockerHub <https://hub.docker.com/u/reanahub/>`_
 - `REANA on GitHub <https://github.com/reanahub/>`_
 - `REANA on ReadTheDocs <https://reana.readthedocs.io/>`_
-- `REANA on Twitter <https://github.com/search?q=org%3Areanahub+is%3Aissue+is%3Aopen>`_
+- `REANA on Twitter <https://twitter.com/reanahub>`_
