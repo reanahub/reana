@@ -23,11 +23,10 @@
 About
 -----
 
-`REANA <http://reanahub.io/>`_ is a platform for reusable research data
-analyses. It permits researchers to structure their analysis data, code,
-environment and workflows in reusable manner. REANA command-line client allows
-users to instantiate and run computational research data analysis workflows on
-remote containerised compute clouds.
+`REANA <http://www.reana.io>`_ is a reusable and reproducible research data
+analysis platform. It helps researchers to structure their input data, analysis
+code, containerised environments and computational workflows so that the
+analysis can be instantiated and run on remote compute clouds.
 
 REANA was born to target the use case of particle physics analyses, but is
 applicable to any scientific discipline. The system paves the way towards
@@ -48,8 +47,8 @@ Features
 Useful links
 ------------
 
-- `REANA home page <https://reanahub.io/>`_
-- `REANA on ReadTheDocs <https://reana.readthedocs.io/>`_
+- `REANA home page <http://www.reana.io/>`_
 - `REANA on DockerHub <https://hub.docker.com/u/reanahub/>`_
 - `REANA on GitHub <https://github.com/reanahub/>`_
+- `REANA on ReadTheDocs <https://reana.readthedocs.io/>`_
 - `REANA on Twitter <https://github.com/search?q=org%3Areanahub+is%3Aissue+is%3Aopen>`_

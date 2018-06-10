@@ -62,7 +62,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'reana'
-copyright = '2017, info@reana.io'
+copyright = '2017, 2018, info@reana.io'
 author = 'info@reana.io'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -112,15 +112,21 @@ html_theme = 'alabaster'
 #
 html_theme_options = {
     'logo': 'logo-reana.png',
-    'description': 'REANA - Reusable Analyses',
+    'description': """<a href="http://www.reana.io">REANA</a> is a reusable and reproducible
+                      research data analysis platform. Structure your input
+                      data, analysis code, containerised environments,
+                      computational workflows and run your analysis on remote
+                      compute clouds.""",
     'github_user': 'reanahub',
     'github_repo': 'reana',
     'github_button': False,
     'github_banner': True,
     'show_powered_by': False,
     'extra_nav_links': {
-        'REANA@GitHub': 'https://github.com/reanahub',
         'REANA@DockerHub': 'https://hub.docker.com/u/reanahub/',
+        'REANA@GitHub': 'https://github.com/reanahub',
+        'REANA@Twitter': 'https://twitter.com/reanahub',
+        'REANA@Web': 'http://www.reana.io',
     }
 }
 
