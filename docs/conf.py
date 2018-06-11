@@ -112,11 +112,11 @@ html_theme = 'alabaster'
 #
 html_theme_options = {
     'logo': 'logo-reana.png',
-    'description': """<a href="http://www.reana.io">REANA</a> is a reusable and reproducible
-                      research data analysis platform. Structure your input
-                      data, analysis code, containerised environments,
-                      computational workflows and run your analysis on remote
-                      compute clouds.""",
+    'description': """<p><a href="http://www.reana.io">REANA</a> is a reusable and reproducible
+                      research data analysis platform.</p><p>Structure your
+                      analysis inputs, code, environments, workflows and run
+                      your analysis on remote containerised compute
+                      clouds.</p>""",
     'github_user': 'reanahub',
     'github_repo': 'reana',
     'github_button': False,
