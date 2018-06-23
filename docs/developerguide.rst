@@ -6,6 +6,19 @@ Developer guide
 This developer guide is meant for software developers who would like to
 understand REANA source code and contribute to it.
 
+Local development workflow
+--------------------------
+
+REANA cluster is composed of several micro-services with multiple independent
+source code repositories. ``reana`` is a helper development script that
+facilitates working with multiple repositories for local development and
+integration testing purposes.
+
+.. click:: reana.cli:cli
+   :prog: reana
+
+You can use ``--help`` option to see the detailed help for each command.
+
 Debugging
 ---------
 

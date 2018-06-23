@@ -46,6 +46,7 @@ tests_require = [
 extras_require = {
     'docs': [
         'Sphinx>=1.4.4',
+        'sphinx-click>=1.0.4',
         'sphinx-rtd-theme>=0.1.9',
     ],
     'tests': tests_require,
@@ -56,6 +57,13 @@ for key, reqs in extras_require.items():
     if ':' == key[0]:
         continue
     extras_require['all'].extend(reqs)
+
+
+install_requires = [
+    'click>=6.7',
+    'colorama>=0.3.9',
+]
+
 
 setup_requires = [
     'pytest-runner>=2.7',
@@ -78,10 +86,16 @@ setup(
     long_description=readme + '\n\n' + history,
     author='REANA',
     author_email='info@reana.io',
-    url='https://github.com/reanahub/reana',
+    url='http://www.reana.io/',
     packages=['reana'],
     zip_safe=False,
+    entry_points={
+      'console_scripts': [
+          'reana = reana.cli:cli',
+      ],
+    },
     extras_require=extras_require,
+    install_requires=install_requires,
     setup_requires=setup_requires,
     tests_require=tests_require,
     classifiers=[
