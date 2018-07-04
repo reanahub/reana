@@ -150,38 +150,16 @@ Examples
 
 This section lists several REANA-compatible research data analysis examples that
 illustrate how to a typical research data analysis can be packaged in a
-REANA-compatible manner to be reusable even several years after original results
-were published.
+REANA-compatible manner to facilitate its future reuse.
 
-Hello world
-~~~~~~~~~~~
-
-A "hello world" application example that illustrates how a simple command can be
-run on the REANA cloud.
-
-- sources: `<https://github.com/reanahub/reana-demo-helloworld/>`_
-- documentation: `<https://github.com/reanahub/reana-demo-helloworld/blob/master/README.rst>`_
-
-Jupyter notebook
-~~~~~~~~~~~~~~~~
-
-A "world population" research data analysis example that illustrates how to
-package an Jupyter Notebook type of analysis with a set of input and output
-files.
-
-- sources: `<https://github.com/reanahub/reana-demo-worldpopulation/>`_
-- documentation: `<https://github.com/reanahub/reana-demo-worldpopulation/blob/master/README.rst>`_
-
-ROOT and RooFit
-~~~~~~~~~~~~~~~
-
-A simplified particle physics analysis example using the `RooFit
-<https://root.cern.ch/roofit>`_ package of the `ROOT <https://root.cern.ch/>`_
-framework. The example mimics a typical particle physics analysis where the
-signal and background data is processed and fitted against a model.
-
-- sources: `<https://github.com/reanahub/reana-demo-root6-roofit/>`_
-- documentation: `<https://github.com/reanahub/reana-demo-root6-roofit/blob/master/README.rst>`_
+- `reana-demo-helloworld <https://github.com/reanahub/reana-demo-helloworld/blob/master/README.rst>`_ - a simple "hello world" example
+- `reana-demo-worldpopulation <https://github.com/reanahub/reana-demo-worldpopulation/>`_ - a parametrised Jupyter notebook example
+- `reana-demo-root6-roofit <https://github.com/reanahub/reana-demo-root6-roofit/>`_ - a simplified ROOT RooFit physics analysis example
+- `reana-demo-alice-lego-train-test-run <https://github.com/reanahub/reana-demo-alice-lego-train-test-run/blob/master/README.rst>`_ - ALICE experiment analysis train test run and validation
+- `reana-demo-atlas-recast <https://github.com/reanahub/reana-demo-atlas-recast/blob/master/README.rst>`_ - ATLAS collaboration production software stack example recasting an analysis
+- `reana-demo-bsm-search <https://github.com/reanahub/reana-demo-bsm-search/blob/master/README.rst>`_ - a typical BSM search example with complex particle physics workflows
+- `reana-demo-cms-h4l <https://github.com/reanahub/reana-demo-cms-h4l/blob/master/README.rst>`_ - CMS Higgs-to-four-leptons open data analysis example
+- `reana-demo-lhcb-d2pimumu <https://github.com/reanahub/reana-demo-lhcb-d2pimumu/blob/master/README.rst>`_ - LHCb rare charm decay search example
 
 Next steps
 ----------

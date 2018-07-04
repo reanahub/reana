@@ -55,6 +55,16 @@ REANA component providing utilities to manage cluster instance.
 - known issues: `<https://github.com/reanahub/reana-cluster/issues>`_
 - documentation: `<https://reana-cluster.readthedocs.io/>`_
 
+reana-commons
+~~~~~~~~~~~~~
+
+Shared utilities for REANA components.
+
+- source code: `<https://github.com/reanahub/reana-commons>`_
+- release notes: `<https://github.com/reanahub/reana-commons/releases>`_
+- known issues: `<https://github.com/reanahub/reana-commons/issues>`_
+- documentation: `<https://reana-commons.readthedocs.io/>`_
+
 reana-job-controller
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -85,6 +95,26 @@ REANA component providing API server replying to client queries.
 - known issues: `<https://github.com/reanahub/reana-server/issues>`_
 - documentation: `<https://reana-server.readthedocs.io/>`_
 
+reana-ui
+~~~~~~~~
+
+REANA UI frontend.
+
+- source code: `<https://github.com/reanahub/reana-ui>`_
+- release notes: `<https://github.com/reanahub/reana-ui/releases>`_
+- known issues: `<https://github.com/reanahub/reana-ui/issues>`_
+- documentation: `<https://reana-ui.readthedocs.io/>`_
+
+reana-workflow-commons
+~~~~~~~~~~~~~~~~~~~~~~
+
+Shared utilities for REANA runtime workflows.
+
+- source code: `<https://github.com/reanahub/reana-workflow-commons>`_
+- release notes: `<https://github.com/reanahub/reana-workflow-commons/releases>`_
+- known issues: `<https://github.com/reanahub/reana-workflow-commons/issues>`_
+- documentation: `<https://reana-workflow-commons.readthedocs.io/>`_
+
 reana-workflow-controller
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -104,6 +134,16 @@ REANA component for running CWL types of workflows.
 - release notes: `<https://github.com/reanahub/reana-workflow-engine-cwl/releases>`_
 - known issues: `<https://github.com/reanahub/reana-workflow-engine-cwl/issues>`_
 - documentation: `<https://reana-workflow-engine-cwl.readthedocs.io/>`_
+
+reana-workflow-engine-serial
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+REANA component for running simple sequential workflows.
+
+- source code: `<https://github.com/reanahub/reana-workflow-engine-serial>`_
+- release notes: `<https://github.com/reanahub/reana-workflow-engine-serial/releases>`_
+- known issues: `<https://github.com/reanahub/reana-workflow-engine-serial/issues>`_
+- documentation: `<https://reana-workflow-engine-serial.readthedocs.io/>`_
 
 reana-workflow-engine-yadage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

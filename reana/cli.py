@@ -51,11 +51,13 @@ REPO_LIST_ALL = [
     'reana-job-controller',
     'reana-message-broker',
     'reana-server',
+    'reana-workflow-commons',
     'reana-workflow-controller',
     'reana-workflow-engine-cwl',
     'reana-workflow-engine-serial',
     'reana-workflow-engine-yadage',
     'reana-workflow-monitor',
+    'reana-ui',
 ]
 
 
