@@ -47,24 +47,26 @@ REPO_LIST_ALL = [
     'reana-env-aliphysics',
     'reana-env-jupyter',
     'reana-env-root6',
-    'reana.io',
     'reana-job-controller',
     'reana-message-broker',
     'reana-server',
+    'reana-ui',
     'reana-workflow-commons',
     'reana-workflow-controller',
     'reana-workflow-engine-cwl',
     'reana-workflow-engine-serial',
     'reana-workflow-engine-yadage',
     'reana-workflow-monitor',
-    'reana-ui',
+    'reana.io',
 ]
 
 
 REPO_LIST_CLUSTER = [
+    'reana-commons',
     'reana-job-controller',
     'reana-message-broker',
     'reana-server',
+    'reana-workflow-commons',
     'reana-workflow-controller',
     'reana-workflow-engine-cwl',
     'reana-workflow-engine-serial',
@@ -180,7 +182,6 @@ def select_components(components):
     'ALL') where name is a component name, 'CLUSTER' will expand to cover all
     REANA cluster components, 'ALL' will expand to include all REANA
     repositories.
-
     """
     output = set([])
     for component in components:
@@ -193,6 +194,18 @@ def select_components(components):
         else:
             output.add(component)
     return list(output)
+
+
+def is_component_dockerised(component):
+    """Return whether the component contains Dockerfile.
+
+    Useful to skip some docker-related commands for those components that are
+    not concerned, such as building Docker images for `reana-cluster` that does
+    not provide any.
+    """
+    if os.path.exists(get_srcdir(component) + os.sep + 'Dockerfile'):
+        return True
+    return False
 
 
 def shorten_component_name(component):
@@ -220,6 +233,11 @@ def run_command(cmd, component=''):
         subprocess.run(cmd, shell=True, check=True)
     except subprocess.CalledProcessError as err:
         sys.exit(err.cmd)
+
+
+def display_message(msg, component=''):
+    """Display message in a similar style as run_command()."""
+    click.secho('[{0}] {1}'.format(component, msg), bold=True)
 
 
 @cli.command()
@@ -456,13 +474,18 @@ def docker_build(user, tag, component, no_cache):
     """
     components = select_components(component)
     for component in components:
-        if no_cache:
-            cmd = 'docker build --no-cache -t {0}/{1}:{2} .'.format(
-                user, component, tag)
+        if is_component_dockerised(component):
+            if no_cache:
+                cmd = 'docker build --no-cache -t {0}/{1}:{2} .'.format(
+                    user, component, tag)
+            else:
+                cmd = 'docker build -t {0}/{1}:{2} .'.format(
+                    user, component, tag)
+            run_command(cmd, component)
         else:
-            cmd = 'docker build -t {0}/{1}:{2} .'.format(
-                user, component, tag)
-        run_command(cmd, component)
+            msg = 'Ignoring this component that does not contain' \
+                  ' a Dockerfile.'
+            display_message(msg, component)
 
 
 @click.option('--user', '-u', default='reanahub',
@@ -491,8 +514,13 @@ def docker_rmi(user, tag, component):
     """
     components = select_components(component)
     for component in components:
-        cmd = 'docker rmi {0}/{1}:{2}'.format(user, component, tag)
-        run_command(cmd, component)
+        if is_component_dockerised(component):
+            cmd = 'docker rmi {0}/{1}:{2}'.format(user, component, tag)
+            run_command(cmd, component)
+        else:
+            msg = 'Ignoring this component that does not contain' \
+                  ' a Dockerfile.'
+            display_message(msg, component)
 
 
 @click.option('--user', '-u', default='reanahub',
@@ -512,8 +540,13 @@ def docker_push(user, tag, component):
     """
     components = select_components(component)
     for component in components:
-        cmd = 'docker push {0}/{1}:{2}'.format(user, component, tag)
-        run_command(cmd, component)
+        if is_component_dockerised(component):
+            cmd = 'docker push {0}/{1}:{2}'.format(user, component, tag)
+            run_command(cmd, component)
+        else:
+            msg = 'Ignoring this component that does not contain' \
+                  ' a Dockerfile.'
+            display_message(msg, component)
 
 
 @click.option('--user', '-u', default='reanahub',
@@ -533,5 +566,10 @@ def docker_pull(user, tag, component):
     """
     components = select_components(component)
     for component in components:
-        cmd = 'docker pull {0}/{1}:{2}'.format(user, component, tag)
-        run_command(cmd, component)
+        if not is_component_dockerised(component):
+            cmd = 'docker pull {0}/{1}:{2}'.format(user, component, tag)
+            run_command(cmd, component)
+        else:
+            msg = 'Ignoring this component that does not contain' \
+                  ' a Dockerfile.'
+            display_message(msg, component)
