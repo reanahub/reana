@@ -50,14 +50,47 @@ def test_select_components():
     """Tests for select_components()."""
     from reana.cli import select_components, REPO_LIST_ALL, REPO_LIST_CLUSTER
     for (input_value, output_expected) in (
-            (['reana-job-controller', ], ['reana-job-controller', ]),
+            # regular operation:
+            (['reana-job-controller', ],
+             ['reana-job-controller', ]),
             (['reana-job-controller', 'reana', ],
              ['reana-job-controller', 'reana, ']),
+            # special value: '.'
+            (['.', ], [os.path.basename(os.getcwd()), ]),
+            # special value: 'cluster'
             (['cluster', ], REPO_LIST_CLUSTER),
-            (['cluster', 'reana', ], REPO_LIST_CLUSTER),
+            # special value: 'ALL'
             (['all', ], REPO_LIST_ALL),
+            # bad values:
+            (['nonsense', ], []),
+            (['nonsense', 'reana', ], ['reana', ]),
+            # output uniqueness:
             (['all', 'reana', ], REPO_LIST_ALL),
+            (['cluster', 'reana', ], REPO_LIST_CLUSTER),
             (['all', 'cluster', 'reana'], REPO_LIST_ALL),
     ):
         output_obtained = select_components(input_value)
         assert output_obtained.sort() == output_expected.sort()
+
+
+def test_find_standard_component_name():
+    """Tests for find_standard_component_name()."""
+    from reana.cli import find_standard_component_name
+    for (input_value, output_expected) in (
+            ('reana', 'reana'),
+            ('r-server', 'reana-server'),
+            ('r-j-controller', 'reana-job-controller'),
+    ):
+        output_obtained = find_standard_component_name(input_value)
+        assert output_obtained == output_expected
+
+
+def test_uniqueness_of_short_names():
+    """Test whether all shortened component names are unique."""
+    from reana.cli import shorten_component_name, REPO_LIST_ALL
+    short_names = []
+    for repo in REPO_LIST_ALL:
+        short_name = shorten_component_name(repo)
+        if short_name in short_names:
+            raise Exception('Found ')
+        short_names.append(short_name)
