@@ -61,12 +61,10 @@ REPO_LIST_ALL = [
     'reana.io',
 ]
 
-
 REPO_LIST_CLIENT = [
     'reana-commons',
     'reana-client',
 ]
-
 
 REPO_LIST_CLUSTER = [
     'reana-commons',
@@ -81,10 +79,15 @@ REPO_LIST_CLUSTER = [
     'reana-workflow-monitor',
 ]
 
-
 REPO_LIST_CLUSTER_CLI = [
     'reana-commons',
     'reana-cluster',
+]
+
+WORKFLOW_ENGINE_LIST_ALL = [
+    'cwl',
+    'serial',
+    'yadage'
 ]
 
 
@@ -123,6 +126,15 @@ def cli():  # noqa: D301
         $ eval "$(reana git-fork -c ALL)"
         $ reana git-clone -c ALL
 
+    How to install latest ``master`` REANA cluster and client CLI scripts:
+
+    .. code-block:: console
+
+        \b
+        $ workon reana
+        $ reana install-client
+        $ reana install-cluster
+
     How to compile and deploy latest ``master`` REANA cluster:
 
     .. code-block:: console
@@ -134,23 +146,20 @@ def cli():  # noqa: D301
         $ reana docker-images
         $ pip install reana-cluster
         $ reana-cluster -f reana-cluster-latest.yaml init
-        $ # we now have REANA cluster running "master" versions of components
 
-    How to install latest ``master`` REANA client CLI script:
-
-    .. code-block:: console
-
-        \b
-        $ workon reana
-        $ reana install-client
-
-    How to install latest ``master`` REANA cluster CLI script:
+    How to set up your shell environment variables:
 
     .. code-block:: console
 
         \b
-        $ workon reana
-        $ reana install-cluster
+        $ eval $(reana setup-environment)
+
+    How to run full REANA example using a given workflow engine:
+
+    .. code-block:: console
+
+        \b
+        $ reana run-example -c reana-demo-root6-roofit -w serial -s 10
 
     How to test one component pull request:
 
@@ -161,8 +170,6 @@ def cli():  # noqa: D301
         $ reana git-checkout -b . 72 --fetch
         $ reana docker-build -c .
         $ kubectl delete pod -l app=job-controller
-        $ kubectl get pods
-        $ # we can now try to run an example
 
     How to test multiple component branches:
 
@@ -175,8 +182,6 @@ def cli():  # noqa: D301
         $ reana docker-build
         $ kubectl delete pod -l app=job-controller
         $ kubectl delete pod -l app=workflow-controller
-        $ kubectl get pods
-        $ # we can now try to run an example
 
     How to release and push cluster component images:
 
@@ -190,6 +195,7 @@ def cli():  # noqa: D301
         $ reana docker-build -t 0.3.0.dev20180625
         $ reana docker-push -t 0.3.0.dev20180625
         $ # we should now make PR for ``reana-cluster.yaml`` to use given tag
+
     """
     pass
 
@@ -321,6 +327,26 @@ def select_components(components):
     return list(output)
 
 
+def select_workflow_engines(workflow_engines):
+    """Return known workflow engine names that REANA supports.
+
+    :param workflow_engines: A list of workflow engine names such as 'cwl'.
+    :type components: list
+
+    :return: Unique workflow engine names.
+    :rtype: list
+
+    """
+    output = set([])
+    for workflow_engine in workflow_engines:
+        if workflow_engine in WORKFLOW_ENGINE_LIST_ALL:
+            output.add(workflow_engine)
+        else:
+            display_message('Ignoring unknown workflow engine {0}.'.format(
+                workflow_engine))
+    return list(output)
+
+
 def is_component_dockerised(component):
     """Return whether the component contains Dockerfile.
 
@@ -339,6 +365,37 @@ def is_component_dockerised(component):
     return False
 
 
+def is_component_runnable_example(component):
+    """Return whether the component contains reana.yaml.
+
+    Useful for safety check when using some run-example commands for those
+    components that are not REANA examples.
+
+    :param component: standard component name
+    :type component: str
+
+    :return: True/False whether the component is a REANA example
+    :rtype: bool
+
+    """
+    if os.path.exists(get_srcdir(component) + os.sep + 'reana.yaml'):
+        return True
+    return False
+
+
+def construct_workflow_name(example, workflow_engine):
+    """Construct suitable workflow name for given REANA example.
+
+    :param example: REANA example (e.g. reana-demo-root6-roofit)
+    :param workflow_engine: workflow engine to use (cwl, serial, yadage)
+    :type example: str
+    :type workflow_engine: str
+    """
+    output = '{0}.{1}'.format(example.replace('reana-demo-', ''),
+                              workflow_engine)
+    return output
+
+
 def run_command(cmd, component=''):
     """Run given command in the given component source directory.
 
@@ -355,7 +412,8 @@ def run_command(cmd, component=''):
     try:
         subprocess.run(cmd, shell=True, check=True)
     except subprocess.CalledProcessError as err:
-        sys.exit(err.cmd)
+        click.secho('[{0}] {1}'.format(component, err), bold=True)
+        sys.exit(err.returncode)
 
 
 def display_message(msg, component=''):
@@ -899,3 +957,87 @@ def install_cluster():  # noqa: D301
                 'pip install . --upgrade',
         ]:
             run_command(cmd, component)
+
+
+@cli.command(name='setup-environment')
+def setup_environment():  # noqa: D301
+    """Display commands to set up shell environment for local cluster.
+
+    Display commands how to set up REANA_SERVER_URL and REANA_ACCESS_TOKEN
+    suitable for current local REANA cluster deployment. The output should be
+    passed to eval.
+    """
+    my_reana_server_url_cmd = subprocess.getoutput('reana-cluster env')
+    my_reana_access_token = subprocess.getoutput('kubectl logs -l app=server |'
+                                                 ' grep access_token: |'
+                                                 ' awk \'{print $NF;}\' |'
+                                                 ' tr -d \'[:space:]\'')
+    print(my_reana_server_url_cmd)
+    print('export REANA_ACCESS_TOKEN={0}'.format(my_reana_access_token))
+
+
+@click.option('--component', '-c', multiple=True,
+              default=['reana-demo-root6-roofit'],
+              help='Which examples to run? [reana-demo-root6-roofit]')
+@click.option('--workflow_engine', '-w', multiple=True,
+              default=['cwl', 'serial', 'yadage'],
+              help='Which workflow engine to run? [cwl,serial,yadage]')
+@click.option('--output', '-o', multiple=True,
+              default=['plot.png'],
+              help='Expected output file? [plot.png]')
+@click.option('--sleep', '-s', default=60,
+              help='How much seconds to wait for results? [60]')
+@cli.command(name='run-example')
+def run_example(component, workflow_engine, output, sleep):  # noqa: D301
+    """Run given REANA example with given workflow engine.
+
+    \b
+    :param component: The option ``component`` can be repeated. The value is
+                      the repository name of the example.
+                      [default=reana-demo-root6-roofit]
+    :param workflow_engine: The option ``workflow_engine`` can be repeated. The
+                     value is the workflow engine to use to run the example.
+                     [default=cwl,serial,yadage]
+    :param output: The option ``output`` can be repeated. The value is the
+                   expected output file the workflow should produce.
+                     [default=plot.png]
+    :param sleep: How much seconds to sleep in order to wait for workflow to be
+                  finished before checking the results? [default=60]
+
+    :type component: str
+    :type workflow_engine: str
+    :type sleep: int
+
+    """
+    components = select_components(component)
+    workflow_engines = select_workflow_engines(workflow_engine)
+    reana_yaml = {
+        'cwl': 'reana-cwl.yaml',
+        'serial': 'reana.yaml',
+        'yadage': 'reana-yadage.yaml',
+    }
+    for component in components:
+        for workflow_engine in workflow_engines:
+            workflow_name = construct_workflow_name(component, workflow_engine)
+            # run example workflow:
+            for cmd in [
+                'reana-client create -f {0} -n {1}'.format(
+                    reana_yaml[workflow_engine], workflow_name),
+                'reana-client upload ./code ./inputs -w {0}'.format(
+                    workflow_name),
+                'reana-client start -w {0}'.format(
+                    workflow_name),
+                'sleep {0}'.format(sleep),
+                'reana-client status -w {0}'.format(
+                    workflow_name),
+                'reana-client list -w {0}'.format(
+                    workflow_name),
+            ]:
+                run_command(cmd, component)
+            # verify output file presence:
+            for output_file in output:
+                cmd = 'reana-client list -w {0} | grep -q {1}'.format(
+                    workflow_name, output_file)
+                run_command(cmd, component)
+    # report status; everything was OK
+    run_command('echo OK', component)

@@ -42,8 +42,20 @@ def test_is_component_dockerised():
     """Tests for is_component_dockerised()."""
     from reana.cli import is_component_dockerised
     if os.environ.get('REANA_SRCDIR'):
-        assert is_component_dockerised('reana-workflow-controller') is True
-        assert is_component_dockerised('reana-cluster') is False
+        assert is_component_dockerised(
+            'reana-workflow-controller') is True
+        assert is_component_dockerised(
+            'reana-cluster') is False
+
+
+def test_is_component_runnable_example():
+    """Tests for is_component_runnable_example()."""
+    from reana.cli import is_component_runnable_example
+    if os.environ.get('REANA_SRCDIR'):
+        assert is_component_runnable_example(
+            'reana-workflow-controller') is False
+        assert is_component_runnable_example(
+            'reana-demo-worldpopulation') is True
 
 
 def test_select_components():
@@ -76,6 +88,24 @@ def test_select_components():
         assert output_obtained.sort() == output_expected.sort()
 
 
+def test_select_workflow_engines():
+    """Tests for select_workflow_engines()."""
+    from reana.cli import select_workflow_engines
+    for (input_value, output_expected) in (
+            # regular workflow engines:
+            (['cwl', ], ['cwl', ]),
+            (['serial', ], ['serial', ]),
+            (['cwl', 'yadage', ], ['cwl', 'yadage, ']),
+            # bad values:
+            (['nonsense', ], []),
+            (['nonsense', 'cwl', ], ['cwl', ]),
+            # output uniqueness:
+            (['cwl', 'cwl', ], ['cwl', ]),
+    ):
+        output_obtained = select_workflow_engines(input_value)
+        assert output_obtained.sort() == output_expected.sort()
+
+
 def test_find_standard_component_name():
     """Tests for find_standard_component_name()."""
     from reana.cli import find_standard_component_name
@@ -97,3 +127,15 @@ def test_uniqueness_of_short_names():
         if short_name in short_names:
             raise Exception('Found ')
         short_names.append(short_name)
+
+
+def test_construct_workflow_name():
+    """Tests for construct_workflow_name()."""
+    from reana.cli import construct_workflow_name
+    for (input_value, output_expected) in (
+            (('reana', 'cwl'), 'reana.cwl'),
+            (('reana-demo-root6-roofit', 'yadage'), 'root6-roofit.yadage'),
+    ):
+        output_obtained = construct_workflow_name(input_value[0],
+                                                  input_value[1])
+        assert output_obtained == output_expected
