@@ -62,6 +62,12 @@ REPO_LIST_ALL = [
 ]
 
 
+REPO_LIST_CLIENT = [
+    'reana-commons',
+    'reana-client',
+]
+
+
 REPO_LIST_CLUSTER = [
     'reana-commons',
     'reana-job-controller',
@@ -73,6 +79,12 @@ REPO_LIST_CLUSTER = [
     'reana-workflow-engine-serial',
     'reana-workflow-engine-yadage',
     'reana-workflow-monitor',
+]
+
+
+REPO_LIST_CLUSTER_CLI = [
+    'reana-commons',
+    'reana-cluster',
 ]
 
 
@@ -123,6 +135,22 @@ def cli():  # noqa: D301
         $ pip install reana-cluster
         $ reana-cluster -f reana-cluster-latest.yaml init
         $ # we now have REANA cluster running "master" versions of components
+
+    How to install latest ``master`` REANA client CLI script:
+
+    .. code-block:: console
+
+        \b
+        $ workon reana
+        $ reana install-client
+
+    How to install latest ``master`` REANA cluster CLI script:
+
+    .. code-block:: console
+
+        \b
+        $ workon reana
+        $ reana install-cluster
 
     How to test one component pull request:
 
@@ -256,7 +284,9 @@ def select_components(components):
                                 current working directory;
                           * (4) special value 'CLUSTER' that will expand to
                                 cover all REANA cluster components;
-                          * (5) special value 'ALL' that will expand to include
+                          * (5) special value 'CLIENT' that will expand to
+                                cover all REANA client components;
+                          * (6) special value 'ALL' that will expand to include
                                 all REANA repositories.
     :type components: list
 
@@ -270,6 +300,9 @@ def select_components(components):
     for component in components:
         if component == 'ALL':
             for repo in REPO_LIST_ALL:
+                output.add(repo)
+        elif component == 'CLIENT':
+            for repo in REPO_LIST_CLIENT:
                 output.add(repo)
         elif component == 'CLUSTER':
             for repo in REPO_LIST_CLUSTER:
@@ -367,7 +400,9 @@ def git_fork(component, browser):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param browser: The web browser to use. [default=firefox]
     :type component: str
@@ -408,7 +443,9 @@ def git_clone(user, component):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param user: The GitHub user name. [default=$REANA_GITHUB_USER]
     :type component: str
@@ -449,7 +486,9 @@ def git_status(component):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -482,7 +521,9 @@ def git_clean(component):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -548,7 +589,9 @@ def git_fetch(component):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -573,7 +616,9 @@ def git_upgrade(component):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -602,7 +647,9 @@ def git_diff(component):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -627,7 +674,9 @@ def git_push(full, component):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -658,7 +707,9 @@ def docker_build(user, tag, component, no_cache):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker tag to use. [default=latest]
@@ -717,7 +768,9 @@ def docker_rmi(user, tag, component):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker tag to use. [default=latest]
@@ -756,7 +809,9 @@ def docker_push(user, tag, component):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker tag to use. [default=latest]
@@ -795,7 +850,9 @@ def docker_pull(user, tag, component):  # noqa: D301
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
                                cover all REANA cluster components [default];
-                         * (5) special value 'ALL' that will expand to include
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker tag to use. [default=latest]
@@ -812,3 +869,33 @@ def docker_pull(user, tag, component):  # noqa: D301
             msg = 'Ignoring this component that does not contain' \
                   ' a Dockerfile.'
             display_message(msg, component)
+
+
+@cli.command(name='install-client')
+def install_client():  # noqa: D301
+    """Install latest REANA client Python package and its dependencies.
+
+    \b
+    :param upgrade: Should we upgrade? [default=True]
+    :type fetch: bool
+    """
+    for component in REPO_LIST_CLIENT:
+        for cmd in [
+                'pip install . --upgrade',
+        ]:
+            run_command(cmd, component)
+
+
+@cli.command(name='install-cluster')
+def install_cluster():  # noqa: D301
+    """Install latest REANA cluster Python package and its dependencies.
+
+    \b
+    :param upgrade: Should we upgrade if already installed? [default=True]
+    :type fetch: bool
+    """
+    for component in REPO_LIST_CLUSTER_CLI:
+        for cmd in [
+                'pip install . --upgrade',
+        ]:
+            run_command(cmd, component)

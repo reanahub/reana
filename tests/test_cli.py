@@ -48,7 +48,8 @@ def test_is_component_dockerised():
 
 def test_select_components():
     """Tests for select_components()."""
-    from reana.cli import select_components, REPO_LIST_ALL, REPO_LIST_CLUSTER
+    from reana.cli import select_components, \
+        REPO_LIST_ALL, REPO_LIST_CLIENT, REPO_LIST_CLUSTER
     for (input_value, output_expected) in (
             # regular operation:
             (['reana-job-controller', ],
@@ -57,17 +58,19 @@ def test_select_components():
              ['reana-job-controller', 'reana, ']),
             # special value: '.'
             (['.', ], [os.path.basename(os.getcwd()), ]),
-            # special value: 'cluster'
-            (['cluster', ], REPO_LIST_CLUSTER),
+            # special value: 'CLUSTER'
+            (['CLUSTER', ], REPO_LIST_CLUSTER),
+            # special value: 'CLIENT'
+            (['CLIENT', ], REPO_LIST_CLIENT),
             # special value: 'ALL'
-            (['all', ], REPO_LIST_ALL),
+            (['ALL', ], REPO_LIST_ALL),
             # bad values:
             (['nonsense', ], []),
             (['nonsense', 'reana', ], ['reana', ]),
             # output uniqueness:
-            (['all', 'reana', ], REPO_LIST_ALL),
-            (['cluster', 'reana', ], REPO_LIST_CLUSTER),
-            (['all', 'cluster', 'reana'], REPO_LIST_ALL),
+            (['ALL', 'reana', ], REPO_LIST_ALL),
+            (['CLUSTER', 'reana', ], REPO_LIST_CLUSTER),
+            (['ALL', 'CLUSTER', 'reana'], REPO_LIST_ALL),
     ):
         output_obtained = select_components(input_value)
         assert output_obtained.sort() == output_expected.sort()
