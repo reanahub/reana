@@ -268,8 +268,8 @@ def get_srcdir(component=''):
 def get_current_branch(srcdir):
     """Return current Git branch name checked out in the given directory.
 
-    :param component: standard component name
-    :type component: str
+    :param srcdir: source code directory
+    :type srcdir: str
 
     :return: checkout out branch in the component source code directory
     :rtype: str
@@ -277,6 +277,19 @@ def get_current_branch(srcdir):
     os.chdir(srcdir)
     return subprocess.getoutput('git branch 2>/dev/null | '
                                 'grep "^*" | colrm 1 2')
+
+
+def get_current_commit(srcdir):
+    """Return information about git commit checked out in the given directory.
+
+    :param srcdir: source code directory
+    :type srcdir: str
+
+    :return: commit information composed of brief SHA1 and subject
+    :rtype: str
+    """
+    os.chdir(srcdir)
+    return subprocess.getoutput('git log --pretty=format:"%h %s" -n 1')
 
 
 def select_components(components):
@@ -553,11 +566,12 @@ def git_status(component):  # noqa: D301
     components = select_components(component)
     for component in components:
         branch = get_current_branch(get_srcdir(component))
+        commit = get_current_commit(get_srcdir(component))
         click.secho('- {0}'.format(component), nl=False, bold=True)
         if branch == 'master':
-            click.secho(' @ {0}'.format(branch))
+            click.secho(' @ {0} {1}'.format(branch, commit))
         else:
-            click.secho(' @ {0}'.format(branch), fg='red')
+            click.secho(' @ {0} {1}'.format(branch, commit), fg='red')
 
 
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
