@@ -28,8 +28,13 @@ language: python
 cache:
   - pip
 
-python:
-  - "3.5"
+matrix:
+  fast_finish: true
+  include:
+    - python: 2.7
+    - python: 3.6
+    - python: 3.7
+      dist: xenial
 
 before_install:
   - travis_retry pip install --upgrade pip setuptools py
