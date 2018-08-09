@@ -37,8 +37,8 @@ working on in development mode and we restart the corresponding pod:
    $ kubectl delete pod --selector=app="server"
 
 Let us now introduce `wdb` breakpoint as the first instruction of the
-first instruction of the `get_analyses()` function located in
-`reana_server/rest/analyses.py`:
+first instruction of the `get_workflows()` function located in
+`reana_server/rest/workflows.py`:
 
 .. image:: /_static/setting-the-breakpoint.png
 
@@ -49,16 +49,17 @@ component:
 
    $ kubectl logs --selector=app="server"
 
+   DB Created.
+    * Serving Flask app "/code/reana_server/app.py" (lazy loading)
+    * Environment: production
+    WARNING: Do not use the development server in a production environment.
+    Use a production WSGI server instead.
+    * Debug mode: on
     * Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)
     * Restarting with stat
     * Debugger is active!
-    * Debugger PIN: 310-304-952
-   172.17.0.1 - - [15/Feb/2018 12:43:49] "GET /api/ping HTTP/1.1" 200 -
-    * Detected change in '/code/reana_server/rest/analyses.py', reloading
-    * Restarting with stat
-    * Debugger is active!
-    * Debugger PIN: 310-304-952
-   $ curl "192.168.99.100:30659/api/analyses?organization=default&user=00000000-0000-0000-0000-000000000000"
+    * Debugger PIN: 221-564-335
+   $ curl $REANA_SERVER_URL/api/workflows?access_token=$REANA_ACCESS_TOKEN
 
 After doing that we can go to the `wdb` dashboard (you can get ``wdb`` address
 using `reana-cluster get wdb <http://reana-cluster.readthedocs.io/en/latest/cliapi.html#reana-cluster-get>`_).

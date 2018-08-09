@@ -69,7 +69,7 @@ The ``reana.yaml`` describing this structure look as follows:
 
 .. code-block:: yaml
 
-    version: 0.2.0
+    version: 0.3.0
     code:
       files:
       - code/mycode.py
@@ -101,7 +101,7 @@ using ``pip``, for example:
 .. code-block:: console
 
    $ # install reana-client
-   $ mkvirtualenv reana-client -p /usr/bin/python2.7
+   $ mkvirtualenv reana-client
    $ pip install reana-client
 
 You can run ``reana-client --help`` to obtain help.
@@ -116,6 +116,13 @@ There are several convenient environment variables you can set when working with
 
    $ export REANA_SERVER_URL=http://reana.cern.ch
 
+- ``REANA_ACCESS_TOKEN`` Identifies the current user when performing
+  protected actions.
+
+.. code-block:: console
+
+   $ export REANA_ACCESS_TOKEN=XXXXXXX
+
 - ``REANA_WORKON`` Permits to specify a concrete workflow run for the given
   analysis. (As an alternative to specifying ``--workflow`` name in commands.)
   For example:
@@ -129,16 +136,16 @@ The typical usage scenario of ``reana-client`` goes as follows:
 .. code-block:: console
 
    $ # create new workflow
-   $ export REANA_WORKON=$(reana-client workflow create)
+   $ export REANA_WORKON=$(reana-client create)
    $ # upload runtime code and inputs
-   $ reana-client code upload ./code/*
-   $ reana-client inputs upload ./inputs/*
+   $ reana-client upload
    $ # start workflow and check progress
-   $ reana-client workflow start
-   $ reana-client workflow status
+   $ reana-client start
+   $ reana-client status
+   $ # list files
+   $ reana-client list
    $ # download outputs
-   $ reana-client outputs list
-   $ reana-client outputs download myplot.png
+   $ reana-client download myplot.png
 
 For more information, please see `REANA-Client's Getting started guide
 <http://reana-client.readthedocs.io/en/latest/gettingstarted.html>`_.

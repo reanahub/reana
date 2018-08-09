@@ -15,7 +15,7 @@ Structure your research data analysis repository into "inputs", "code",
 
 .. code-block:: yaml
 
-    version: 0.2.0
+    version: 0.3.0
     code:
       files:
       - code/mycode.py
@@ -40,11 +40,13 @@ Step Two: Install REANA cluster
 -------------------------------
 
 You can use an existing REANA cloud deployment (if you have access to one) by
-setting the ``REANA_SERVER_URL`` environment variable:
+setting the ``REANA_SERVER_URL`` environment variable and providing a valid
+token:
 
 .. code-block:: console
 
    $ export REANA_SERVER_URL=https://reana.cern.ch/
+   $ export REANA_ACCESS_TOKEN=XXXXXXX
 
 You can also easily deploy your own REANA cloud instance by using the
 ``reana-cluster`` command line utility:
@@ -61,7 +63,13 @@ You can also easily deploy your own REANA cloud instance by using the
    $ reana-cluster init
    $ reana-cluster status
    $ # set environment variables for reana-client
-   $ eval $(reana-cluster env)
+   $ eval $(reana-cluster env --incude-admin-token) # if you are admin
+
+.. warning::
+
+    We are using the ``--incude-admin-token`` in this case to make getting
+    started easier but this option should be used carefully and never shared
+    with regular users.
 
 (see `REANA-Cluster's Getting started guide
 <http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_)
@@ -75,20 +83,20 @@ command line client:
 .. code-block:: console
 
    $ # install reana-client
-   $ mkvirtualenv reana-client -p /usr/bin/python2.7
+   $ mkvirtualenv reana-client
    $ pip install reana-client
    $ reana-client ping
    $ # create new workflow
-   $ export REANA_WORKON=$(reana-client workflow create)
+   $ export REANA_WORKON=$(reana-client create)
    $ # upload runtime code and inputs
-   $ reana-client code upload ./code/*
-   $ reana-client inputs upload ./inputs/*
+   $ reana-client upload
    $ # start workflow and check progress
-   $ reana-client workflow start
-   $ reana-client workflow status
+   $ reana-client start
+   $ reana-client status
+   $ # list files
+   $ reana-client list
    $ # download outputs
-   $ reana-client outputs list
-   $ reana-client outputs download myplot.png
+   $ reana-client download
 
 (see `REANA-Client's Getting started guide
 <http://reana-client.readthedocs.io/en/latest/gettingstarted.html>`_)
