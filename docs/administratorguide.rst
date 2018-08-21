@@ -115,16 +115,6 @@ REANA UI frontend.
 - known issues: `<https://github.com/reanahub/reana-ui/issues>`_
 - documentation: `<https://reana-ui.readthedocs.io/>`_
 
-reana-workflow-commons
-~~~~~~~~~~~~~~~~~~~~~~
-
-Shared utilities for REANA runtime workflows.
-
-- source code: `<https://github.com/reanahub/reana-workflow-commons>`_
-- release notes: `<https://github.com/reanahub/reana-workflow-commons/releases>`_
-- known issues: `<https://github.com/reanahub/reana-workflow-commons/issues>`_
-- documentation: `<https://reana-workflow-commons.readthedocs.io/>`_
-
 reana-workflow-controller
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
