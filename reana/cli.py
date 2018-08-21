@@ -37,6 +37,7 @@ REPO_LIST_ALL = [
     'reana-client',
     'reana-cluster',
     'reana-commons',
+    'reana-db',
     'reana-demo-alice-lego-train-test-run',
     'reana-demo-atlas-recast',
     'reana-demo-bsm-search',
@@ -68,6 +69,7 @@ REPO_LIST_CLIENT = [
 
 REPO_LIST_CLUSTER = [
     'reana-commons',
+    'reana-db',
     'reana-job-controller',
     'reana-message-broker',
     'reana-server',

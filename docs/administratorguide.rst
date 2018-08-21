@@ -65,6 +65,16 @@ Shared utilities for REANA components.
 - known issues: `<https://github.com/reanahub/reana-commons/issues>`_
 - documentation: `<https://reana-commons.readthedocs.io/>`_
 
+reana-db
+~~~~~~~~
+
+REANA component containing database models and utilities.
+
+- source code: `<https://github.com/reanahub/reana-db>`_
+- release notes: `<https://github.com/reanahub/reana-db/releases>`_
+- known issues: `<https://github.com/reanahub/reana-db/issues>`_
+- documentation: `<https://reana-db.readthedocs.io/>`_
+
 reana-job-controller
 ~~~~~~~~~~~~~~~~~~~~
 
