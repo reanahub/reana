@@ -140,7 +140,7 @@ def cli():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ minikube start --kubernetes-version="v1.9.4" --vm-driver=kvm2
+        $ minikube start --kubernetes-version="v1.11.2" --vm-driver=kvm2
         $ eval $(minikube docker-env)
         $ reana docker-build
         $ reana docker-images
