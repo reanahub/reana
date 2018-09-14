@@ -1037,7 +1037,7 @@ def run_example(component, workflow_engine, output, sleep):  # noqa: D301
             for cmd in [
                 'reana-client create -f {0} -n {1}'.format(
                     reana_yaml[workflow_engine], workflow_name),
-                'reana-client upload ./code ./inputs -w {0}'.format(
+                'reana-client upload ./code ./data -w {0}'.format(
                     workflow_name),
                 'reana-client start -w {0}'.format(
                     workflow_name),
