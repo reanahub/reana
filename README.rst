@@ -5,14 +5,11 @@
 .. image:: https://img.shields.io/travis/reanahub/reana.svg
    :target: https://travis-ci.org/reanahub/reana
 
-.. image:: https://img.shields.io/coveralls/reanahub/reana.svg
-   :target: https://coveralls.io/r/reanahub/reana
-
 .. image:: https://readthedocs.org/projects/docs/badge/?version=latest
    :target: https://reana.readthedocs.io/en/latest/?badge=latest
 
-.. image:: https://badge.waffle.io/reanahub/reana.svg?label=Status%3A%20ready%20for%20work&title=Issues%20ready%20for%20work
-   :target: https://waffle.io/reanahub/reana
+.. image:: https://img.shields.io/coveralls/reanahub/reana.svg
+   :target: https://coveralls.io/r/reanahub/reana
 
 .. image:: https://badges.gitter.im/Join%20Chat.svg
    :target: https://gitter.im/reanahub/reana?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
@@ -36,12 +33,12 @@ original publication.
 Features
 --------
 
-- help to structure research data analysis in reusable manner
+- structure research data analysis in reusable manner
 - instantiate computational workflows on remote clouds
 - rerun analyses with modified input data, parameters or code
 - support for several compute clouds (Kubernetes/OpenStack)
-- support for several workflow specifications (CWL, Yadage)
-- support for several shared storage systems (Ceph, EOS)
+- support for several workflow specifications (CWL, Serial, Yadage)
+- support for several shared storage systems (Ceph)
 - support for several container technologies (Docker)
 
 Useful links

@@ -9,32 +9,28 @@ three steps.
 Step One: Structure your analysis
 ---------------------------------
 
-Structure your research data analysis repository into "inputs", "code",
-"environments", "workflows" directories, following up the model of the
-:ref:`fourquestions`. Create ``reana.yaml`` describing your structure:
+Structure your research data analysis repository into input "data" and
+"parameters", runtime "code", computing "environments", and computational
+"workflows", following the model of the :ref:`fourquestions`. Create
+``reana.yaml`` describing your structure:
 
 .. code-block:: yaml
 
     version: 0.3.0
-    code:
-      files:
-      - code/mycode.py
     inputs:
       files:
-        - inputs/mydata.csv
+        - code/mycode.py
+        - data/mydata.csv
       parameters:
         myparameter: myvalue
-    environments:
-      - type: docker
-        image: johndoe/mypython:1.0
     workflow:
       type: cwl
       file: workflow/myworkflow.cwl
     outputs:
       files:
-      - outputs/myplot.png
+        - results/myplot.png
 
-(see :ref:`examples`)
+See and run some :ref:`examples`.
 
 Step Two: Install REANA cluster
 -------------------------------
@@ -65,14 +61,9 @@ You can also easily deploy your own REANA cloud instance by using the
    $ # set environment variables for reana-client
    $ eval $(reana-cluster env --incude-admin-token) # if you are admin
 
-.. warning::
-
-    We are using the ``--incude-admin-token`` in this case to make getting
-    started easier but this option should be used carefully and never shared
-    with regular users.
-
-(see `REANA-Cluster's Getting started guide
-<http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_)
+See `REANA-Cluster's Getting started guide
+<http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_ for more
+information.
 
 Step Three: Run REANA client
 ----------------------------
@@ -82,24 +73,26 @@ command line client:
 
 .. code-block:: console
 
-   $ # install reana-client
+   $ # install REANA client
    $ mkvirtualenv reana-client
    $ pip install reana-client
-   $ reana-client ping
    $ # create new workflow
-   $ export REANA_WORKON=$(reana-client create)
-   $ # upload runtime code and inputs
+   $ reana-client create -n my-analysis
+   $ export REANA_WORKON=my-analysis
+   $ # upload input code and data to the workspace
    $ reana-client upload
-   $ # start workflow and check progress
+   $ # start computational workflow
    $ reana-client start
+   $ # check its progress
    $ reana-client status
-   $ # list files
+   $ # list workspace files
    $ reana-client list
-   $ # download outputs
+   $ # download output results
    $ reana-client download
 
-(see `REANA-Client's Getting started guide
-<http://reana-client.readthedocs.io/en/latest/gettingstarted.html>`_)
+See `REANA-Client's Getting started guide
+<http://reana-client.readthedocs.io/en/latest/gettingstarted.html>`_ for more
+information.
 
 Next steps
 ----------

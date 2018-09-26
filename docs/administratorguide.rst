@@ -194,7 +194,7 @@ script. The typical usage scenario goes as follows:
    $ reana-cluster init
    $ reana-cluster status
    $ # set environment variables for reana-client
-   $ eval $(reana-cluster env)
+   $ eval $(reana-cluster env --incude-admin-token) # if you are admin
 
 For more information, please see `REANA-Cluster's Getting started guide
 <http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_.

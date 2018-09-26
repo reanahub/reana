@@ -9,145 +9,405 @@ analysis and run them on REANA cloud.
 Reusable analyses
 -----------------
 
-The revalidation, reinterpretation and reuse of research data analyses requires
-having access not only to the original experimental datasets and the analysis
-software, but also to the operating system environment and the computational
-workflow steps which were used by the researcher to produce the original
-scientific results in the first place.
+Making a research data analysis reproducible basically means to provide
+structured "runnable recipes" addressing (1) where is the input data, (2) what
+software was used to analyse the data, (3) which computing environments were
+used to run the software and (4) which computational steps were taken to run the
+analysis. This will permit to instantiate the analysis on the computational
+cloud and run the analysis to obtain its (5) output results.
 
 .. _fourquestions:
 
 Four questions
 --------------
 
-REANA helps to make the research analysis reusable by providing a structure
+REANA helps to make the research analysis reproducible by providing a structure
 helping to answer the "Four Questions":
 
 1. What is your input data?
 
-   - input files
+   - input data files
    - input parameters
    - live database calls
 
-2. What is your environment?
+2. Which code analyses it?
 
-   - operating systems
+   - custom analysis code
+   - analysis frameworks
+   - Jupyter notebooks
+
+3. What is your environment?
+
+   - operating system
    - software packages and libraries
    - CPU and memory resources
-
-3. Which code analyses it?
-
-   - analysis frameworks
-   - custom analysis code
-   - Jupyter notebooks
 
 4. Which steps did you take?
 
    - simple shell commands
    - complex computational workflows
-   - local or remote workflow step execution
+   - local and/or remote task execution
+
+Let us see step by step on how we could go about making an analysis reproducible
+and run it on the REANA platform.
 
 Structure your analysis
 -----------------------
 
-It is advised to structure your research data analysis repository into "inputs",
-"code", "environments", "workflows" directories, following up the model of the
-:ref:`fourquestions`:
+It is advised to structure your research data analysis sources to clearly
+declare and separate your analysis inputs, code, and outputs. A simple
+hypothetical example:
 
 .. code-block:: console
 
-   $ ls .
-   code/mycode.py
-   docs/mynotes.txt
-   inputs/mydata.csv
-   environments/mypython/Dockerfile
-   workflow/myworkflow.cwl
-   outputs/
-   reana.yaml
+    $ find .
+    data/mydata.csv
+    code/mycode.py
+    docs/mynotes.txt
+    results/myplot.png
 
-The ``reana.yaml`` describing this structure look as follows:
+Note how we put the input data file in the ``data`` directory, the runtime code
+that analyses it in the ``code`` directory, the documentation in the ``docs``
+directory, and the produced output plots in the ``results`` directory.
+
+Note that this structure is fully optional and you can use any you prefer, or
+simply store everything in the same working directory. You can also take
+inspiration by looking at several real-life examples in the :ref:`examples`
+section of the documentation.
+
+Capture your workflows
+----------------------
+
+Now that we have structured our analysis data and code, we have to provide
+recipe how to produce final plots.
+
+**Simple analyses**
+
+Let us assume that our analysis is run in two stages, firstly a data filtering
+stage and secondly a data plotting stage. A hypothetical example:
+
+.. code-block:: console
+
+    $ python ./code/mycode.py \
+        < ./data/mydata.csv > ./workspace/mydata.tmp
+    $ python ./code/mycode.py --plot myparameter=myvalue \
+        < ./workspace/mydata.tmp > ./results/myplot.png
+
+Note how we call a given sequence of commands to produce our desired output
+plots. In order to capture this sequence of commands in a "runnable" or
+"actionable" manner, we can write a short shell script ``run.sh`` and make it
+parametrisable:
+
+.. code-block:: console
+
+    $ ./run.sh --myparameter myvalue
+
+In this case you will want to use the `Serial
+<https://reana-workflow-engine-serial.readthedocs.io/>`_ workflow engine of
+REANA. The engine permits to express the workflow as a sequence of commands:
+
+.. code-block:: console
+
+              START
+               |
+               |
+               V
+          +--------+
+          | filter |  <-- mydata.csv
+          +--------+
+               |
+               | mydata.tmp
+               |
+               V
+          +--------+
+          |  plot  |  <-- myparameter=myvalue
+          +--------+
+               |
+               | plot.png
+               V
+              STOP
+
+Note that you can run different commands in different computing environments,
+but they must be run in a linear sequential manner.
+
+The sequential workflow pattern will usually cover only simple computational
+workflow needs.
+
+**Complex analyses**
+
+For advanced workflow needs we may want to run certain commands in parallel in a
+sort of map-reduce fashion. There are `many workflow systems
+<https://github.com/common-workflow-language/common-workflow-language/wiki/Existing-Workflow-systems>`_
+that are dedicated to expressing complex computational schemata in a structured
+manner. REANA supports several, such as `CWL <http://www.commonwl.org/>`_ and
+`Yadage <https://github.com/yadage/yadage>`_.
+
+The workflow systems enable to express the computational steps in the form of
+`Directed Acyclic Graph (DAG)
+<https://en.wikipedia.org/wiki/Directed_acyclic_graph>`_ permitting advanced
+computational scenarios.
+
+.. code-block:: console
+
+                        START
+                         |
+                         |
+                  +------+----------+
+                 /       |           \
+                /        V            \
+          +--------+  +--------+  +--------+
+          | filter |  | filter |  | filter |   <-- mydata
+          +--------+  +--------+  +--------+
+                  \       |       /
+                   \      |      /
+                    \     |     /
+                     \    |    /
+                      \   |   /
+                       \  |  /
+                        \ | /
+                      +-------+
+                      | merge |
+                      +-------+
+                          |
+                          | mydata.tmp
+                          |
+                          V
+                      +--------+
+                      |  plot  |  <-- myparameter=myvalue
+                      +--------+
+                          |
+                          | plot.png
+                          V
+                         STOP
+
+
+
+We pick for example the CWL standard to express our computational steps. We
+store the workflow specification in the ``workflow`` directory:
+
+.. code-block:: console
+
+    $ find workflow
+    workflow/myinput.yaml
+    workflow/myworkflow.cwl
+    workflow/step-filter.cwl
+    workflow/step-plot.cwl
+
+You will again be able to take inspiration from some real-life examples later in
+the :ref:`examples` section of the documentation.
+
+
+**To pick a workflow engine**
+
+For simple needs, the ``Serial`` workflow engine is the quickest to start with.
+For regular needs, ``CWL`` or ``Yadage`` would be more appropriate.
+
+Note that the level of REANA platform support for a particular workflow engine
+can differ:
+
+    +----------------+---------------+---------------------+-------------+
+    | Engine         | Parametrised? | Parallel execution? | Caching?    |
+    +================+===============+=====================+=============+
+    | CWL            |      yes      |         yes         |     no(1)   |
+    +----------------+---------------+---------------------+-------------+
+    | Serial         |      yes      |          no         |    yes      |
+    +----------------+---------------+---------------------+-------------+
+    | Yadage         |      yes      |         yes         |     no(1)   |
+    +----------------+---------------+---------------------+-------------+
+
+    (1) The vanilla workflow system may support the feature, but not when run
+        via REANA environment.
+
+**Develop workflow locally**
+
+Now that we have declared our analysis input data and code, as well as captured
+the computational steps in a structured manner, we can see whether our analysis
+runs in the original computing environment. We can use the helper wrapper
+scripts:
+
+.. code-block:: console
+
+    $ run.sh
+
+or use workflow-specific commands, such as ``cwltool`` in case of CWL workflows:
+
+.. code-block:: console
+
+    $ cwltool --quiet --outdir="./results" \
+         ./workflow/myworkflow.cwl ./workflow/myinput.yaml
+
+This completes the first step in the parametrisation of our analysis in a
+reproducible manner.
+
+Containerise your environment
+-----------------------------
+
+Now that we have fully described our inputs and code and the steps to run the
+analysis and produce our results, we need to make sure we shall be running the
+commands in the same environment. Capturing the environment specifics is
+essential to ensure reproducibility, for example the same version of Python we
+are using and the same set of pre-installed libraries that are needed for our
+analysis.
+
+The environment is encapsulated by means of "containers" such as Docker or
+Singularity.
+
+**Using an existing environment**
+
+Sometimes you can use an already-existing container environment prepared by
+others. For example ``python:2.7`` packaging Python 2.7. In this case you simply
+specify the container name and the version number in your workflow specification
+and you are good to go.
+
+This is usually the case when your code can be considered "runtime", for example
+Python scripts or ROOT macros.
+
+Note that REANA platform offers a set of containers for certain popular
+environments such as ROOT RooFit.  FIXME
+
+**Building your own environment**
+
+Other times you may need to build your own container, for example to add a
+certain library on top of Python 2.7. This is the most typical use case that
+we'll address below.
+
+This is usually the case when your code needs to be compiled, for example C++
+analysis.
+
+If you need to create your own environment, this can be achieved by means of
+providing a particular ``Dockerfile``:
+
+.. code-block:: console
+
+    $ find environment
+    environment/myenv/Dockerfile
+
+    $ less environment/Dockerfile
+    # Start from the Python 2.7 base image:
+    FROM python:2.7
+
+    # Install HFtools:
+    RUN apt-get -y update && \
+        apt-get -y install \
+           python-pip \
+           zip && \
+        apt-get autoremove -y && \
+        apt-get clean -y
+    RUN pip install hftools
+
+    # Mount our code:
+    ADD code /code
+    WORKDIR /code
+
+You can build this customised analysis environment image and give it some name,
+for example ``johndoe/myenv``:
+
+.. code-block:: console
+
+    $ docker build -f environment/myenv/Dockerfile -t johndoe/myenv .
+
+and push the created image to the DockerHub image registry:
+
+.. code-block:: console
+
+    $ docker push johndoe/myenv
+
+**Testing the environment**
+
+We now have a containerised image representing our computational environment
+that we can use to run our analysis in another replicated environment.
+
+We should test the containerised environment to ensure it works properly, for
+example whether all the necessary libraries are present:
+
+.. code-block:: console
+
+    $ docker run -i -t --rm johndoe/myenv /bin/bash
+    container> python -V
+    Python 2.7.15
+    container> python mycode.py < mydata.csv > /tmp/mydata.tmp
+
+**Multiple environments**
+
+Note that various steps of the analysis can run in various environments; the
+data filtering step on a big cloud having data selection libraries installed,
+the data plotting step in a local environment containing only the preferred
+graphing system of choice. You can prepare several different environments for
+your analysis if needed.
+
+Write your ``reana.yaml``
+-------------------------
+
+We are now ready to tie all the above reproducible elements together. Our
+analysis example becomes:
+
+.. code-block:: console
+
+    $ find .
+    code/mycode.py
+    data/mydata.csv
+    docs/mynotes.txt
+    environment/myenv/Dockerfile
+    workflow/myinput.yaml
+    workflow/myworkflow.cwl
+    workflow/step-filtering.cwl
+    workflow/step-plotting.cwl
+    results/myplot.png
+
+There is only thing that remains in order to make it runnable on the REANA
+cloud; we need to capture the above structure by means of a ``reana.yaml`` file:
 
 .. code-block:: yaml
 
     version: 0.3.0
-    code:
-      files:
-      - code/mycode.py
     inputs:
       files:
-        - inputs/mydata.csv
+        - code/mycode.py
+        - data/mydata.csv
       parameters:
         myparameter: myvalue
-    environments:
-      - type: docker
-        image: johndoe/mypython:1.0
     workflow:
       type: cwl
       file: workflow/myworkflow.cwl
     outputs:
       files:
-      - outputs/myplot.png
+        - results/myplot.png
 
-Note that this structure is fully optional and you can simply store everything
-in the same working directory. You can see some real-life :ref:`examples` for
-inspiration.
+This file is used by REANA to instantiate and run the analysis on the cloud.
 
-Use REANA client
-----------------
+Run your analysis on REANA cloud
+--------------------------------
 
-REANA is coming with a convenience ``reana-client`` script that you can install
-using ``pip``, for example:
-
-.. code-block:: console
-
-   $ # install reana-client
-   $ mkvirtualenv reana-client
-   $ pip install reana-client
-
-You can run ``reana-client --help`` to obtain help.
-
-There are several convenient environment variables you can set when working with
-``reana-client``:
-
-- ``REANA_SERVER_URL`` Permits to specify to which REANA cloud instance the
-  client should connect. For example:
+We can now download ``reana-client`` command-line utility, configure access to
+the remote REANA cloud where we shall run the analysis, and launch it as
+follows:
 
 .. code-block:: console
 
-   $ export REANA_SERVER_URL=http://reana.cern.ch
+    $ # install REANA client:
+    $ mkvirtualenv reana-client
+    $ pip install reana-client
+    $ # connect to some REANA cloud instance:
+    $ export REANA_SERVER_URL=https://reana.cern.ch/
+    $ export REANA_ACCESS_TOKEN=XXXXXXX
+    $ # create new workflow:
+    $ reana-client create -n my-analysis
+    $ export REANA_WORKON=my-analysis
+    $ # upload input code and data to the workspace:
+    $ reana-client upload ./code ./data
+    $ # start computational workflow:
+    $ reana-client start
+    $ # ... should be finished in about a minute:
+    $ reana-client status
+    $ # list workspace files:
+    $ reana-client list
+    $ # download output results:
+    $ reana-client download results/plot.png
 
-- ``REANA_ACCESS_TOKEN`` Identifies the current user when performing
-  protected actions.
+We are done! Our outputs plot should be located in the ``results`` directory.
 
-.. code-block:: console
-
-   $ export REANA_ACCESS_TOKEN=XXXXXXX
-
-- ``REANA_WORKON`` Permits to specify a concrete workflow run for the given
-  analysis. (As an alternative to specifying ``--workflow`` name in commands.)
-  For example:
-
-.. code-block:: console
-
-   $ export REANA_WORKON=myanalysis.17
-
-The typical usage scenario of ``reana-client`` goes as follows:
-
-.. code-block:: console
-
-   $ # create new workflow
-   $ export REANA_WORKON=$(reana-client create)
-   $ # upload runtime code and inputs
-   $ reana-client upload
-   $ # start workflow and check progress
-   $ reana-client start
-   $ reana-client status
-   $ # list files
-   $ reana-client list
-   $ # download outputs
-   $ reana-client download myplot.png
-
-For more information, please see `REANA-Client's Getting started guide
+For more information on how to use ``reana-client``, please see `REANA-Client's
+Getting started guide
 <http://reana-client.readthedocs.io/en/latest/gettingstarted.html>`_.
 
 .. _examples:
@@ -171,5 +431,5 @@ REANA-compatible manner to facilitate its future reuse.
 Next steps
 ----------
 
-For more information, you can explore `REANA-Client documentation
-<https://reana-client.readthedocs.io/>`_.
+For more information on how to use ``reana-client``, you can explore
+`REANA-Client documentation <https://reana-client.readthedocs.io/>`_.
