@@ -1,6 +1,18 @@
 Changes
 =======
 
+Version 0.3.0 (2018-09-27)
+--------------------------
+
+- Introduces new Serial workflow engine for simple sequential workflow needs.
+- Enhances progress reporting for CWL, Serial and Yadage workflow engines.
+- Simplifies ``reana-client`` command set and usage scenarios.
+- Introduces multi-user capabilities with mandatory access tokens.
+- Adds support for multi-node clusters using shared CephFS volumes.
+- Adds support for Kubernetes 1.11, Minikube 0.28.2.
+- Upgrades CWL workflow engine to use latest ``cwltool`` version.
+- Fixes several bugs such as binary file download with Python 3.
+
 Version 0.2.0 (2018-04-23)
 --------------------------
 
