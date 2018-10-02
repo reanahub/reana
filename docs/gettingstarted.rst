@@ -45,7 +45,8 @@ token:
    $ export REANA_ACCESS_TOKEN=XXXXXXX
 
 You can also easily deploy your own REANA cloud instance by using the
-``reana-cluster`` command line utility:
+``reana-cluster`` command line utility (see `prerequisites
+<https://reana-cluster.readthedocs.io/en/latest/userguide.html#prerequisites>`_):
 
 .. code-block:: console
 
@@ -59,7 +60,7 @@ You can also easily deploy your own REANA cloud instance by using the
    $ reana-cluster init
    $ reana-cluster status
    $ # set environment variables for reana-client
-   $ eval $(reana-cluster env --incude-admin-token) # if you are admin
+   $ eval $(reana-cluster env --incude-admin-token) # since you are admin
 
 See `REANA-Cluster's Getting started guide
 <http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_ for more
