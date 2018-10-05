@@ -1021,12 +1021,20 @@ def run_example(component, workflow_engine, output, sleep):  # noqa: D301
     for component in components:
         for workflow_engine in workflow_engines:
             workflow_name = construct_workflow_name(component, workflow_engine)
-            # run example workflow:
+            # create workflow:
             for cmd in [
                 'reana-client create -f {0} -n {1}'.format(
                     reana_yaml[workflow_engine], workflow_name),
-                'reana-client upload ./code ./data -w {0}'.format(
-                    workflow_name),
+            ]:
+                run_command(cmd, component)
+            # upload various inputs
+            for inputdir in ['inputs', 'code', 'data']:
+                if os.path.exists(get_srcdir(component) + os.sep + inputdir):
+                    cmd = 'reana-client upload ./{0} -w {1}'.format(
+                        inputdir, workflow_name)
+                    run_command(cmd, component)
+            # run workflow
+            for cmd in [
                 'reana-client start -w {0}'.format(
                     workflow_name),
                 'sleep {0}'.format(sleep),
