@@ -15,7 +15,7 @@
    :target: https://gitter.im/reanahub/reana?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
 
 .. image:: https://img.shields.io/github/license/reanahub/reana.svg
-   :target: https://github.com/reanahub/reana/blob/master/COPYING
+   :target: https://github.com/reanahub/reana/blob/master/LICENSE
 
 About
 -----
