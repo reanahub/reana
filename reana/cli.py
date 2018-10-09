@@ -969,13 +969,9 @@ def setup_environment():  # noqa: D301
     suitable for current local REANA cluster deployment. The output should be
     passed to eval.
     """
-    my_reana_server_url_cmd = subprocess.getoutput('reana-cluster env')
-    my_reana_access_token = subprocess.getoutput('kubectl logs -l app=server |'
-                                                 ' grep access_token: |'
-                                                 ' awk \'{print $NF;}\' |'
-                                                 ' tr -d \'[:space:]\'')
-    print(my_reana_server_url_cmd)
-    print('export REANA_ACCESS_TOKEN={0}'.format(my_reana_access_token))
+    my_reana_env_variables = subprocess.getoutput('reana-cluster env'
+                                                  ' --include-admin-token')
+    print(my_reana_env_variables)
 
 
 @click.option('--component', '-c', multiple=True,
