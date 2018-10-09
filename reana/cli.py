@@ -6,7 +6,7 @@
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 
-"""Helper scripts for REANA developers. Run `reana --help` for help."""
+"""Helper scripts for REANA developers. Run `reana-dev --help` for help."""
 
 import os
 import subprocess
@@ -98,7 +98,7 @@ def cli():  # noqa: D301
         \b
         $ # prepare directory that will hold sources
         $ mkdir $REANA_SRCDIR && cd $REANA_SRCDIR
-        $ # install reana developer helper script
+        $ # install reana-dev developer helper script
         $ mkvirtualenv reana
         $ pip install git+git://github.com/reanahub/reana.git#egg=reana
         $ # run ssh-agent locally to simplify GitHub interaction
@@ -110,9 +110,9 @@ def cli():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ reana git-fork -c ALL
-        $ eval "$(reana git-fork -c ALL)"
-        $ reana git-clone -c ALL
+        $ reana-dev git-fork -c ALL
+        $ eval "$(reana-dev git-fork -c ALL)"
+        $ reana-dev git-clone -c ALL
 
     How to install latest ``master`` REANA cluster and client CLI scripts:
 
@@ -120,8 +120,8 @@ def cli():  # noqa: D301
 
         \b
         $ workon reana
-        $ reana install-client
-        $ reana install-cluster
+        $ reana-dev install-client
+        $ reana-dev install-cluster
 
     How to compile and deploy latest ``master`` REANA cluster:
 
@@ -130,8 +130,8 @@ def cli():  # noqa: D301
         \b
         $ minikube start --kubernetes-version="v1.11.2" --vm-driver=kvm2
         $ eval $(minikube docker-env)
-        $ reana docker-build
-        $ reana docker-images
+        $ reana-dev docker-build
+        $ reana-dev docker-images
         $ pip install reana-cluster
         $ reana-cluster -f reana-cluster-latest.yaml init
 
@@ -140,14 +140,14 @@ def cli():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ eval $(reana setup-environment)
+        $ eval $(reana-dev setup-environment)
 
     How to run full REANA example using a given workflow engine:
 
     .. code-block:: console
 
         \b
-        $ reana run-example -c reana-demo-root6-roofit -w serial -s 10
+        $ reana-dev run-example -c reana-demo-root6-roofit -w serial -s 10
 
     How to test one component pull request:
 
@@ -155,8 +155,8 @@ def cli():  # noqa: D301
 
         \b
         $ cd reana-job-controller
-        $ reana git-checkout -b . 72 --fetch
-        $ reana docker-build -c .
+        $ reana-dev git-checkout -b . 72 --fetch
+        $ reana-dev docker-build -c .
         $ kubectl delete pod -l app=job-controller
 
     How to test multiple component branches:
@@ -164,10 +164,10 @@ def cli():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ reana git-checkout -b reana-job-controller 72
-        $ reana git-checkout -b reana-workflow-controller 98
-        $ reana git-status
-        $ reana docker-build
+        $ reana-dev git-checkout -b reana-job-controller 72
+        $ reana-dev git-checkout -b reana-workflow-controller 98
+        $ reana-dev git-status
+        $ reana-dev docker-build
         $ kubectl delete pod -l app=job-controller
         $ kubectl delete pod -l app=workflow-controller
 
@@ -176,12 +176,12 @@ def cli():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ reana git-clean
-        $ reana docker-build --no-cache
+        $ reana-dev git-clean
+        $ reana-dev docker-build --no-cache
         $ # we should now run one more test with non-cached ``latest``
         $ # once it works, we can tag and push
-        $ reana docker-build -t 0.3.0.dev20180625
-        $ reana docker-push -t 0.3.0.dev20180625
+        $ reana-dev docker-build -t 0.3.0.dev20180625
+        $ reana-dev docker-push -t 0.3.0.dev20180625
         $ # we should now make PR for ``reana-cluster.yaml`` to use given tag
 
     """
@@ -473,7 +473,7 @@ def git_fork(component, browser):  # noqa: D301
         click.echo('# Run the following eval and then complete the fork'
                    ' process in your browser.')
         click.echo('#')
-        click.echo('# eval "$(reana git-fork -b {0} {1})"'.format(
+        click.echo('# eval "$(reana-dev git-fork -b {0} {1})"'.format(
             browser,
             "".join([" -c {0}".format(c) for c in component])))
     for component in components:

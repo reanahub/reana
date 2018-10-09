@@ -77,7 +77,7 @@ setup(
     zip_safe=False,
     entry_points={
       'console_scripts': [
-          'reana = reana.cli:cli',
+          'reana-dev = reana.cli:cli',
       ],
     },
     extras_require=extras_require,
