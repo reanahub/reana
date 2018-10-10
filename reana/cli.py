@@ -78,6 +78,18 @@ WORKFLOW_ENGINE_LIST_ALL = [
     'yadage'
 ]
 
+COMPONENT_PODS = {
+    'reana-workflow-engine-cwl': 'cwl-default-worker',
+    'reana-db': 'db',
+    'reana-job-controller': 'job-controller',
+    'reana-message-broker': 'message-broker',
+    'reana-workflow-engine-serial': 'serial-default-worker',
+    'reana-server': 'server',
+    'reana-workflow-controller': 'workflow-controller',
+    'reana-workflow-monitor': 'workflow-monitor',
+    'reana-workflow-engine-yadage': 'yadage-default-worker',
+}
+
 
 @click.group()
 def cli():  # noqa: D301
@@ -157,7 +169,7 @@ def cli():  # noqa: D301
         $ cd reana-job-controller
         $ reana-dev git-checkout -b . 72 --fetch
         $ reana-dev docker-build -c .
-        $ kubectl delete pod -l app=job-controller
+        $ reana-dev kubectl-delete-pod -c .
 
     How to test multiple component branches:
 
@@ -168,8 +180,8 @@ def cli():  # noqa: D301
         $ reana-dev git-checkout -b reana-workflow-controller 98
         $ reana-dev git-status
         $ reana-dev docker-build
-        $ kubectl delete pod -l app=job-controller
-        $ kubectl delete pod -l app=workflow-controller
+        $ reana-dev kubectl-delete-pod -c reana-job-controller
+        $ reana-dev kubectl-delete-pod -c reana-workflow-controller
 
     How to release and push cluster component images:
 
@@ -1047,3 +1059,40 @@ def run_example(component, workflow_engine, output, sleep):  # noqa: D301
                 run_command(cmd, component)
     # report status; everything was OK
     run_command('echo OK', component)
+
+
+@click.option('--component', '-c', multiple=True, default=['ALL'],
+              help='Which components? [shortname|name|.|CLUSTER|ALL]')
+@cli.command(name='kubectl-delete-pod')
+def kubectl_delete_pod(component):  # noqa: D301
+    """Delete REANA component's pod.
+
+    If option ``component`` is not used, all pods will be deleted.
+
+    \b
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-job-controller';
+                         * (2) short component name such as 'r-j-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :type component: str
+
+    """
+    if "ALL" in component:
+        cmd = 'kubectl delete --all pods --wait=false'
+        run_command(cmd)
+    else:
+        components = select_components(component)
+        for component in components:
+            if component in COMPONENT_PODS:
+                cmd = 'kubectl delete pod --wait=false -l app={0}'.format(
+                    COMPONENT_PODS[component])
+                run_command(cmd, component)
