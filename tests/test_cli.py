@@ -24,6 +24,18 @@ def test_shorten_component_name():
         assert name_short == shorten_component_name(name_long)
 
 
+def test_get_default_output_for_example():
+    """Tests for get_default_output_for_example()."""
+    from reana.cli import get_default_output_for_example
+    for (example, output) in (
+            ('', ('plot.png',)),
+            ('reana-demo-helloworld', ('greetings.txt',)),
+            ('reana-demo-root6-roofit', ('plot.png',)),
+            ('reana-demo-alice-lego-train-test-run', ('plot.pdf', )),
+    ):
+        assert output == get_default_output_for_example(example)
+
+
 def test_is_component_dockerised():
     """Tests for is_component_dockerised()."""
     from reana.cli import is_component_dockerised

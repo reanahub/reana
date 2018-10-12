@@ -90,6 +90,14 @@ COMPONENT_PODS = {
     'reana-workflow-engine-yadage': 'yadage-default-worker',
 }
 
+EXAMPLE_OUTPUTS = {
+    'reana-demo-helloworld': ('greetings.txt',),
+    'reana-demo-bsm-search': ('prefit.pdf', 'postfit.pdf'),
+    'reana-demo-alice-lego-train-test-run': ('plot.pdf',),
+    'reana-demo-atlas-recast': ('pre.png', 'limit.png', 'limit_data.json'),
+    '*': ('plot.png',)
+}
+
 
 @click.group()
 def cli():  # noqa: D301
@@ -438,6 +446,19 @@ def display_message(msg, component=''):
     :type component: str
     """
     click.secho('[{0}] {1}'.format(component, msg), bold=True)
+
+
+def get_default_output_for_example(example):
+    """Return default output file name for given example.
+
+    :param example: name of the component
+    :return: Tuple with output file name(s)
+    """
+    try:
+        output = EXAMPLE_OUTPUTS[example]
+    except KeyError:
+        output = EXAMPLE_OUTPUTS['*']
+    return output
 
 
 @cli.command()
@@ -993,8 +1014,7 @@ def setup_environment():  # noqa: D301
               default=['cwl', 'serial', 'yadage'],
               help='Which workflow engine to run? [cwl,serial,yadage]')
 @click.option('--output', '-o', multiple=True,
-              default=['plot.png'],
-              help='Expected output file? [plot.png]')
+              help='Expected output file?')
 @click.option('--sleep', '-s', default=60,
               help='How much seconds to wait for results? [60]')
 @cli.command(name='run-example')
@@ -1053,6 +1073,7 @@ def run_example(component, workflow_engine, output, sleep):  # noqa: D301
             ]:
                 run_command(cmd, component)
             # verify output file presence:
+            output = output or get_default_output_for_example(component)
             for output_file in output:
                 cmd = 'reana-client list -w {0} | grep -q {1}'.format(
                     workflow_name, output_file)
