@@ -95,15 +95,15 @@ REANA component for messaging needs.
 - known issues: `<https://github.com/reanahub/reana-message-broker/issues>`_
 - documentation: `<https://reana-message-broker.readthedocs.io/>`_
 
-reana-pytest-commons
-~~~~~~~~~~~~~~~~~~~~
+pytest-reana
+~~~~~~~~~~~~
 
 Shared pytest fixtures and other common testing utilities.
 
-- source code: `<https://github.com/reanahub/reana-pytest-commons>`_
-- release notes: `<https://github.com/reanahub/reana-pytest-commons/releases>`_
-- known issues: `<https://github.com/reanahub/reana-pytest-commons/issues>`_
-- documentation: `<https://reana-pytest-commons.readthedocs.io/>`_
+- source code: `<https://github.com/reanahub/pytest-reana>`_
+- release notes: `<https://github.com/reanahub/pytest-reana/releases>`_
+- known issues: `<https://github.com/reanahub/pytest-reana/issues>`_
+- documentation: `<https://pytest-reana.readthedocs.io/>`_
 
 reana-server
 ~~~~~~~~~~~~
