@@ -384,8 +384,10 @@ follows:
 
 .. code-block:: console
 
+    $ # create new virtual environment
+    $ virtualenv myreana
+    $ source myreana/bin/activate
     $ # install REANA client:
-    $ mkvirtualenv reana-client
     $ pip install reana-client
     $ # connect to some REANA cloud instance:
     $ export REANA_SERVER_URL=https://reana.cern.ch/

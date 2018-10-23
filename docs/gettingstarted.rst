@@ -53,8 +53,10 @@ You can also easily deploy your own REANA cloud instance by using the
    $ # install kubectl 1.11.2 and minikube 0.28.2
    $ sudo dpkg -i kubectl*.deb minikube*.deb
    $ minikube start --kubernetes-version="v1.11.2"
+   $ # create new virtual environment
+   $ virtualenv ~/.virtualenvs/myreana
+   $ source ~/.virtualenvs/myreana/bin/activate
    $ # install reana-cluster utility
-   $ mkvirtualenv reana-cluster
    $ pip install reana-cluster
    $ # deploy new cluster and check progress
    $ reana-cluster init
@@ -74,22 +76,24 @@ command line client:
 
 .. code-block:: console
 
-   $ # install REANA client
-   $ mkvirtualenv reana-client
-   $ pip install reana-client
-   $ # create new workflow
-   $ reana-client create -n my-analysis
-   $ export REANA_WORKON=my-analysis
-   $ # upload input code and data to the workspace
-   $ reana-client upload
-   $ # start computational workflow
-   $ reana-client start
-   $ # check its progress
-   $ reana-client status
-   $ # list workspace files
-   $ reana-client list
-   $ # download output results
-   $ reana-client download
+    $ # create new virtual environment
+    $ virtualenv ~/.virtualenvs/myreana
+    $ source ~/.virtualenvs/myreana/bin/activate
+    $ # install REANA client
+    $ pip install reana-client
+    $ # create new workflow
+    $ reana-client create -n my-analysis
+    $ export REANA_WORKON=my-analysis
+    $ # upload input code and data to the workspace
+    $ reana-client upload
+    $ # start computational workflow
+    $ reana-client start
+    $ # check its progress
+    $ reana-client status
+    $ # list workspace files
+    $ reana-client list
+    $ # download output results
+    $ reana-client download
 
 See `REANA-Client's Getting started guide
 <http://reana-client.readthedocs.io/en/latest/gettingstarted.html>`_ for more

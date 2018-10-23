@@ -118,8 +118,10 @@ def cli():  # noqa: D301
         \b
         $ # prepare directory that will hold sources
         $ mkdir $REANA_SRCDIR && cd $REANA_SRCDIR
+        $ # create new virtual environment
+        $ virtualenv ~/.virtualenvs/myreana
+        $ source ~/.virtualenvs/myreana/bin/activate
         $ # install reana-dev developer helper script
-        $ mkvirtualenv reana
         $ pip install git+git://github.com/reanahub/reana.git#egg=reana
         $ # run ssh-agent locally to simplify GitHub interaction
         $ eval "$(ssh-agent -s)"

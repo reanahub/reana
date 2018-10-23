@@ -197,14 +197,16 @@ script. The typical usage scenario goes as follows:
 
 .. code-block:: console
 
-   $ # install reana-cluster utility
-   $ mkvirtualenv reana-cluster
-   $ pip install reana-cluster
-   $ # deploy new cluster and check progress
-   $ reana-cluster init
-   $ reana-cluster status
-   $ # set environment variables for reana-client
-   $ eval $(reana-cluster env --incude-admin-token) # since you are admin
+    $ # create new virtual environment
+    $ virtualenv ~/.virtualenvs/myreana
+    $ source ~/.virtualenvs/myreana/bin/activate
+    $ # install reana-cluster utility
+    $ pip install reana-cluster
+    $ # deploy new cluster and check progress
+    $ reana-cluster init
+    $ reana-cluster status
+    $ # set environment variables for reana-client
+    $ eval $(reana-cluster env --incude-admin-token) # since you are admin
 
 For more information, please see `REANA-Cluster's Getting started guide
 <http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_.
