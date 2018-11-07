@@ -359,7 +359,7 @@ cloud; we need to capture the above structure by means of a ``reana.yaml`` file:
 
 .. code-block:: yaml
 
-    version: 0.3.0
+    version: 0.4.0
     inputs:
       files:
         - code/mycode.py
@@ -384,24 +384,26 @@ follows:
 
 .. code-block:: console
 
-    $ # install REANA client:
-    $ mkvirtualenv reana-client
+    $ # create new virtual environment
+    $ virtualenv ~/.virtualenvs/myreana
+    $ source ~/.virtualenvs/myreana/bin/activate
+    $ # install REANA client
     $ pip install reana-client
-    $ # connect to some REANA cloud instance:
+    $ # connect to some REANA cloud instance
     $ export REANA_SERVER_URL=https://reana.cern.ch/
     $ export REANA_ACCESS_TOKEN=XXXXXXX
-    $ # create new workflow:
+    $ # create new workflow
     $ reana-client create -n my-analysis
     $ export REANA_WORKON=my-analysis
-    $ # upload input code and data to the workspace:
+    $ # upload input code and data to the workspace
     $ reana-client upload ./code ./data
-    $ # start computational workflow:
+    $ # start computational workflow
     $ reana-client start
-    $ # ... should be finished in about a minute:
+    $ # ... should be finished in about a minute
     $ reana-client status
-    $ # list workspace files:
+    $ # list workspace files
     $ reana-client list
-    $ # download output results:
+    $ # download output results
     $ reana-client download results/plot.png
 
 We are done! Our outputs plot should be located in the ``results`` directory.

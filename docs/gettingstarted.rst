@@ -16,7 +16,7 @@ Structure your research data analysis repository into input "data" and
 
 .. code-block:: yaml
 
-    version: 0.3.0
+    version: 0.4.0
     inputs:
       files:
         - code/mycode.py
@@ -53,8 +53,10 @@ You can also easily deploy your own REANA cloud instance by using the
    $ # install kubectl 1.11.2 and minikube 0.28.2
    $ sudo dpkg -i kubectl*.deb minikube*.deb
    $ minikube start --kubernetes-version="v1.11.2"
+   $ # create new virtual environment
+   $ virtualenv ~/.virtualenvs/myreana
+   $ source ~/.virtualenvs/myreana/bin/activate
    $ # install reana-cluster utility
-   $ mkvirtualenv reana-cluster
    $ pip install reana-cluster
    $ # deploy new cluster and check progress
    $ reana-cluster init
@@ -74,8 +76,10 @@ command line client:
 
 .. code-block:: console
 
+   $ # create new virtual environment
+   $ virtualenv ~/.virtualenvs/myreana
+   $ source ~/.virtualenvs/myreana/bin/activate
    $ # install REANA client
-   $ mkvirtualenv reana-client
    $ pip install reana-client
    $ # create new workflow
    $ reana-client create -n my-analysis

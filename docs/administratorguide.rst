@@ -197,8 +197,10 @@ script. The typical usage scenario goes as follows:
 
 .. code-block:: console
 
+   $ # create new virtual environment
+   $ virtualenv ~/.virtualenvs/myreana
+   $ source ~/.virtualenvs/myreana/bin/activate
    $ # install reana-cluster utility
-   $ mkvirtualenv reana-cluster
    $ pip install reana-cluster
    $ # deploy new cluster and check progress
    $ reana-cluster init
