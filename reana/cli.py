@@ -648,6 +648,33 @@ def git_clean(component):  # noqa: D301
             run_command(cmd, component)
 
 
+@click.option('--component', '-c', multiple=True, default=['CLUSTER'],
+              help='Which components? [shortname|name|.|CLUSTER|ALL]')
+@cli.command(name='git-branch')
+def git_branch(component):  # noqa: D301
+    """Display information about locally checked-out branches.
+
+    \b
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-job-controller';
+                         * (2) short component name such as 'r-j-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :type component: str
+    """
+    for component in select_components(component):
+        cmd = 'git branch'
+        run_command(cmd, component)
+
+
 @click.option('--branch', '-b', nargs=2, multiple=True,
               help='Which PR? [number component]')
 @click.option('--fetch', is_flag=True, default=False)
