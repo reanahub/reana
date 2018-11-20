@@ -769,6 +769,48 @@ def git_upgrade(component):  # noqa: D301
 
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
               help='Which components? [shortname|name|.|CLUSTER|ALL]')
+@click.option('--number', '-n', default=6,
+              help='Number of commits to output [6]')
+@click.option('--all', is_flag=True, default=False,
+              help="Show all references?")
+@cli.command(name='git-log')
+def git_log(component, number, all):  # noqa: D301
+    """Show commit logs in given component repositories.
+
+    \b
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-job-controller';
+                         * (2) short component name such as 'r-j-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :param number: The number of commits to output. [6]
+    :param all: Show all references? [6]
+    :type component: str
+    :type number: int
+    :type all: bool
+    """
+    for component in select_components(component):
+        cmd = 'git log -n {0} --graph --decorate' \
+              ' --pretty=format:"%C(blue)%d%Creset' \
+              ' %C(yellow)%h%Creset %s, %C(bold green)%an%Creset,' \
+              ' %C(green)%cd%Creset" --date=relative'.format(number)
+        if all:
+            cmd += ' --all'
+        msg = cmd[0:cmd.find('--pretty')] + '...'
+        display_message(msg, component)
+        run_command(cmd, component, display=False)
+
+
+@click.option('--component', '-c', multiple=True, default=['CLUSTER'],
+              help='Which components? [shortname|name|.|CLUSTER|ALL]')
 @cli.command(name='git-diff')
 def git_diff(component):  # noqa: D301
     """Diff checked-out REANA local source code repositories.
