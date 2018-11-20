@@ -423,23 +423,27 @@ def construct_workflow_name(example, workflow_engine):
     return output
 
 
-def run_command(cmd, component=''):
+def run_command(cmd, component='', display=True):
     """Run given command in the given component source directory.
 
     Exit in case of troubles.
 
     :param cmd: shell command to run
     :param component: standard component name
+    :param display: should we display command to run?
     :type cmd: str
     :type component: str
+    :type display: bool
     """
-    click.secho('[{0}] {1}'.format(component, cmd), bold=True)
+    if display:
+        click.secho('[{0}] {1}'.format(component, cmd), bold=True)
     if component:
         os.chdir(get_srcdir(component))
     try:
         subprocess.run(cmd, shell=True, check=True)
     except subprocess.CalledProcessError as err:
-        click.secho('[{0}] {1}'.format(component, err), bold=True)
+        if display:
+            click.secho('[{0}] {1}'.format(component, err), bold=True)
         sys.exit(err.returncode)
 
 
@@ -570,8 +574,10 @@ def git_clone(user, component):  # noqa: D301
 
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
               help='Which components? [shortname|name|.|CLUSTER|ALL]')
+@click.option('--short', '-s', is_flag=True, default=False,
+              help="Show git status short format details?")
 @cli.command(name='git-status')
-def git_status(component):  # noqa: D301
+def git_status(component, short):  # noqa: D301
     """Report status of REANA source repositories.
 
     \b
@@ -588,6 +594,7 @@ def git_status(component):  # noqa: D301
                                cover all REANA client components;
                          * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param verbose: Show git status details? [default=False]
     :type component: str
     """
     components = select_components(component)
@@ -599,6 +606,9 @@ def git_status(component):  # noqa: D301
             click.secho(' @ {0} {1}'.format(branch, commit))
         else:
             click.secho(' @ {0} {1}'.format(branch, commit), fg='red')
+        if short:
+            cmd = 'git status --short'
+            run_command(cmd, component, display=False)
 
 
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
