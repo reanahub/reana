@@ -49,16 +49,21 @@ REPO_LIST_ALL = [
 ]
 
 REPO_LIST_CLIENT = [
+    # shared utils
+    'pytest-reana',
     'reana-commons',
+    # client
     'reana-client',
 ]
 
 REPO_LIST_CLUSTER = [
+    # shared utils
+    'pytest-reana',
     'reana-commons',
     'reana-db',
+    # cluster components
     'reana-job-controller',
     'reana-message-broker',
-    'pytest-reana',
     'reana-server',
     'reana-workflow-controller',
     'reana-workflow-engine-cwl',
