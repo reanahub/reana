@@ -440,7 +440,7 @@ def run_command(cmd, component='', display=True):
     if component:
         os.chdir(get_srcdir(component))
     try:
-        subprocess.run(cmd, shell=True, check=True)
+        subprocess.check_call(cmd, shell=True)
     except subprocess.CalledProcessError as err:
         if display:
             click.secho('[{0}] {1}'.format(component, err), bold=True)
