@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018 CERN.
+# Copyright (C) 2018, 2019 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -154,12 +154,15 @@ def cli():  # noqa: D301
     .. code-block:: console
 
         \b
+        $ # install minikube and set docker environment
         $ minikube start --kubernetes-version="v1.11.2" --vm-driver=kvm2
         $ eval $(minikube docker-env)
+        $ # option (a): cluster in production-like mode
         $ reana-dev docker-build
-        $ reana-dev docker-images
-        $ pip install reana-cluster
         $ reana-cluster -f reana-cluster-latest.yaml init
+        $ # option (b): cluster in developer-like debug-friendly mode
+        $ reana-dev docker-build -b DEBUG=true
+        $ reana-cluster -f reana-cluster-dev.yaml init
 
     How to set up your shell environment variables:
 
@@ -870,9 +873,11 @@ def git_push(full, component):  # noqa: D301
               help='Image tag [latest]')
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
               help='Which components? [name|CLUSTER]')
+@click.option('--build-arg', '-b', default='', multiple=True,
+              help='Any build arguments? (e.g. `-b DEBUG=true`)')
 @click.option('--no-cache', is_flag=True)
 @cli.command(name='docker-build')
-def docker_build(user, tag, component, no_cache):  # noqa: D301
+def docker_build(user, tag, component, build_arg, no_cache):  # noqa: D301
     """Build REANA component images.
 
     \b
@@ -891,21 +896,23 @@ def docker_build(user, tag, component, no_cache):  # noqa: D301
                                all REANA repositories.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker tag to use. [default=latest]
+    :param build_arg: Optional docker build argument. (e.g. DEBUG=true)
     :param no_cache: Flag instructing to avoid using cache. [default=False]
     :type component: str
     :type user: str
     :type tag: str
+    :type build_arg: str
     :type no_cache: bool
     """
     components = select_components(component)
     for component in components:
         if is_component_dockerised(component):
+            cmd = 'docker build'
+            for arg in build_arg:
+                cmd += ' --build-arg {0}'.format(arg)
             if no_cache:
-                cmd = 'docker build --no-cache -t {0}/{1}:{2} .'.format(
-                    user, component, tag)
-            else:
-                cmd = 'docker build -t {0}/{1}:{2} .'.format(
-                    user, component, tag)
+                cmd += ' --no-cache'
+            cmd += ' -t {0}/{1}:{2} .'.format(user, component, tag)
             run_command(cmd, component)
         else:
             msg = 'Ignoring this component that does not contain' \

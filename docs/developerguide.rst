@@ -10,12 +10,12 @@ Local development workflow
 --------------------------
 
 REANA cluster is composed of several micro-services with multiple independent
-source code repositories. ``reana`` is a helper development script that
+source code repositories. ``reana-dev`` is a helper development script that
 facilitates working with multiple repositories for local development and
 integration testing purposes.
 
 .. click:: reana.cli:cli
-   :prog: reana
+   :prog: reana-dev
 
 You can use ``--help`` option to see the detailed help for each command.
 
@@ -31,10 +31,8 @@ working on in development mode and we restart the corresponding pod:
 .. code-block:: console
 
    $ cd src/reana-server
-   $ # if we are not connected to the minikube docker daemon we should do it
-   $ eval "$(minikube docker-env)"
-   $ docker build . --build-arg DEBUG=true -t reanahub/reana-server:latest
-   $ kubectl delete pod --selector=app="server"
+   $ reana-dev docker-build -c . -b DEBUG=true
+   $ reana-dev kubectl-delete-pod -c .
 
 Let us now introduce `wdb` breakpoint as the first instruction of the
 first instruction of the `get_workflows()` function located in
