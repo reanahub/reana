@@ -1105,12 +1105,21 @@ def setup_environment():  # noqa: D301
 @click.option('--workflow_engine', '-w', multiple=True,
               default=['cwl', 'serial', 'yadage'],
               help='Which workflow engine to run? [cwl,serial,yadage]')
-@click.option('--output', '-o', multiple=True,
+@click.option('--file', '-f', multiple=True,
               help='Expected output file?')
 @click.option('--sleep', '-s', default=60,
               help='How much seconds to wait for results? [60]')
+@click.option('--parameter', '-p', 'parameters', multiple=True,
+              help='Additional input parameters to override '
+                   'original ones from reana.yaml. '
+                   'E.g. -p myparam1=myval1 -p myparam2=myval2.')
+@click.option('-o', '--option', 'options',
+              multiple=True,
+              help='Additional operatioal options for the workflow execution. '
+                   'E.g. CACHE=off.')
 @cli.command(name='run-example')
-def run_example(component, workflow_engine, output, sleep):  # noqa: D301
+def run_example(component, workflow_engine,
+                file, sleep, parameters, options):  # noqa: D301
     """Run given REANA example with given workflow engine.
 
     \b
@@ -1120,11 +1129,16 @@ def run_example(component, workflow_engine, output, sleep):  # noqa: D301
     :param workflow_engine: The option ``workflow_engine`` can be repeated. The
                      value is the workflow engine to use to run the example.
                      [default=cwl,serial,yadage]
-    :param output: The option ``output`` can be repeated. The value is the
+    :param file: The option ``file`` can be repeated. The value is the
                    expected output file the workflow should produce.
                      [default=plot.png]
     :param sleep: How much seconds to sleep in order to wait for workflow to be
                   finished before checking the results? [default=60]
+    :param parameters: Additional input parameters to override original ones
+                       from reana.yaml.
+                       E.g. -p myparam1=myval1 -p myparam2=myval2.
+    :param options: Additional operatioal options for the workflow execution.
+                    E.g. CACHE=off.
 
     :type component: str
     :type workflow_engine: str
@@ -1154,9 +1168,13 @@ def run_example(component, workflow_engine, output, sleep):  # noqa: D301
                         inputdir, workflow_name)
                     run_command(cmd, component)
             # run workflow
+            input_parameters = ' '.join(
+                ['-p ' + parameter for parameter in parameters])
+            operational_options = ' '.join(
+                ['-o ' + option for option in options])
             for cmd in [
-                'reana-client start -w {0}'.format(
-                    workflow_name),
+                'reana-client start -w {0} {1} {2}'.format(
+                    workflow_name, input_parameters, operational_options),
                 'sleep {0}'.format(sleep),
                 'reana-client status -w {0}'.format(
                     workflow_name),
@@ -1165,7 +1183,7 @@ def run_example(component, workflow_engine, output, sleep):  # noqa: D301
             ]:
                 run_command(cmd, component)
             # verify output file presence:
-            output = output or get_default_output_for_example(component)
+            output = file or get_default_output_for_example(component)
             for output_file in output:
                 cmd = 'reana-client list -w {0} | grep -q {1}'.format(
                     workflow_name, output_file)
