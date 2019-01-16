@@ -155,7 +155,8 @@ def cli():  # noqa: D301
 
         \b
         $ # install minikube and set docker environment
-        $ minikube start --kubernetes-version="v1.11.2" --vm-driver=kvm2
+        $ minikube start --kubernetes-version="v1.12.1" --vm-driver=kvm2 \
+          --feature-gates="TTLAfterFinished=true"
         $ eval $(minikube docker-env)
         $ # option (a): cluster in production-like mode
         $ reana-dev docker-build

@@ -50,9 +50,10 @@ You can also easily deploy your own REANA cloud instance by using the
 
 .. code-block:: console
 
-   $ # install kubectl 1.11.2 and minikube 0.28.2
+   $ # install kubectl 1.13.1 and minikube 0.32.0
    $ sudo dpkg -i kubectl*.deb minikube*.deb
-   $ minikube start --kubernetes-version="v1.11.2"
+   $ minikube start --kubernetes-version="v1.12.1" \
+     --feature-gates="TTLAfterFinished=true"
    $ # create new virtual environment
    $ virtualenv ~/.virtualenvs/myreana
    $ source ~/.virtualenvs/myreana/bin/activate
