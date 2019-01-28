@@ -31,7 +31,7 @@ working on in development mode and we restart the corresponding pod:
 .. code-block:: console
 
    $ cd src/reana-server
-   $ reana-dev docker-build -c . -b DEBUG=true
+   $ reana-dev docker-build -t latest -c . -b DEBUG=true
    $ reana-dev kubectl-delete-pod -c .
 
 Let us now introduce `wdb` breakpoint as the first instruction of the

@@ -159,10 +159,10 @@ def cli():  # noqa: D301
           --feature-gates="TTLAfterFinished=true"
         $ eval $(minikube docker-env)
         $ # option (a): cluster in production-like mode
-        $ reana-dev docker-build
+        $ reana-dev docker-build -t latest
         $ reana-cluster -f reana-cluster-latest.yaml init
         $ # option (b): cluster in developer-like debug-friendly mode
-        $ reana-dev docker-build -b DEBUG=true
+        $ reana-dev docker-build -t latest -b DEBUG=true
         $ reana-cluster -f reana-cluster-dev.yaml init
 
     How to set up your shell environment variables:
@@ -186,7 +186,7 @@ def cli():  # noqa: D301
         \b
         $ cd reana-job-controller
         $ reana-dev git-checkout -b . 72 --fetch
-        $ reana-dev docker-build -c .
+        $ reana-dev docker-build -t latest -c .
         $ reana-dev kubectl-delete-pod -c .
 
     How to test multiple component branches:
@@ -197,7 +197,7 @@ def cli():  # noqa: D301
         $ reana-dev git-checkout -b reana-job-controller 72
         $ reana-dev git-checkout -b reana-workflow-controller 98
         $ reana-dev git-status
-        $ reana-dev docker-build
+        $ reana-dev docker-build -t latest
         $ reana-dev kubectl-delete-pod -c reana-job-controller
         $ reana-dev kubectl-delete-pod -c reana-workflow-controller
 
@@ -207,7 +207,7 @@ def cli():  # noqa: D301
 
         \b
         $ reana-dev git-clean
-        $ reana-dev docker-build --no-cache
+        $ reana-dev docker-build -t latest --no-cache
         $ # we should now run one more test with non-cached ``latest``
         $ # once it works, we can tag and push
         $ reana-dev docker-build -t 0.3.0.dev20180625
