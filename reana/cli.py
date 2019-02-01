@@ -644,8 +644,8 @@ def git_status(component, short):  # noqa: D301
 def git_clean(component):  # noqa: D301
     """Clean REANA source repository code tree.
 
-    Removes pyc, eggs, _build and other leftover friends.
-    Less aggressive then "git clean -x".
+    Removes all non-source-controlled files in the component source code
+    repository. Useful to run before building container images.
 
     \b
     :param components: The option ``component`` can be repeated. The value may
@@ -666,11 +666,7 @@ def git_clean(component):  # noqa: D301
     components = select_components(component)
     for component in components:
         for cmd in [
-            'find . -name "*.pyc" -delete',
-            'find . -type d -name "*.egg-info" -exec rm -rf {} \\;',
-            'find . -type d -name ".eggs" -exec rm -rf {} \\;',
-            'find . -type d -name __pycache__ -delete',
-            'find docs -type d -name "_build" -exec rm -rf {} \\;'
+            'git clean -x -f -d',
         ]:
             run_command(cmd, component)
 
