@@ -1203,14 +1203,14 @@ def run_example(component, workflow_engine,
                 'sleep {0}'.format(sleep),
                 'reana-client status -w {0}'.format(
                     workflow_name),
-                'reana-client list -w {0}'.format(
+                'reana-client ls -w {0}'.format(
                     workflow_name),
             ]:
                 run_command(cmd, component)
             # verify output file presence:
             output = file or get_default_output_for_example(component)
             for output_file in output:
-                cmd = 'reana-client list -w {0} | grep -q {1}'.format(
+                cmd = 'reana-client ls -w {0} | grep -q {1}'.format(
                     workflow_name, output_file)
                 run_command(cmd, component)
     # report status; everything was OK

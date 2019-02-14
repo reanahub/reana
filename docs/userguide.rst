@@ -402,7 +402,7 @@ follows:
     $ # ... should be finished in about a minute
     $ reana-client status
     $ # list workspace files
-    $ reana-client list
+    $ reana-client ls
     $ # download output results
     $ reana-client download results/plot.png
 
