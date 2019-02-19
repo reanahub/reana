@@ -103,6 +103,21 @@ EXAMPLE_OUTPUTS = {
     '*': ('plot.png',)
 }
 
+COMPONENTS_USING_SHARED_MODULE_COMMONS = [
+    'reana-job-controller',
+    'reana-server',
+    'reana-workflow-controller',
+    'reana-workflow-engine-cwl',
+    'reana-workflow-engine-serial',
+    'reana-workflow-engine-yadage',
+]
+
+COMPONENTS_USING_SHARED_MODULE_DB = [
+    'reana-job-controller',
+    'reana-server',
+    'reana-workflow-controller',
+]
+
 
 @click.group()
 def cli():  # noqa: D301
@@ -200,6 +215,27 @@ def cli():  # noqa: D301
         $ reana-dev docker-build -t latest
         $ reana-dev kubectl-delete-pod -c reana-job-controller
         $ reana-dev kubectl-delete-pod -c reana-workflow-controller
+
+    How to test multiple component branches with commits to shared modules:
+
+    .. code-block:: console
+
+        \b
+        $ reana-dev git-checkout -b reana-commons 72
+        $ reana-dev git-checkout -b reana-db 73
+        $ reana-dev git-checkout -b reana-workflow-controller 98
+        $ reana-dev git-checkout -b reana-server 112
+        $ reana-dev git-submodule --update
+        $ reana-dev install-client
+        $ reana-dev install-cluster
+        $ reana-dev docker-build -t latest
+        $ reana-cluster -f reana-cluster-latest.yaml down
+        $ minikube ssh 'sudo rm -rf /var/reana'
+        $ reana-cluster -f reana-cluster-latest.yaml init
+        $ eval $(reana-dev setup-environment)
+        $ reana-dev run-example -c r-d-helloworld -s 20
+        $ reana-dev git-submodule --delete
+        $ reana-dev git-status -s
 
     How to release and push cluster component images:
 
@@ -666,9 +702,66 @@ def git_clean(component):  # noqa: D301
     components = select_components(component)
     for component in components:
         for cmd in [
-            'git clean -x -f -d',
+            'git clean -d -ff -x',
         ]:
             run_command(cmd, component)
+
+
+@click.option('--update', is_flag=True,
+              help='Update shared modules everywhere?', default=False)
+@click.option('--status', is_flag=True,
+              help='Show status of shared modules everywhere.', default=False)
+@click.option('--delete', is_flag=True,
+              help='Delete shared modules everywhere?', default=False)
+@cli.command(name='git-submodule')
+def git_submodule(update=False, status=False, delete=False):  # noqa: D301
+    """Sync REANA shared modules across all the repositories.
+
+    Take currently checked-out reana-commons and reana-db modules and sync them
+    across REANA components. Useful for building container images with
+    not-yet-released shared modules.
+
+    The option ``--update`` propagates the shared modules across the code base
+    as necessary. Useful before running local docker image building.
+
+    The option ``--status`` shows the information about shared modules.
+
+    The option ``--delete`` removes the shared modules from everywhere. Useful
+    for clean up after testing.
+    """
+    if update:
+        for component in COMPONENTS_USING_SHARED_MODULE_COMMONS:
+            for cmd in [
+                'rsync -az ../reana-commons modules',
+            ]:
+                run_command(cmd, component)
+        for component in COMPONENTS_USING_SHARED_MODULE_DB:
+            for cmd in [
+                'rsync -az ../reana-db modules',
+            ]:
+                run_command(cmd, component)
+    elif delete:
+        for component in set(COMPONENTS_USING_SHARED_MODULE_COMMONS +
+                             COMPONENTS_USING_SHARED_MODULE_DB):
+            for cmd in [
+                'rm -rf ./modules/',
+            ]:
+                run_command(cmd, component)
+    elif status:
+        for component in COMPONENTS_USING_SHARED_MODULE_COMMONS:
+            for cmd in [
+                'git status -s',
+            ]:
+                run_command(cmd, component)
+        for component in COMPONENTS_USING_SHARED_MODULE_DB:
+            for cmd in [
+                    'git status -s',
+            ]:
+                run_command(cmd, component)
+    else:
+        click.echo('Unknown action. Please specify `--update`, `--status` '
+                   ' or `--delete`. Exiting.')
+        sys.exit(1)
 
 
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
