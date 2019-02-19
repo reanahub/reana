@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018 CERN.
+# Copyright (C) 2018, 2019 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -39,21 +39,15 @@ def test_get_default_output_for_example():
 def test_is_component_dockerised():
     """Tests for is_component_dockerised()."""
     from reana.cli import is_component_dockerised
-    if os.environ.get('REANA_SRCDIR'):
-        assert is_component_dockerised(
-            'reana-workflow-controller') is True
-        assert is_component_dockerised(
-            'reana-cluster') is False
+    assert is_component_dockerised(
+        'reana') is False
 
 
 def test_is_component_runnable_example():
     """Tests for is_component_runnable_example()."""
     from reana.cli import is_component_runnable_example
-    if os.environ.get('REANA_SRCDIR'):
-        assert is_component_runnable_example(
-            'reana-workflow-controller') is False
-        assert is_component_runnable_example(
-            'reana-demo-worldpopulation') is True
+    assert is_component_runnable_example(
+        'reana') is False
 
 
 def test_select_components():

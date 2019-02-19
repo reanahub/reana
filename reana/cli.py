@@ -14,10 +14,6 @@ import sys
 
 import click
 
-SRCDIR = os.environ.get('REANA_SRCDIR')
-
-GITHUB_USER = os.environ.get('REANA_GITHUB_USER')
-
 REPO_LIST_ALL = [
     'reana',
     'reana-client',
@@ -123,21 +119,14 @@ COMPONENTS_USING_SHARED_MODULE_DB = [
 def cli():  # noqa: D301
     """Run REANA development and integration commands.
 
-    How to configure your environment:
-
-    .. code-block:: console
-
-        \b
-        $ export REANA_SRCDIR=~/project/reana/src
-        $ export REANA_GITHUB_USER=tiborsimko
-
     How to prepare your environment:
 
     .. code-block:: console
 
         \b
         $ # prepare directory that will hold sources
-        $ mkdir $REANA_SRCDIR && cd $REANA_SRCDIR
+        $ mkdir -p ~/project/reana/src
+        $ cd ~/project/reana/src
         $ # create new virtual environment
         $ virtualenv ~/.virtualenvs/myreana
         $ source ~/.virtualenvs/myreana/bin/activate
@@ -154,7 +143,7 @@ def cli():  # noqa: D301
         \b
         $ reana-dev git-fork -c ALL
         $ eval "$(reana-dev git-fork -c ALL)"
-        $ reana-dev git-clone -c ALL
+        $ reana-dev git-clone -c ALL -u tiborsimko
 
     How to install latest ``master`` REANA cluster and client CLI scripts:
 
@@ -170,8 +159,8 @@ def cli():  # noqa: D301
 
         \b
         $ # install minikube and set docker environment
-        $ minikube start --kubernetes-version="v1.12.1" --vm-driver=kvm2 \
-          --feature-gates="TTLAfterFinished=true"
+        $ minikube start --vm-driver=kvm2 \\
+                         --feature-gates="TTLAfterFinished=true"
         $ eval $(minikube docker-env)
         $ # option (a): cluster in production-like mode
         $ reana-dev docker-build -t latest
@@ -297,6 +286,34 @@ def find_standard_component_name(short_component_name):
         'short_component_name'))
 
 
+def find_reana_srcdir():
+    """Find directory where REANA sources are checked out.
+
+    Try to go up from the current directory until you find the first parent
+    directory where REANA cluster repositories are checked out.
+
+    :return: source code directory for given component
+    :rtype: str
+
+    :raise: exception in case it is not found
+    """
+    # first, try current working directory:
+    srcdir = os.getcwd()
+    if os.path.exists(srcdir + os.sep + 'reana' + os.sep + '.git' +
+                      os.sep + 'config'):
+        return srcdir
+    # second, try from the parent of git toplevel:
+    toplevel = subprocess.check_output(
+        'git rev-parse --show-toplevel', shell=True).decode().rstrip('\r\n')
+    srcdir = toplevel.rsplit(os.sep, 1)[0]
+    if os.path.exists(srcdir + os.sep + 'reana' + os.sep + '.git' +
+                      os.sep + 'config'):
+        return srcdir
+    # fail if not found
+    raise Exception('Cannot find REANA component source directory '
+                    'in {1}.'.format(srcdir))
+
+
 def get_srcdir(component=''):
     """Return source code directory of the given REANA component.
 
@@ -306,17 +323,11 @@ def get_srcdir(component=''):
     :return: source code directory for given component
     :rtype: str
     """
-    if not SRCDIR:
-        click.echo('Please set environment variable REANA_SRCDIR'
-                   ' to the directory that will contain'
-                   ' REANA source code repositories.')
-        click.echo('Example:'
-                   ' $ export REANA_SRCDIR=~/private/project/reana/src')
-        sys.exit(1)
+    reana_srcdir = find_reana_srcdir()
     if component:
-        return SRCDIR + os.sep + component
+        return reana_srcdir + os.sep + component
     else:
-        return SRCDIR
+        return reana_srcdir
 
 
 def get_current_branch(srcdir):
@@ -329,8 +340,9 @@ def get_current_branch(srcdir):
     :rtype: str
     """
     os.chdir(srcdir)
-    return subprocess.getoutput('git branch 2>/dev/null | '
-                                'grep "^*" | colrm 1 2')
+    return subprocess.check_output(
+        'git branch 2>/dev/null | grep "^*" | colrm 1 2',
+        shell=True).decode().rstrip('\r\n')
 
 
 def get_current_commit(srcdir):
@@ -343,7 +355,9 @@ def get_current_commit(srcdir):
     :rtype: str
     """
     os.chdir(srcdir)
-    return subprocess.getoutput('git log --pretty=format:"%h %s" -n 1')
+    return subprocess.check_output(
+        'git log --pretty=format:"%h %s" -n 1',
+        shell=True).decode().rstrip('\r\n')
 
 
 def select_components(components):
@@ -590,13 +604,22 @@ def git_fork(component, browser):  # noqa: D301
                ' browser windows."')
 
 
-@click.option('--user', '-u', default=GITHUB_USER,
-              help='GitHub user name [{0}]'.format(GITHUB_USER))
+@click.option('--user', '-u', default='anonymous',
+              help='GitHub user name [anonymous]')
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
               help='Which components? [shortname|name|.|CLUSTER|ALL]')
 @cli.command(name='git-clone')
 def git_clone(user, component):  # noqa: D301
     """Clone REANA source repositories from GitHub.
+
+    If the ``user`` argument is provided, the ``origin`` will be cloned from
+    the user repository on GitHub and the ``upstream`` will be set to
+    ``reanahub`` organisation. Useful for setting up personal REANA development
+    environment,
+
+    If the ``user`` argument is not provided, the cloning will be done in
+    anonymous manner from ``reanahub`` organisation. Also, the clone will be
+    shallow to save disk space and CPU time. Useful for CI purposes.
 
     \b
     :param components: The option ``component`` can be repeated. The value may
@@ -612,27 +635,31 @@ def git_clone(user, component):  # noqa: D301
                                cover all REANA client components;
                          * (6) special value 'ALL' that will expand to include
                                all REANA repositories.
-    :param user: The GitHub user name. [default=$REANA_GITHUB_USER]
+    :param user: The GitHub user name. [default=anonymous]
     :type component: str
     :type user: str
+
     """
-    if not GITHUB_USER:
-        click.echo('Please set environment variable REANA_GITHUB_USER to your'
-                   ' GitHub user name.')
-        click.echo('Example: $ export REANA_GITHUB_USER=tiborsimko')
-        sys.exit(1)
     components = select_components(component)
     for component in components:
         os.chdir(get_srcdir())
-        cmd = 'git clone git@github.com:{0}/{1}'.format(user, component)
-        run_command(cmd)
-        for cmd in [
-            'git remote add upstream'
-                ' "git@github.com:reanahub/{0}"'.format(component),
-            'git config --add remote.upstream.fetch'
-                ' "+refs/pull/*/head:refs/remotes/upstream/pr/*"',
-        ]:
-            run_command(cmd, component)
+        if os.path.exists('{0}/.git/config'.format(component)):
+            msg = 'Component seems already cloned. Skipping.'
+            display_message(msg, component)
+        elif user == 'anonymous':
+            cmd = 'git clone https://github.com/reanahub/{0} --depth 1'.format(
+                component)
+            run_command(cmd)
+        else:
+            cmd = 'git clone git@github.com:{0}/{1}'.format(user, component)
+            run_command(cmd)
+            for cmd in [
+                'git remote add upstream'
+                    ' "git@github.com:reanahub/{0}"'.format(component),
+                'git config --add remote.upstream.fetch'
+                    ' "+refs/pull/*/head:refs/remotes/upstream/pr/*"',
+            ]:
+                run_command(cmd, component)
 
 
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
@@ -1212,9 +1239,9 @@ def setup_environment():  # noqa: D301
     suitable for current local REANA cluster deployment. The output should be
     passed to eval.
     """
-    my_reana_env_variables = subprocess.getoutput('reana-cluster env'
-                                                  ' --include-admin-token')
-    print(my_reana_env_variables)
+    print(subprocess.check_output(
+        'reana-cluster env --include-admin-token',
+        shell=True).decode().rstrip('\r\n'))
 
 
 @click.option('--component', '-c', multiple=True,
