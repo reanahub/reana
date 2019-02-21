@@ -255,15 +255,18 @@ Singularity.
 **Using an existing environment**
 
 Sometimes you can use an already-existing container environment prepared by
-others. For example ``python:2.7`` packaging Python 2.7. In this case you simply
-specify the container name and the version number in your workflow specification
-and you are good to go.
+others. For example ``python:2.7`` for Python programs or
+``clelange/cmssw:5_3_32`` for CMS Offline Software framework. In this case you
+simply specify the container name and the version number in your workflow
+specification and you are good to go. This is usually the case when your code
+does not have to be compiled, for example Python scripts or ROOT macros.
 
-This is usually the case when your code can be considered "runtime", for example
-Python scripts or ROOT macros.
-
-Note that REANA platform offers a set of containers for certain popular
-environments such as ROOT RooFit.  FIXME
+Note also REANA offers a set of containers that can server as examples about how
+to containerise popular analysis environments such as ROOT (see `reana-env-root6
+<https://github.com/reanahub/reana-env-root6>`_), Jupyter (see
+`reana-env-jupyter <https://github.com/reanahub/reana-env-jupyter>`_) or an
+analysis framework such as AliPhysics (see `reana-env-aliphysics
+<https://github.com/reanahub/reana-env-aliphysics>`_).
 
 **Building your own environment**
 
@@ -374,6 +377,27 @@ cloud; we need to capture the above structure by means of a ``reana.yaml`` file:
         - results/myplot.png
 
 This file is used by REANA to instantiate and run the analysis on the cloud.
+
+Declare necessary resources
+---------------------------
+
+You can declare other additional runtime dependencies that your workflow needs
+for successful operation, such as access to `CVMFS
+<https://cernvm.cern.ch/portal/filesystem>`_. This is achieved by means of
+providing a ``resources`` clause in ``reana.yaml``. For example:
+
+.. code-block:: yaml
+
+    workflow:
+      type: serial
+      resources:
+        - cvmfs:
+          - fcc.cern.ch
+      specification:
+        steps:
+          - environment: 'cern/slc6-base'
+            commands:
+            - ls -l /cvmfs/fcc.cern.ch/sw/views/releases/
 
 Run your analysis on REANA cloud
 --------------------------------
