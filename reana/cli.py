@@ -1017,8 +1017,11 @@ def git_push(full, component):  # noqa: D301
 @click.option('--build-arg', '-b', default='', multiple=True,
               help='Any build arguments? (e.g. `-b DEBUG=true`)')
 @click.option('--no-cache', is_flag=True)
+@click.option('-q', '--quiet', is_flag=True,
+              help='Suppress the build output and print image ID on success')
 @cli.command(name='docker-build')
-def docker_build(user, tag, component, build_arg, no_cache):  # noqa: D301
+def docker_build(user, tag, component, build_arg,
+                 no_cache, quiet):  # noqa: D301
     """Build REANA component images.
 
     \b
@@ -1045,6 +1048,7 @@ def docker_build(user, tag, component, build_arg, no_cache):  # noqa: D301
     :type tag: str
     :type build_arg: str
     :type no_cache: bool
+    :type quiet bool
     """
     components = select_components(component)
     static_tag = tag
@@ -1057,6 +1061,8 @@ def docker_build(user, tag, component, build_arg, no_cache):  # noqa: D301
                 cmd += ' --build-arg {0}'.format(arg)
             if no_cache:
                 cmd += ' --no-cache'
+            if quiet:
+                cmd += ' --quiet'
             cmd += ' -t {0}/{1}:{2} .'.format(user, component, tag)
             run_command(cmd, component)
         else:
