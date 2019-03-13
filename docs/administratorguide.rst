@@ -165,16 +165,6 @@ REANA component for running Yadage types of workflows.
 - known issues: `<https://github.com/reanahub/reana-workflow-engine-yadage/issues>`_
 - documentation: `<https://reana-workflow-engine-yadage.readthedocs.io/>`_
 
-reana-workflow-monitor
-~~~~~~~~~~~~~~~~~~~~~~
-
-REANA component permitting to monitor running workflows.
-
-- source code: `<https://github.com/reanahub/reana-workflow-monitor>`_
-- release notes: `<https://github.com/reanahub/reana-workflow-monitor/releases>`_
-- known issues: `<https://github.com/reanahub/reana-workflow-monitor/issues>`_
-- documentation: `<https://reana-workflow-monitor.readthedocs.io/>`_
-
 Deployment
 ----------
 

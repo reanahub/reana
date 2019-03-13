@@ -65,7 +65,6 @@ REPO_LIST_CLUSTER = [
     'reana-workflow-engine-cwl',
     'reana-workflow-engine-serial',
     'reana-workflow-engine-yadage',
-    'reana-workflow-monitor',
 ]
 
 REPO_LIST_CLUSTER_CLI = [
@@ -87,7 +86,6 @@ COMPONENT_PODS = {
     'reana-workflow-engine-serial': 'serial-default-worker',
     'reana-server': 'server',
     'reana-workflow-controller': 'workflow-controller',
-    'reana-workflow-monitor': 'workflow-monitor',
     'reana-workflow-engine-yadage': 'yadage-default-worker',
 }
 
