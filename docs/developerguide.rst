@@ -70,8 +70,12 @@ component:
     * Debugger PIN: 221-564-335
    $ curl $REANA_SERVER_URL/api/workflows?access_token=$REANA_ACCESS_TOKEN
 
-After doing that we can go to the `wdb` dashboard (you can get ``wdb`` address
-using `reana-cluster get wdb <http://reana-cluster.readthedocs.io/en/latest/cliapi.html#reana-cluster-get>`_).
+After doing that we can go to the `wdb` dashboard:
+
+.. code-block:: console
+
+   $ firefox http://`minikube ip`:31984
+
 
 .. image:: /_static/wdb-active-sessions.png
 
