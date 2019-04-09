@@ -50,7 +50,7 @@ You can also easily deploy your own REANA cloud instance by using the
 
 .. code-block:: console
 
-   $ # install kubectl 1.13.4 and minikube 0.35.0
+   $ # install kubectl 1.14.0 and minikube 1.0.0
    $ sudo dpkg -i kubectl*.deb minikube*.deb
    $ minikube start --feature-gates="TTLAfterFinished=true"
    $ # create new virtual environment
@@ -58,8 +58,10 @@ You can also easily deploy your own REANA cloud instance by using the
    $ source ~/.virtualenvs/myreana/bin/activate
    $ # install reana-cluster utility
    $ pip install reana-cluster
+   $ # deploy helm inside the cluster
+   $ helm init
    $ # deploy new cluster and check progress
-   $ reana-cluster init
+   $ reana-cluster init --traefik
    $ reana-cluster status
    $ # set environment variables for reana-client
    $ eval $(reana-cluster env --incude-admin-token) # since you are admin

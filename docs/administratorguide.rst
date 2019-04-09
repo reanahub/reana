@@ -174,7 +174,7 @@ Local deployment using Minikube
 REANA cloud uses `Kubernetes <https://kubernetes.io/>`_ container orchestration
 system. The best way to try it out locally is to set up `Minikube
 <https://kubernetes.io/docs/getting-started-guides/minikube/>`_ (minikube
-version 0.35.0 or higher is known to work the best).
+version 1.0.0 is known to work the best).
 
 The minikube can be started as follows:
 
@@ -192,8 +192,10 @@ script. The typical usage scenario goes as follows:
    $ source ~/.virtualenvs/myreana/bin/activate
    $ # install reana-cluster utility
    $ pip install reana-cluster
+   $ # deploy helm inside the Cluster
+   $ helm init
    $ # deploy new cluster and check progress
-   $ reana-cluster init
+   $ reana-cluster init --traefik
    $ reana-cluster status
    $ # set environment variables for reana-client
    $ eval $(reana-cluster env --incude-admin-token) # since you are admin

@@ -452,7 +452,7 @@ REANA-compatible manner to facilitate its future reuse.
 - `reana-demo-atlas-recast <https://github.com/reanahub/reana-demo-atlas-recast/blob/master/README.rst>`_ - ATLAS collaboration production software stack example recasting an analysis
 - `reana-demo-bsm-search <https://github.com/reanahub/reana-demo-bsm-search/blob/master/README.rst>`_ - a typical BSM search example with complex particle physics workflows
 - `reana-demo-cms-h4l <https://github.com/reanahub/reana-demo-cms-h4l/blob/master/README.rst>`_ - CMS Higgs-to-four-leptons open data analysis example
-- `reana-demo-lhcb-d2pimumu <https://github.com/reanahub/reana-demo-lhcb-d2pimumu/blob/master/README.rst>`_ - LHCb rare charm decay search example
+- `reana-demo-lhcb-d2pimumu <https://github.com/reanahub/reana-demo-lhcb-d2pimumu/blob/master/README.md>`_ - LHCb rare charm decay search example
 
 Next steps
 ----------

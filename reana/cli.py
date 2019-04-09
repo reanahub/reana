@@ -160,12 +160,14 @@ def cli():  # noqa: D301
         $ minikube start --vm-driver=kvm2 \\
                          --feature-gates="TTLAfterFinished=true"
         $ eval $(minikube docker-env)
+        # deploy helm inside the Cluster
+        $ helm init
         $ # option (a): cluster in production-like mode
         $ reana-dev docker-build -t latest
-        $ reana-cluster -f reana-cluster-latest.yaml init
+        $ reana-cluster -f reana-cluster-latest.yaml init --traefik
         $ # option (b): cluster in developer-like debug-friendly mode
         $ reana-dev docker-build -t latest -b DEBUG=true
-        $ reana-cluster -f reana-cluster-dev.yaml init
+        $ reana-cluster -f reana-cluster-dev.yaml init --traefik
 
     How to set up your shell environment variables:
 
@@ -218,7 +220,7 @@ def cli():  # noqa: D301
         $ reana-dev docker-build -t latest
         $ reana-cluster -f reana-cluster-latest.yaml down
         $ minikube ssh 'sudo rm -rf /var/reana'
-        $ reana-cluster -f reana-cluster-latest.yaml init
+        $ reana-cluster -f reana-cluster-latest.yaml init --traefik
         $ eval $(reana-dev setup-environment)
         $ reana-dev run-example -c r-d-helloworld -s 20
         $ reana-dev git-submodule --delete
