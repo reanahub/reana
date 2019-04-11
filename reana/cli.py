@@ -883,7 +883,7 @@ def git_fetch(component):  # noqa: D301
               help='Which components? [shortname|name|.|CLUSTER|ALL]')
 @cli.command(name='git-upgrade')
 def git_upgrade(component):  # noqa: D301
-    """Upgrade REANA local source code repositories.
+    """Upgrade REANA local source code repositories and push to GitHub origin.
 
     \b
     :param components: The option ``component`` can be repeated. The value may
@@ -982,7 +982,7 @@ def git_diff(component):  # noqa: D301
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
               help='Which components? [name|CLUSTER]')
 @cli.command(name='git-push')
-def git_push(full, component):  # noqa: D301
+def git_push(component):  # noqa: D301
     """Push REANA local repositories to GitHub origin.
 
     \b
