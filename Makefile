@@ -61,6 +61,7 @@ ifndef HAS_MINIKUBE
 	$(error "Please install Minikube v0.35.0 or higher")
 endif
 	minikube status --profile ${MINIKUBE_PROFILE} || minikube start --profile ${MINIKUBE_PROFILE} --vm-driver ${MINIKUBE_DRIVER} --cpus ${MINIKUBE_CPUS} --memory ${MINIKUBE_MEMORY} --disk-size ${MINIKUBE_DISKSIZE} --feature-gates="TTLAfterFinished=true"
+	helm init
 	test -e ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate || virtualenv ${HOME}/.virtualenvs/${VENV_NAME}
 
 clone: # Clone REANA source code repositories locally.
@@ -86,7 +87,7 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 	sleep ${TIME_SLEEP} && \
 	minikube ssh --profile ${MINIKUBE_PROFILE} 'sudo rm -rf /var/reana' && \
 	docker images | grep '<none>' | awk '{print $$3;}' | xargs -r docker rmi && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-latest.yaml init
+	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-latest.yaml init --traefik
 
 example: # Run a simple "hello world" analysis example.
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
