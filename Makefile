@@ -13,6 +13,7 @@ MINIKUBE_MEMORY ?= 3072
 MINIKUBE_DISKSIZE ?= 40g
 TIME_SLEEP ?= 40
 VENV_NAME ?= reana
+DEMO ?= DEMO
 
 # let's detect where we are and whether minikube and kubectl are available:
 HAS_KUBECTL := $(shell command -v kubectl 2> /dev/null)
@@ -45,6 +46,11 @@ help:
 	@echo '  $$ GITHUB_USER=johndoe MINIKUBE_DRIVER=virtualbox make setup clone'
 	@echo '  # how to build latest checked-out sources and run an example:'
 	@echo '  $$ make ci'
+	@echo
+	@echo '  # how to run a specific example:'
+	@echo '  $$ DEMO=reana-demo-helloworld make example'
+	@echo '  # how to run all REANA examples:'
+	@echo '  $$ make example'
 	@echo
 	@echo '  # how to perform an independent automated CI test run:'
 	@echo '  $$ mkdir /tmp/nightlybuild && cd /tmp/nightlybuild'
@@ -89,10 +95,10 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 	docker images | grep '<none>' | awk '{print $$3;}' | xargs -r docker rmi && \
 	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-latest.yaml init --traefik
 
-example: # Run a simple "hello world" analysis example.
+example: # Run a REANA example. By default all REANA examples are executed.
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	eval $$(reana-dev setup-environment) && \
-	reana-dev run-example -c r-d-helloworld -s ${TIME_SLEEP}
+	reana-dev run-example -c ${DEMO} -s ${TIME_SLEEP}
 
 ci: # Perform full Continuous Integration build and test cycle. [main function]
 	make setup

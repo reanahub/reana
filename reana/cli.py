@@ -14,6 +14,14 @@ import sys
 
 import click
 
+REPO_LIST_DEMO = [
+    'reana-demo-atlas-recast',
+    'reana-demo-bsm-search',
+    'reana-demo-helloworld',
+    'reana-demo-root6-roofit',
+    'reana-demo-worldpopulation',
+]
+
 REPO_LIST_ALL = [
     'reana',
     'reana-client',
@@ -21,13 +29,8 @@ REPO_LIST_ALL = [
     'reana-commons',
     'reana-db',
     'reana-demo-alice-lego-train-test-run',
-    'reana-demo-atlas-recast',
-    'reana-demo-bsm-search',
     'reana-demo-cms-h4l',
-    'reana-demo-helloworld',
     'reana-demo-lhcb-d2pimumu',
-    'reana-demo-root6-roofit',
-    'reana-demo-worldpopulation',
     'reana-env-aliphysics',
     'reana-env-jupyter',
     'reana-env-root6',
@@ -42,7 +45,7 @@ REPO_LIST_ALL = [
     'reana-workflow-engine-yadage',
     'reana-workflow-monitor',
     'reana.io',
-]
+] + REPO_LIST_DEMO
 
 REPO_LIST_CLIENT = [
     # shared utils
@@ -375,6 +378,8 @@ def select_components(components):
                                 cover all REANA client components;
                           * (6) special value 'ALL' that will expand to include
                                 all REANA repositories.
+                          * (7) special value 'DEMO' that will expand
+                                to include all REANA repository examples.
     :type components: list
 
     :return: Unique standard component names.
@@ -387,6 +392,9 @@ def select_components(components):
     for component in components:
         if component == 'ALL':
             for repo in REPO_LIST_ALL:
+                output.add(repo)
+        elif component == 'DEMO':
+            for repo in REPO_LIST_DEMO:
                 output.add(repo)
         elif component == 'CLIENT':
             for repo in REPO_LIST_CLIENT:
@@ -1306,6 +1314,13 @@ def run_example(component, workflow_engine,
     for component in components:
         for workflow_engine in workflow_engines:
             workflow_name = construct_workflow_name(component, workflow_engine)
+            # check whether example contains recipe for given engine:
+            if not os.path.exists(get_srcdir(component) + os.sep +
+                                  reana_yaml[workflow_engine]):
+                msg = 'Skipping example with workflow engine {0}.'.format(
+                    workflow_engine)
+                display_message(msg, component)
+                continue
             # create workflow:
             for cmd in [
                 'reana-client create -f {0} -n {1}'.format(
