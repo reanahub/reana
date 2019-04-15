@@ -460,6 +460,9 @@ follows:
 
 We are done! Our outputs plot should be located in the ``results`` directory.
 
+Note that you can inspect your analysis workspace by opening `Jupyter notebook interactive sessions
+<https://reana-client.readthedocs.io/en/latest/userguide.html#opening-interactive-sessions>`_.
+
 For more information on how to use ``reana-client``, please see `REANA-Client's
 Getting started guide
 <http://reana-client.readthedocs.io/en/latest/gettingstarted.html>`_.
