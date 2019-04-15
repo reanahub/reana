@@ -26,7 +26,7 @@ tests_require = [
     'pytest-cache>=1.0',
     'pytest-cov>=1.8.0',
     'pytest-pep8>=1.0.6',
-    'pytest>=2.8.0',
+    'pytest>=3.8.0',
 ]
 
 extras_require = {
@@ -47,7 +47,7 @@ for key, reqs in extras_require.items():
 
 
 install_requires = [
-    'click>=6.7',
+    'click>=7',
     'colorama>=0.3.9',
 ]
 
