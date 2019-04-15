@@ -55,10 +55,10 @@ help:
 
 setup: # Prepare local host virtual environment and Minikube for REANA building and deployment.
 ifndef HAS_KUBECTL
-	$(error "Please install Kubectl v1.13.4 or higher")
+	$(error "Please install Kubectl v1.14.0 or higher")
 endif
 ifndef HAS_MINIKUBE
-	$(error "Please install Minikube v0.35.0 or higher")
+	$(error "Please install Minikube v1.0.0 or higher")
 endif
 	minikube status --profile ${MINIKUBE_PROFILE} || minikube start --profile ${MINIKUBE_PROFILE} --vm-driver ${MINIKUBE_DRIVER} --cpus ${MINIKUBE_CPUS} --memory ${MINIKUBE_MEMORY} --disk-size ${MINIKUBE_DISKSIZE} --feature-gates="TTLAfterFinished=true"
 	helm init
