@@ -315,6 +315,34 @@ and push the created image to the DockerHub image registry:
 
     $ docker push johndoe/myenv
 
+**Supporting arbitrary user IDs**
+
+In the Docker container ecosystem, the processes run in the containers by
+default use the ``root`` user identity. However, this may not be secure. If
+you want to improve the security in your environment you can set up your own
+user under which identity the processes will run.
+
+In order for processes to run under any user identity and still be able to
+write to shared workspaces, we use a GID=0 technique
+`as used by OpenShift <https://docs.openshift.com/container-platform/3.11/creating_images/guidelines.html#openshift-specific-guidelines>`_:
+
+- UID: you can use any user ID you want;
+- GID: your should add your user to group with GID=0 (the root group)
+
+This will ensure the writable access to workspace directories managed by the
+REANA platform.
+
+For example, you can create the user ``johndoe`` with UID=501 and add the user
+to GID=0 by adding the following commands at the end of the previous
+``Dockerfile``:
+
+.. code-block:: console
+
+    # Setup user and permissions
+    RUN adduser johndoe -u 501 --disabled-password --gecos ""
+    RUN usermod -a -G 0 johndoe
+    USER johndoe
+
 **Testing the environment**
 
 We now have a containerised image representing our computational environment
