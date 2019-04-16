@@ -11,7 +11,8 @@ MINIKUBE_PROFILE ?= minikube
 MINIKUBE_CPUS ?= 2
 MINIKUBE_MEMORY ?= 3072
 MINIKUBE_DISKSIZE ?= 40g
-TIME_SLEEP ?= 40
+TIMECHECK ?= 5
+TIMEOUT ?= 300
 VENV_NAME ?= reana
 DEMO ?= DEMO
 
@@ -37,20 +38,21 @@ help:
 	@echo '  GITHUB_USER       Which GitHub user account to use for cloning? [default=anonymous]'
 	@echo '  MINIKUBE_DRIVER   Which Minikube driver to use? [default=kvm2]'
 	@echo '  MINIKUBE_PROFILE  Which Minikube profile to use? [default=minikube]'
-	@echo '  TIME_SLEEP        How much time to sleep when bringing cluster up and down? [default=40]'
+	@echo '  TIMECHECK         Checking frequency in seconds when bringing cluster up and down? [default=5]'
+	@echo '  TIMEOUT           Maximum timeout to wait when bringing cluster up and down? [default=300]'
 	@echo '  VENV_NAME         Which Python virtual environment name to use? [default=reana]'
+	@echo '  DEMO              Which demo example to run? [e.g. reana-demo-helloworld; default=several runable examples]'
 	@echo
 	@echo 'Examples:'
 	@echo
 	@echo '  # how to set up personal development environment:'
 	@echo '  $$ GITHUB_USER=johndoe MINIKUBE_DRIVER=virtualbox make setup clone'
-	@echo '  # how to build latest checked-out sources and run an example:'
-	@echo '  $$ make ci'
 	@echo
-	@echo '  # how to run a specific example:'
-	@echo '  $$ DEMO=reana-demo-helloworld make example'
-	@echo '  # how to run all REANA examples:'
-	@echo '  $$ make example'
+	@echo '  # how to build latest checked-out sources and run one small demo example:'
+	@echo '  $$ DEMO=reana-demo-helloworld make ci'
+	@echo
+	@echo '  # how to build latest checked-out sources and run several runable demo examples:'
+	@echo '  $$ make ci'
 	@echo
 	@echo '  # how to perform an independent automated CI test run:'
 	@echo '  $$ mkdir /tmp/nightlybuild && cd /tmp/nightlybuild'
@@ -90,22 +92,48 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
 	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-latest.yaml down && \
-	sleep ${TIME_SLEEP} && \
+	waited=0 && while true; do \
+		waited=$$(($$waited+${TIMECHECK})); \
+		if [ $$waited -gt ${TIMEOUT} ];then \
+			break; \
+		elif [ $$(kubectl get pods | wc -l) -eq 0 ]; then \
+			break; \
+		else \
+			sleep ${TIMECHECK}; \
+		fi;\
+	done && \
 	minikube ssh --profile ${MINIKUBE_PROFILE} 'sudo rm -rf /var/reana' && \
-	docker images | grep '<none>' | awk '{print $$3;}' | xargs -r docker rmi && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-latest.yaml init --traefik
+  if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
+		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi; \
+  fi && \
+	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-latest.yaml init --traefik && \
+	waited=0 && while true; do \
+		waited=$$(($$waited+${TIMECHECK})); \
+		if [ $$waited -gt ${TIMEOUT} ];then \
+			break; \
+		elif [ $$(kubectl logs -l app=server -c server --tail=500 | grep -c '^Created 1st user') -eq 1 ]; then \
+			break; \
+		else \
+			sleep ${TIMECHECK}; \
+		fi;\
+	done
 
-example: # Run a REANA example. By default all REANA examples are executed.
+example: # Run all or one particular demo example. By default all REANA examples are executed.
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	eval $$(reana-dev setup-environment) && \
-	reana-dev run-example -c ${DEMO} -s ${TIME_SLEEP}
+	reana-dev run-example -c ${DEMO}
+
+prefetch: # Prefetch interesting Docker images. Useful to speed things later.
+	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
+	eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
+	reana-dev docker-pull -c ${DEMO}
 
 ci: # Perform full Continuous Integration build and test cycle. [main function]
 	make setup
 	make clone
+	make prefetch
 	make build
 	make deploy
-	sleep ${TIME_SLEEP}
 	make example
 
 teardown: # Destroy local host virtual environment and Minikube. All traces go.

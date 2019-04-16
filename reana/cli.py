@@ -8,18 +8,19 @@
 
 """Helper scripts for REANA developers. Run `reana-dev --help` for help."""
 
+import datetime
 import os
 import subprocess
 import sys
+import time
 
 import click
 
 REPO_LIST_DEMO = [
-    'reana-demo-atlas-recast',
-    'reana-demo-bsm-search',
     'reana-demo-helloworld',
     'reana-demo-root6-roofit',
     'reana-demo-worldpopulation',
+    'reana-demo-atlas-recast',
 ]
 
 REPO_LIST_ALL = [
@@ -29,6 +30,7 @@ REPO_LIST_ALL = [
     'reana-commons',
     'reana-db',
     'reana-demo-alice-lego-train-test-run',
+    'reana-demo-bsm-search',
     'reana-demo-cms-h4l',
     'reana-demo-lhcb-d2pimumu',
     'reana-env-aliphysics',
@@ -100,6 +102,18 @@ EXAMPLE_OUTPUTS = {
     '*': ('plot.png',)
 }
 
+EXAMPLE_PREFETCH_IMAGES = {
+    'reana-demo-helloworld': [
+        'python:2.7-slim', ],
+    'reana-demo-worldpopulation': [
+        'reanahub/reana-env-jupyter', ],
+    'reana-demo-root6-roofit': [
+        'reanahub/reana-env-root6', ],
+    'reana-demo-atlas-recast': [
+        'reanahub/reana-demo-atlas-recast-eventselection',
+        'reanahub/reana-demo-atlas-recast-statanalysis']
+}
+
 COMPONENTS_USING_SHARED_MODULE_COMMONS = [
     'reana-job-controller',
     'reana-server',
@@ -114,6 +128,10 @@ COMPONENTS_USING_SHARED_MODULE_DB = [
     'reana-server',
     'reana-workflow-controller',
 ]
+
+TIMECHECK = 5
+
+TIMEOUT = 300
 
 
 @click.group()
@@ -184,7 +202,7 @@ def cli():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ reana-dev run-example -c reana-demo-root6-roofit -w serial -s 10
+        $ reana-dev run-example -c reana-demo-root6-roofit -w serial
 
     How to test one component pull request:
 
@@ -225,7 +243,7 @@ def cli():  # noqa: D301
         $ minikube ssh 'sudo rm -rf /var/reana'
         $ reana-cluster -f reana-cluster-latest.yaml init --traefik
         $ eval $(reana-dev setup-environment)
-        $ reana-dev run-example -c r-d-helloworld -s 20
+        $ reana-dev run-example -c r-d-helloworld
         $ reana-dev git-submodule --delete
         $ reana-dev git-status -s
 
@@ -376,10 +394,10 @@ def select_components(components):
                                 cover all REANA cluster components;
                           * (5) special value 'CLIENT' that will expand to
                                 cover all REANA client components;
-                          * (6) special value 'ALL' that will expand to include
+                          * (6) special value 'DEMO' that will expand
+                                to include several runable REANA demo examples;
+                          * (7) special value 'ALL' that will expand to include
                                 all REANA repositories.
-                          * (7) special value 'DEMO' that will expand
-                                to include all REANA repository examples.
     :type components: list
 
     :return: Unique standard component names.
@@ -499,8 +517,9 @@ def run_command(cmd, component='', display=True, return_output=False):
     :type display: bool
     :type return_output: bool
     """
+    now = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
     if display:
-        click.secho('[{0}] {1}'.format(component, cmd), bold=True)
+        click.secho('[{0} {1}] {2}'.format(now, component, cmd), bold=True)
     if component:
         os.chdir(get_srcdir(component))
     try:
@@ -511,7 +530,8 @@ def run_command(cmd, component='', display=True, return_output=False):
             subprocess.check_call(cmd, shell=True)
     except subprocess.CalledProcessError as err:
         if display:
-            click.secho('[{0}] {1}'.format(component, err), bold=True)
+            click.secho('[{0} {1}] {2}'.format(now, component, err),
+                        bold=True)
         sys.exit(err.returncode)
 
 
@@ -523,7 +543,8 @@ def display_message(msg, component=''):
     :type msg: str
     :type component: str
     """
-    click.secho('[{0}] {1}'.format(component, msg), bold=True)
+    now = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+    click.secho('[{0} {1}] {2}'.format(now, component, msg), bold=True)
 
 
 def get_default_output_for_example(example):
@@ -589,7 +610,9 @@ def git_fork(component, browser):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param browser: The web browser to use. [default=firefox]
     :type component: str
@@ -641,7 +664,9 @@ def git_clone(user, component):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param user: The GitHub user name. [default=anonymous]
     :type component: str
@@ -690,7 +715,9 @@ def git_status(component, short):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param verbose: Show git status details? [default=False]
     :type component: str
@@ -730,7 +757,9 @@ def git_clean(component):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -817,7 +846,9 @@ def git_branch(component):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -878,7 +909,9 @@ def git_fetch(component):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -905,7 +938,9 @@ def git_upgrade(component):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -940,7 +975,9 @@ def git_log(component, number, all):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param number: The number of commits to output. [6]
     :param all: Show all references? [6]
@@ -978,7 +1015,9 @@ def git_diff(component):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -1005,7 +1044,9 @@ def git_push(component):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
     """
@@ -1044,7 +1085,9 @@ def docker_build(user, tag, component, build_arg,
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker tag to use. Automatically filled with the output of
@@ -1114,7 +1157,9 @@ def docker_rmi(user, tag, component):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker tag to use. [default=latest]
@@ -1155,7 +1200,9 @@ def docker_push(user, tag, component):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker tag to use. [default=latest]
@@ -1179,7 +1226,7 @@ def docker_push(user, tag, component):  # noqa: D301
 @click.option('--tag', '-t', default='latest',
               help='Image tag [latest]')
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
-              help='Which components? [name|CLUSTER]')
+              help='Which components? [name|CLUSTER|DEMO]')
 @cli.command(name='docker-pull')
 def docker_pull(user, tag, component):  # noqa: D301
     """Pull REANA component images from DockerHub.
@@ -1196,7 +1243,9 @@ def docker_pull(user, tag, component):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand to
+                               cover all REANA demo example images;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker tag to use. [default=latest]
@@ -1206,7 +1255,11 @@ def docker_pull(user, tag, component):  # noqa: D301
     """
     components = select_components(component)
     for component in components:
-        if is_component_dockerised(component):
+        if component in EXAMPLE_PREFETCH_IMAGES:
+            for image in EXAMPLE_PREFETCH_IMAGES[component]:
+                cmd = 'docker pull {0}'.format(image)
+                run_command(cmd, component)
+        elif is_component_dockerised(component):
             cmd = 'docker pull {0}/{1}:{2}'.format(user, component, tag)
             run_command(cmd, component)
         else:
@@ -1225,7 +1278,7 @@ def install_client():  # noqa: D301
     """
     for component in REPO_LIST_CLIENT:
         for cmd in [
-                'pip install . --upgrade',
+            'pip install . --upgrade',
         ]:
             run_command(cmd, component)
 
@@ -1253,9 +1306,12 @@ def setup_environment():  # noqa: D301
     suitable for current local REANA cluster deployment. The output should be
     passed to eval.
     """
-    print(subprocess.check_output(
-        'reana-cluster env --include-admin-token',
-        shell=True).decode().rstrip('\r\n'))
+    try:
+        print(subprocess.check_output(
+            'reana-cluster env --include-admin-token',
+            shell=True).decode().rstrip('\r\n'))
+    except subprocess.CalledProcessError as err:
+        sys.exit(err.returncode)
 
 
 @click.option('--component', '-c', multiple=True,
@@ -1266,8 +1322,12 @@ def setup_environment():  # noqa: D301
               help='Which workflow engine to run? [cwl,serial,yadage]')
 @click.option('--file', '-f', multiple=True,
               help='Expected output file?')
-@click.option('--sleep', '-s', default=60,
-              help='How much seconds to wait for results? [60]')
+@click.option('--timecheck', default=TIMECHECK,
+              help='Checking frequency in seconds for results? [{0}]'.format(
+                  TIMECHECK))
+@click.option('--timeout', default=TIMEOUT,
+              help='Maximum timeout to wait for results? [{0}]'.format(
+                  TIMEOUT))
 @click.option('--parameter', '-p', 'parameters', multiple=True,
               help='Additional input parameters to override '
                    'original ones from reana.yaml. '
@@ -1278,7 +1338,7 @@ def setup_environment():  # noqa: D301
                    'E.g. CACHE=off.')
 @cli.command(name='run-example')
 def run_example(component, workflow_engine,
-                file, sleep, parameters, options):  # noqa: D301
+                file, timecheck, timeout, parameters, options):  # noqa: D301
     """Run given REANA example with given workflow engine.
 
     \b
@@ -1286,13 +1346,14 @@ def run_example(component, workflow_engine,
                       the repository name of the example.
                       [default=reana-demo-root6-roofit]
     :param workflow_engine: The option ``workflow_engine`` can be repeated. The
-                     value is the workflow engine to use to run the example.
-                     [default=cwl,serial,yadage]
-    :param file: The option ``file`` can be repeated. The value is the
-                   expected output file the workflow should produce.
-                     [default=plot.png]
-    :param sleep: How much seconds to sleep in order to wait for workflow to be
-                  finished before checking the results? [default=60]
+                            value is the workflow engine to use to run the
+                            example. [default=cwl,serial,yadage]
+    :param file: The option ``file`` can be repeated. The value is the expected
+                 output file the workflow should produce. [default=plot.png]
+    :param timecheck: Checking frequency in seconds for results.
+                      [default=5 (TIMECHECK)]
+    :param timeout: Maximum timeout to wait for results.
+                    [default=300 (TIMEOUT)]
     :param parameters: Additional input parameters to override original ones
                        from reana.yaml.
                        E.g. -p myparam1=myval1 -p myparam2=myval2.
@@ -1302,7 +1363,6 @@ def run_example(component, workflow_engine,
     :type component: str
     :type workflow_engine: str
     :type sleep: int
-
     """
     components = select_components(component)
     workflow_engines = select_workflow_engines(workflow_engine)
@@ -1341,20 +1401,31 @@ def run_example(component, workflow_engine,
             for cmd in [
                 'reana-client start -w {0} {1} {2}'.format(
                     workflow_name, input_parameters, operational_options),
-                'sleep {0}'.format(sleep),
-                'reana-client status -w {0}'.format(
-                    workflow_name),
-                'reana-client ls -w {0}'.format(
-                    workflow_name),
             ]:
                 run_command(cmd, component)
+            # verify whether job finished within time limits:
+            time_start = time.time()
+            while time.time() - time_start <= timeout:
+                time.sleep(timecheck)
+                cmd = 'reana-client status -w {0}'.format(
+                    workflow_name)
+                status = run_command(cmd, component, return_output=True)
+                click.secho(status)
+                if 'finished' in status \
+                   or 'failed' in status \
+                   or 'stopped' in status:
+                    break
             # verify output file presence:
-            output = file or get_default_output_for_example(component)
-            for output_file in output:
-                cmd = 'reana-client ls -w {0} | grep -q {1}'.format(
-                    workflow_name, output_file)
-                run_command(cmd, component)
-    # report status; everything was OK
+            cmd = 'reana-client ls -w {0}'.format(workflow_name)
+            listing = run_command(cmd, component, return_output=True)
+            click.secho(listing)
+            expected_files = file or get_default_output_for_example(component)
+            for expected_file in expected_files:
+                if expected_file not in listing:
+                    click.secho('[ERROR] Expected output file {0} not found. '
+                                'Exiting.'.format(expected_file))
+                    sys.exit(1)
+    # report that everything was OK
     run_command('echo OK', component)
 
 
@@ -1378,7 +1449,9 @@ def kubectl_delete_pod(component):  # noqa: D301
                                cover all REANA cluster components [default];
                          * (5) special value 'CLIENT' that will expand to
                                cover all REANA client components;
-                         * (6) special value 'ALL' that will expand to include
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
 
