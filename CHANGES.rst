@@ -1,6 +1,40 @@
 Changes
 =======
 
+Version 0.5.0 (2019-04-24)
+--------------------------
+
+- Users:
+
+  - Allows to explore workflow results by running interactive Jupyter notebook
+    sessions on the workspace files.
+  - Allows to declare computing resources needed for workflow runs, such as
+    access to CVMFS repositories.
+  - Improves ``reana-client`` command-line client with new options to stop
+    workflows, diff workflows, move and remove files.
+  - Upgrades CWL engine to 1.0.20181118133959.
+  - See additional changes in `reana-client release notes <https://reana-client.readthedocs.io/en/latest/changes.html#version-0-5-0-2019-04-24>`_.
+- Administrators:
+
+  - Upgrades to Kubernetes 1.14, Helm 2.13 and Minikube 1.0.
+  - Separates cluster infrastructure pods from runtime workflow engine pods
+    that will be created by workflow controller.
+  - Introduces configurable CVMFS and CephFS shared volume mounts.
+  - Adds support for optional HTTPS protocol termination.
+  - Introduces incoming workflow queue for additional safety in case of user
+    storms.
+  - Makes infrastructure pods container image slimmer to reduce the memory
+    footprint.
+  - See additional changes in `reana-cluster release notes <https://reana-cluster.readthedocs.io/en/latest/changes.html#version-0-5-0-2019-04-24>`_.
+- Developers:
+
+  - Enhances development process by using git-submodule-like behaviour for
+    shared components.
+  - Introduces simple Makefile for (fast) local testing and (slow) nightly
+    building purposes.
+  - Centralises logging level and common Celery tasks.
+  - Adds helpers for test suite fixtures and improves code coverage.
+
 Version 0.4.0 (2018-11-07)
 --------------------------
 

@@ -419,7 +419,7 @@ providing a ``resources`` clause in ``reana.yaml``. For example:
     workflow:
       type: serial
       resources:
-        - cvmfs:
+        cvmfs:
           - fcc.cern.ch
       specification:
         steps:

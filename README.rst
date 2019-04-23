@@ -5,7 +5,7 @@
 .. image:: https://img.shields.io/travis/reanahub/reana.svg
    :target: https://travis-ci.org/reanahub/reana
 
-.. image:: https://readthedocs.org/projects/docs/badge/?version=latest
+.. image:: https://readthedocs.org/projects/reana/badge/?version=latest
    :target: https://reana.readthedocs.io/en/latest/?badge=latest
 
 .. image:: https://img.shields.io/coveralls/reanahub/reana.svg
