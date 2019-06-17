@@ -92,7 +92,7 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-latest.yaml down && \
 	sleep ${TIME_SLEEP} && \
 	minikube ssh --profile ${MINIKUBE_PROFILE} 'sudo rm -rf /var/reana' && \
-	docker images | grep '<none>' | awk '{print $$3;}' | xargs -r docker rmi && \
+	docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi && \
 	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-latest.yaml init --traefik
 
 example: # Run a REANA example. By default all REANA examples are executed.
