@@ -22,7 +22,14 @@ SHELL = /usr/bin/env bash
 # let's detect where we are and whether minikube and kubectl are available:
 HAS_KUBECTL := $(shell command -v kubectl 2> /dev/null)
 HAS_MINIKUBE := $(shell command -v minikube 2> /dev/null)
+DEBUG := $(shell test "$$CLUSTER_CONFIG" = dev && echo 1 || echo 0)
+SHOULD_MINIKUBE_MOUNT := $(shell [ "${DEBUG}" -gt 0 ] && [ -z "`ps -ef | grep -i '[m]inikube mount' 2> /dev/null`" ] && echo 1 || echo 0)
 PWD := $(shell pwd)
+
+define n
+
+
+endef
 
 all: help
 
@@ -45,11 +52,23 @@ help:
 	@echo '  TIMEOUT           Maximum timeout to wait when bringing cluster up and down? [default=300]'
 	@echo '  VENV_NAME         Which Python virtual environment name to use? [default=reana]'
 	@echo '  DEMO              Which demo example to run? [e.g. reana-demo-helloworld; default=several runable examples]'
+	@echo '  CLUSTER_CONFIG    REANA cluster environment mode. Use "dev" for live coding and debugging.'
 	@echo
 	@echo 'Examples:'
 	@echo
 	@echo '  # how to set up personal development environment:'
 	@echo '  $$ GITHUB_USER=johndoe MINIKUBE_DRIVER=virtualbox make setup clone'
+	@echo
+	@echo '  # how to build and deploy REANA in production mode:'
+	@echo '  $ make build'
+	@echo '  $ make deploy'
+	@echo
+	@echo '  # how to deploy REANA in development mode, with application'
+	@echo '  # autoreload on code changes and debugging capabilities:'
+	@echo '  $$ minikube mount $$(pwd)/..:/code'
+	@echo '  $$ cd reana-server && pip install -e . && cd ..  # workaround necessary for reanahub/reana-workflow-controller#64'
+	@echo '  $$ CLUSTER_CONFIG=dev make build'
+	@echo '  $$ CLUSTER_CONFIG=dev make deploy'
 	@echo
 	@echo '  # how to build latest checked-out sources and run one small demo example:'
 	@echo '  $$ DEMO=reana-demo-helloworld make ci'
@@ -88,13 +107,24 @@ build: # Build REANA client and cluster components.
 	reana-dev install-client && \
 	reana-dev install-cluster && \
 	reana-dev git-submodule --update && \
-	reana-dev docker-build -t latest && \
-	reana-dev git-submodule --delete
+	reana-dev docker-build -b DEBUG=${DEBUG} && \
+	reana-dev git-submodule --delete && \
+	if [ "${DEBUG}" -gt 0 ]; then \
+		echo "Please run minikube mount in a new terminal to have live code updates." && \
+		echo "" && \
+		echo "    $$ minikube mount $$(pwd)/..:/code" && \
+		echo "" && \
+		echo "For more information visit the documentation: https://reana-cluster.readthedocs.io/en/latest/developerguide.html#deploying-latest-master-branch-versions"; \
+	fi
 
 deploy: # Deploy/redeploy previously built REANA cluster.
+ifeq ($(SHOULD_MINIKUBE_MOUNT),1)
+	$(error "$nIt seems you are not running 'minikube mount'.  Please run the following command in a different terminal:$n$n\
+	    $$ minikube mount $$(pwd)/..:/code$n$nThis will enable the cluster pods to see the live edits that are necessary for debugging.")
+endif
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-latest.yaml down && \
+	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml down && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
@@ -106,10 +136,10 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 		fi;\
 	done && \
 	minikube ssh --profile ${MINIKUBE_PROFILE} 'sudo rm -rf /var/reana' && \
-  if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
+	if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
 		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi; \
-  fi && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-latest.yaml init --traefik && \
+	fi && \
+	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml init --traefik && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
