@@ -64,7 +64,7 @@ You can also easily deploy your own REANA cloud instance by using the
    $ reana-cluster init --traefik
    $ reana-cluster status
    $ # set environment variables for reana-client
-   $ eval $(reana-cluster env --incude-admin-token) # since you are admin
+   $ eval $(reana-cluster env --include-admin-token) # since you are admin
 
 See `REANA-Cluster's Getting started guide
 <http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_ for more
