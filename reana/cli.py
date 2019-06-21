@@ -86,12 +86,9 @@ WORKFLOW_ENGINE_LIST_ALL = [
 COMPONENT_PODS = {
     'reana-workflow-engine-cwl': 'cwl-default-worker',
     'reana-db': 'db',
-    'reana-job-controller': 'job-controller',
     'reana-message-broker': 'message-broker',
-    'reana-workflow-engine-serial': 'serial-default-worker',
     'reana-server': 'server',
     'reana-workflow-controller': 'workflow-controller',
-    'reana-workflow-engine-yadage': 'yadage-default-worker',
 }
 
 EXAMPLE_OUTPUTS = {
@@ -209,7 +206,7 @@ def cli():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ cd reana-job-controller
+        $ cd reana-workflow-controller
         $ reana-dev git-checkout -b . 72 --fetch
         $ reana-dev docker-build -t latest -c .
         $ reana-dev kubectl-delete-pod -c .
@@ -219,11 +216,11 @@ def cli():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ reana-dev git-checkout -b reana-job-controller 72
+        $ reana-dev git-checkout -b reana-server 72
         $ reana-dev git-checkout -b reana-workflow-controller 98
         $ reana-dev git-status
         $ reana-dev docker-build -t latest
-        $ reana-dev kubectl-delete-pod -c reana-job-controller
+        $ reana-dev kubectl-delete-pod -c reana-server
         $ reana-dev kubectl-delete-pod -c reana-workflow-controller
 
     How to test multiple component branches with commits to shared modules:
@@ -267,7 +264,7 @@ def cli():  # noqa: D301
 def shorten_component_name(component):
     """Return canonical short version of the component name.
 
-    Example: reana-job-controller -> r-j-controller
+    Example: reana-workflow-controller -> r-w-controller
 
     :param component: standard component name
     :type component: str
@@ -286,7 +283,7 @@ def shorten_component_name(component):
 def find_standard_component_name(short_component_name):
     """Return standard component name corresponding to the short name.
 
-    Example: r-j-controller -> reana-job-controller
+    Example: r-w-controller -> reana-workflow-controller
 
     :param short_component_name: short component name
     :type component: str
@@ -386,8 +383,8 @@ def select_components(components):
 
     :param components: A list of component name that may consist of:
                           * (1) standard component names such as
-                                'reana-job-controller';
-                          * (2) short component name such as 'r-j-controller';
+                                'reana-workflow-controller';
+                          * (2) short component name such as 'r-w-controller';
                           * (3) special value '.' indicating component of the
                                 current working directory;
                           * (4) special value 'CLUSTER' that will expand to
@@ -602,8 +599,8 @@ def git_fork(component, browser):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -656,8 +653,8 @@ def git_clone(user, component):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -707,8 +704,8 @@ def git_status(component, short):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -749,8 +746,8 @@ def git_clean(component):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -838,8 +835,8 @@ def git_branch(component):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -870,9 +867,9 @@ def git_checkout(branch, fetch):  # noqa: D301
     \b
     :param branch: The option ``branch`` can be repeated. The value consist of
                    two strings specifying the component name and the pull
-                   request number. For example, ``-b reana-job-controler 72``
-                   will create a local branch called ``pr-72`` in the
-                   reana-job-component source code directory.
+                   request number. For example, ``-b reana-workflow-controler
+                   72`` will create a local branch called ``pr-72`` in the
+                   reana-workflow-controller source code directory.
     :param fetch: Should we fetch latest upstream first? [default=False]
     :type component: str
     :type fetch: bool
@@ -901,8 +898,8 @@ def git_fetch(component):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -930,8 +927,8 @@ def git_upgrade(component):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -967,8 +964,8 @@ def git_log(component, number, all):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -1007,8 +1004,8 @@ def git_diff(component):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -1036,8 +1033,8 @@ def git_push(component):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -1077,8 +1074,8 @@ def docker_build(user, tag, component, build_arg,
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -1149,8 +1146,8 @@ def docker_rmi(user, tag, component):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -1192,8 +1189,8 @@ def docker_push(user, tag, component):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -1235,8 +1232,8 @@ def docker_pull(user, tag, component):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
@@ -1441,8 +1438,8 @@ def kubectl_delete_pod(component):  # noqa: D301
     :param components: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
-                               'reana-job-controller';
-                         * (2) short component name such as 'r-j-controller';
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
                          * (3) special value '.' indicating component of the
                                current working directory;
                          * (4) special value 'CLUSTER' that will expand to
