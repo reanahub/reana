@@ -84,7 +84,6 @@ WORKFLOW_ENGINE_LIST_ALL = [
 ]
 
 COMPONENT_PODS = {
-    'reana-workflow-engine-cwl': 'cwl-default-worker',
     'reana-db': 'db',
     'reana-message-broker': 'message-broker',
     'reana-server': 'server',
