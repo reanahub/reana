@@ -16,6 +16,9 @@ TIMEOUT ?= 300
 VENV_NAME ?= reana
 DEMO ?= DEMO
 
+# bash shell is necessary
+SHELL = /usr/bin/env bash
+
 # let's detect where we are and whether minikube and kubectl are available:
 HAS_KUBECTL := $(shell command -v kubectl 2> /dev/null)
 HAS_MINIKUBE := $(shell command -v minikube 2> /dev/null)
