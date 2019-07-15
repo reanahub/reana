@@ -92,3 +92,18 @@ celery option `--autoreload` doesn't work and it is deprecated. To debug
 
 * Set breakpoint: ``import wdb; wdb.set_trace()``
 * Kill the workflow engine container: ``kubectl delete pod cwl-default-worker-2461563162-r4hgg``
+
+Port forwarding
+---------------
+
+If you ever need to access one specific microservice via HTTP there is a Kubernetes
+command that can help. The ``port-forward`` command connects a local port on the
+machine to a port on a Kubernetes pod. It directs the traffic reaching the local
+port to the pod port through an HTTP connection. Example:
+
+.. code-block:: console
+
+    $ kubectl port-forward --address 0.0.0.0 <pod_name> <local_port>:<pod_port>
+
+The ``--address`` flag defines the local IP address to listen on. Using ``0.0.0.0``
+makes the connection listen to all local IP addresses.
