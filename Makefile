@@ -125,7 +125,6 @@ endif
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
 	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml down && \
-	kubectl delete secret reana-db || echo "reana-db secret doesn't exit, skipping deletion." && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
@@ -140,8 +139,7 @@ endif
 	if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
 		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi; \
 	fi && \
-	kubectl create secret generic reana-db --from-literal=user=reana --from-literal=password=`openssl rand -base64 32` && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml init --traefik && \
+	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml init --traefik --generate-default-secrets && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \

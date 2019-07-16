@@ -61,7 +61,7 @@ You can also easily deploy your own REANA cloud instance by using the
    $ # deploy helm inside the cluster
    $ helm init
    $ # deploy new cluster and check progress
-   $ reana-cluster init --traefik
+   $ reana-cluster init --traefik --generate-default-secrets
    $ reana-cluster status
    $ # set environment variables for reana-client
    $ eval $(reana-cluster env --include-admin-token) # since you are admin
