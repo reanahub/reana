@@ -184,7 +184,7 @@ def cli():  # noqa: D301
         $ reana-cluster -f reana-cluster-minikube.yaml init --traefik
         $ # option (b): cluster in developer-like debug-friendly mode
         $ reana-dev docker-build -b DEBUG=1
-        $ reana-cluster -f reana-cluster-dev.yaml init --traefik
+        $ reana-cluster -f reana-cluster-minikube-dev.yaml init --traefik
 
     How to set up your shell environment variables:
 
