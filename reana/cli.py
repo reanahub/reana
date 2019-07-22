@@ -362,6 +362,21 @@ def get_current_branch(srcdir):
         shell=True).decode().rstrip('\r\n')
 
 
+def get_all_branches(srcdir):
+    """Return all local and remote Git branch names in the given directory.
+
+    :param srcdir: source code directory
+    :type srcdir: str
+
+    :return: checkout out branch in the component source code directory
+    :rtype: str
+    """
+    os.chdir(srcdir)
+    return subprocess.check_output(
+        'git branch -a 2>/dev/null',
+        shell=True).decode().split()
+
+
 def get_current_commit(srcdir):
     """Return information about git commit checked out in the given directory.
 
@@ -720,13 +735,41 @@ def git_status(component, short):  # noqa: D301
     """
     components = select_components(component)
     for component in components:
+        # detect current branch and commit
         branch = get_current_branch(get_srcdir(component))
         commit = get_current_commit(get_srcdir(component))
+        # detect all local and remote branches
+        all_branches = get_all_branches(get_srcdir(component))
+        # detect branch to compare against
+        if branch == 'master':  # master
+            branch_to_compare = 'upstream/master'
+        elif branch.startswith('pr-'):  # other people's PR
+            branch_to_compare = 'upstream/' + branch.replace('pr-', 'pr/')
+        else:
+            branch_to_compare = 'origin/' + branch  # my PR
+            if 'remotes/' + branch_to_compare not in all_branches:
+                branch_to_compare = 'origin/master'  # local unpushed branch
+        # detect how far it is ahead/behind from origin/upstream
+        cmd = 'git rev-list --left-right --count {0}...{1}'.format(
+            branch_to_compare, branch)
+        behind, ahead = [
+            int(x) for x in run_command(cmd, display=False,
+                                        return_output=True).split()
+        ]
+        if ahead or behind:
+            branch += ' ('
+            if ahead:
+                branch += '{0} AHEAD '.format(ahead)
+            if behind:
+                branch += '{0} BEHIND '.format(behind)
+            branch += branch_to_compare + ')'
+        # print branch information
         click.secho('- {0}'.format(component), nl=False, bold=True)
         if branch == 'master':
             click.secho(' @ {0} {1}'.format(branch, commit))
         else:
             click.secho(' @ {0} {1}'.format(branch, commit), fg='red')
+        # optionally, display short status
         if short:
             cmd = 'git status --short'
             run_command(cmd, component, display=False)
@@ -849,7 +892,7 @@ def git_branch(component):  # noqa: D301
     :type component: str
     """
     for component in select_components(component):
-        cmd = 'git branch'
+        cmd = 'git branch -vv'
         run_command(cmd, component)
 
 
@@ -1099,7 +1142,6 @@ def docker_build(user, tag, component, build_arg,
     :type quiet bool
     """
     components = select_components(component)
-    static_tag = tag
     for component in components:
         if is_component_dockerised(component):
             cmd = 'docker build'
