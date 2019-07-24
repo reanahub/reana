@@ -752,7 +752,8 @@ def git_status(component, short):  # noqa: D301
             branch_to_compare = 'origin/' + branch  # my PR
             if 'remotes/' + branch_to_compare not in all_branches:
                 branch_to_compare = 'origin/master'  # local unpushed branch
-        # detect how far it is ahead/behind from origin/upstream
+        # detect how far it is ahead/behind from pr/origin/upstream
+        report = ''
         cmd = 'git rev-list --left-right --count {0}...{1}'.format(
             branch_to_compare, branch)
         behind, ahead = [
@@ -760,19 +761,38 @@ def git_status(component, short):  # noqa: D301
                                         return_output=True).split()
         ]
         if ahead or behind:
-            branch += ' ('
+            report += '('
             if ahead:
-                branch += '{0} AHEAD '.format(ahead)
+                report += '{0} AHEAD '.format(ahead)
             if behind:
-                branch += '{0} BEHIND '.format(behind)
-            branch += branch_to_compare + ')'
+                report += '{0} BEHIND '.format(behind)
+            report += branch_to_compare + ')'
+        # detect rebase needs for local branches and PRs
+        if branch_to_compare != 'upstream/master':
+            branch_to_compare = 'upstream/master'
+            cmd = 'git rev-list --left-right --count {0}...{1}'.format(
+                branch_to_compare, branch)
+            behind, ahead = [
+                int(x) for x in run_command(cmd, display=False,
+                                            return_output=True).split()
+            ]
+            if behind:
+                report += '(STEMS FROM '
+                if behind:
+                    report += '{0} BEHIND '.format(behind)
+                report += branch_to_compare + ')'
         # print branch information
-        click.secho('- {0}'.format(component), nl=False, bold=True)
+        click.secho('{0}'.format(component), nl=False, bold=True)
+        click.secho(' @ ', nl=False, dim=True)
         if branch == 'master':
-            click.secho(' @ {0} {1}'.format(branch, commit))
+            click.secho('{0}'.format(branch), nl=False)
         else:
-            click.secho(' @ {0} {1}'.format(branch, commit), fg='red')
-        # optionally, display short status
+            click.secho('{0}'.format(branch), nl=False, fg='green')
+        if report:
+            click.secho(' {0}'.format(report), nl=False, fg='red')
+        click.secho(' @ ', nl=False, dim=True)
+        click.secho('{0}'.format(commit))
+        # optionally, display also short status
         if short:
             cmd = 'git status --short'
             run_command(cmd, component, display=False)
