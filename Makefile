@@ -26,11 +26,6 @@ DEBUG := $(shell test "$$CLUSTER_CONFIG" = dev && echo 1 || echo 0)
 SHOULD_MINIKUBE_MOUNT := $(shell [ "${DEBUG}" -gt 0 ] && [ -z "`ps -ef | grep -i '[m]inikube mount' 2> /dev/null`" ] && echo 1 || echo 0)
 PWD := $(shell pwd)
 
-define n
-
-
-endef
-
 all: help
 
 help:
@@ -45,38 +40,38 @@ help:
 	@echo
 	@echo 'Configuration options:'
 	@echo
+	@echo '  CLUSTER_CONFIG    Which cluster configuration to use? [e.g. "dev" for live coding and debugging; default is production]'
+	@echo '  DEMO              Which demo example to run? [e.g. "reana-demo-helloworld"; default is several]'
 	@echo '  GITHUB_USER       Which GitHub user account to use for cloning? [default=anonymous]'
 	@echo '  MINIKUBE_DRIVER   Which Minikube driver to use? [default=kvm2]'
 	@echo '  MINIKUBE_PROFILE  Which Minikube profile to use? [default=minikube]'
 	@echo '  TIMECHECK         Checking frequency in seconds when bringing cluster up and down? [default=5]'
 	@echo '  TIMEOUT           Maximum timeout to wait when bringing cluster up and down? [default=300]'
 	@echo '  VENV_NAME         Which Python virtual environment name to use? [default=reana]'
-	@echo '  DEMO              Which demo example to run? [e.g. reana-demo-helloworld; default=several runable examples]'
-	@echo '  CLUSTER_CONFIG    REANA cluster environment mode. Use "dev" for live coding and debugging.'
 	@echo
 	@echo 'Examples:'
 	@echo
-	@echo '  # how to set up personal development environment:'
-	@echo '  $$ GITHUB_USER=johndoe MINIKUBE_DRIVER=virtualbox make setup clone'
+	@echo '  # Example 1: set up personal development environment'
+	@echo '  $$ GITHUB_USER=johndoe MINIKUBE_DRIVER=virtualbox make setup prefetch clone'
 	@echo
-	@echo '  # how to build and deploy REANA in production mode:'
-	@echo '  $ make build'
-	@echo '  $ make deploy'
+	@echo '  # Example 2: build and deploy REANA in production mode'
+	@echo '  $$ make build deploy'
 	@echo
-	@echo '  # how to deploy REANA in development mode, with application'
-	@echo '  # autoreload on code changes and debugging capabilities:'
+	@echo '  # Example 3: build and deploy REANA in development mode (with live code changes and debugging)'
 	@echo '  $$ minikube mount $$(pwd)/..:/code'
-	@echo '  $$ cd reana-server && pip install -e . && cd ..  # workaround necessary for reanahub/reana-workflow-controller#64'
-	@echo '  $$ CLUSTER_CONFIG=dev make build'
-	@echo '  $$ CLUSTER_CONFIG=dev make deploy'
+	@echo '  $$ cd reana-server && pip install -e . && cd ..  # workaround for reana-workflow-controller#64'
+	@echo '  $$ CLUSTER_CONFIG=dev make build deploy'
 	@echo
-	@echo '  # how to build latest checked-out sources and run one small demo example:'
-	@echo '  $$ DEMO=reana-demo-helloworld make ci'
+	@echo '  # Example 4: run one small demo example to verify the build'
+	@echo '  $$ DEMO=reana-demo-helloworld make example'
 	@echo
-	@echo '  # how to build latest checked-out sources and run several runable demo examples:'
+	@echo '  # Example 5: run several small examples to verify the build'
+	@echo '  $$ make example'
+	@echo
+	@echo '  # Example 6: perform full CI build-and-test cycle'
 	@echo '  $$ make ci'
 	@echo
-	@echo '  # how to perform an independent automated CI test run:'
+	@echo '  # Example 7: perform full CI build-and-test cycle in an independent cluster'
 	@echo '  $$ mkdir /tmp/nightlybuild && cd /tmp/nightlybuild'
 	@echo '  $$ git clone https://github.com/reanahub/reana && cd reana'
 	@echo '  $$ VENV_NAME=nightlybuild MINIKUBE_PROFILE=nightlybuild make ci'
@@ -151,7 +146,7 @@ endif
 		fi;\
 	done
 
-example: # Run all or one particular demo example. By default all REANA examples are executed.
+example: # Run one or several demo examples.
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	eval $$(reana-dev setup-environment) && \
 	reana-dev run-example -c ${DEMO}
