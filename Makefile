@@ -139,7 +139,7 @@ endif
 	if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
 		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi; \
 	fi && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml init --traefik --generate-default-secrets && \
+	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml init --traefik --generate-db-secrets && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \

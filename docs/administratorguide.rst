@@ -195,7 +195,7 @@ script. The typical usage scenario goes as follows:
    $ # deploy helm inside the Cluster
    $ helm init
    $ # deploy new cluster and check progress
-   $ reana-cluster init --traefik
+   $ reana-cluster init --traefik --generate-db-secrets
    $ reana-cluster status
    $ # set environment variables for reana-client
    $ eval $(reana-cluster env --include-admin-token) # since you are admin
