@@ -30,6 +30,7 @@ REPO_LIST_ALL = [
     'reana-commons',
     'reana-db',
     'reana-demo-alice-lego-train-test-run',
+    'reana-demo-alice-pt-analysis',
     'reana-demo-bsm-search',
     'reana-demo-cms-h4l',
     'reana-demo-lhcb-d2pimumu',
@@ -94,6 +95,7 @@ EXAMPLE_OUTPUTS = {
     'reana-demo-helloworld': ('greetings.txt',),
     'reana-demo-bsm-search': ('prefit.pdf', 'postfit.pdf'),
     'reana-demo-alice-lego-train-test-run': ('plot.pdf',),
+    'reana-demo-alice-pt-analysis': ('plot_eta.pdf', 'plot_pt.pdf'),
     'reana-demo-atlas-recast': ('pre.png', 'limit.png', 'limit_data.json'),
     '*': ('plot.png',)
 }

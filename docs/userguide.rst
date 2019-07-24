@@ -480,6 +480,7 @@ REANA-compatible manner to facilitate its future reuse.
 - `reana-demo-worldpopulation <https://github.com/reanahub/reana-demo-worldpopulation/>`_ - a parametrised Jupyter notebook example
 - `reana-demo-root6-roofit <https://github.com/reanahub/reana-demo-root6-roofit/>`_ - a simplified ROOT RooFit physics analysis example
 - `reana-demo-alice-lego-train-test-run <https://github.com/reanahub/reana-demo-alice-lego-train-test-run/blob/master/README.rst>`_ - ALICE experiment analysis train test run and validation
+- `reana-demo-alice-pt-analysis <https://github.com/reanahub/reana-demo-alice-pt-analysis/blob/master/README.rst>`_ - a simple ALICE Pt analysis demonstrator
 - `reana-demo-atlas-recast <https://github.com/reanahub/reana-demo-atlas-recast/blob/master/README.rst>`_ - ATLAS collaboration production software stack example recasting an analysis
 - `reana-demo-bsm-search <https://github.com/reanahub/reana-demo-bsm-search/blob/master/README.rst>`_ - a typical BSM search example with complex particle physics workflows
 - `reana-demo-cms-h4l <https://github.com/reanahub/reana-demo-cms-h4l/blob/master/README.rst>`_ - CMS Higgs-to-four-leptons open data analysis example
