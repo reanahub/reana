@@ -1416,7 +1416,7 @@ def run_example(component, workflow_engine,
     for component in components:
         for workflow_engine in workflow_engines:
             workflow_name = construct_workflow_name(component, workflow_engine)
-            # check whether example contains recipe for given engine:
+            # check whether example contains recipe for given engine
             if not os.path.exists(get_srcdir(component) + os.sep +
                                   reana_yaml[workflow_engine]):
                 msg = 'Skipping example with workflow engine {0}.'.format(
@@ -1429,12 +1429,11 @@ def run_example(component, workflow_engine,
                     reana_yaml[workflow_engine], workflow_name),
             ]:
                 run_command(cmd, component)
-            # upload various inputs
-            for inputdir in ['inputs', 'code', 'data']:
-                if os.path.exists(get_srcdir(component) + os.sep + inputdir):
-                    cmd = 'reana-client upload ./{0} -w {1}'.format(
-                        inputdir, workflow_name)
-                    run_command(cmd, component)
+            # upload inputs
+            for cmd in [
+                'reana-client upload -w {0}'.format(workflow_name),
+            ]:
+                run_command(cmd, component)
             # run workflow
             input_parameters = ' '.join(
                 ['-p ' + parameter for parameter in parameters])
@@ -1445,7 +1444,7 @@ def run_example(component, workflow_engine,
                     workflow_name, input_parameters, operational_options),
             ]:
                 run_command(cmd, component)
-            # verify whether job finished within time limits:
+            # verify whether job finished within time limits
             time_start = time.time()
             while time.time() - time_start <= timeout:
                 time.sleep(timecheck)
@@ -1457,7 +1456,7 @@ def run_example(component, workflow_engine,
                    or 'failed' in status \
                    or 'stopped' in status:
                     break
-            # verify output file presence:
+            # verify output file presence
             cmd = 'reana-client ls -w {0}'.format(workflow_name)
             listing = run_command(cmd, component, return_output=True)
             click.secho(listing)
