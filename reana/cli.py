@@ -536,7 +536,10 @@ def run_command(cmd, component='', display=True, return_output=False):
     """
     now = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
     if display:
-        click.secho('[{0} {1}] {2}'.format(now, component, cmd), bold=True)
+        click.secho('[{0}] '.format(now), bold=True, nl=False, fg='green')
+        click.secho('{0}: '.format(component), bold=True, nl=False,
+                    fg='yellow')
+        click.secho('{0}'.format(cmd), bold=True)
     if component:
         os.chdir(get_srcdir(component))
     try:
@@ -547,8 +550,10 @@ def run_command(cmd, component='', display=True, return_output=False):
             subprocess.check_call(cmd, shell=True)
     except subprocess.CalledProcessError as err:
         if display:
-            click.secho('[{0} {1}] {2}'.format(now, component, err),
-                        bold=True)
+            click.secho('[{0}] '.format(now), bold=True, nl=False, fg='green')
+            click.secho('{0}: '.format(component), bold=True, nl=False,
+                        fg='yellow')
+            click.secho('{0}'.format(err), bold=True, fg='red')
         sys.exit(err.returncode)
 
 
@@ -561,7 +566,9 @@ def display_message(msg, component=''):
     :type component: str
     """
     now = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
-    click.secho('[{0} {1}] {2}'.format(now, component, msg), bold=True)
+    click.secho('[{0}] '.format(now), bold=True, nl=False, fg='green')
+    click.secho('{0}: '.format(component), bold=True, nl=False, fg='yellow')
+    click.secho('{0}'.format(msg), bold=True)
 
 
 def get_default_output_for_example(example):

@@ -79,6 +79,7 @@ help:
 	@echo '  $$ cd /tmp && rm -rf /tmp/nightlybuild'
 
 setup: # Prepare local host virtual environment and Minikube for REANA building and deployment.
+	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make setup\033[0m"
 ifndef HAS_KUBECTL
 	$(error "Please install Kubectl v1.14.0 or higher")
 endif
@@ -90,11 +91,13 @@ endif
 	test -e ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate || virtualenv ${HOME}/.virtualenvs/${VENV_NAME}
 
 clone: # Clone REANA source code repositories locally.
+	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make clone\033[0m"
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	pip install . --upgrade && \
 	reana-dev git-clone -c ALL -u ${GITHUB_USER}
 
 build: # Build REANA client and cluster components.
+	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make build\033[0m"
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE})  && \
 	pip install . --upgrade &&  \
@@ -113,6 +116,7 @@ build: # Build REANA client and cluster components.
 	fi
 
 deploy: # Deploy/redeploy previously built REANA cluster.
+	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make deploy\033[0m"
 ifeq ($(SHOULD_MINIKUBE_MOUNT),1)
 	$(error "$nIt seems you are not running 'minikube mount'.  Please run the following command in a different terminal:$n$n\
 	    $$ minikube mount $$(pwd)/..:/code$n$nThis will enable the cluster pods to see the live edits that are necessary for debugging.")
@@ -147,16 +151,19 @@ endif
 	done
 
 example: # Run one or several demo examples.
+	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make example\033[0m"
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	eval $$(reana-dev setup-environment) && \
 	reana-dev run-example -c ${DEMO}
 
 prefetch: # Prefetch interesting Docker images. Useful to speed things later.
+	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make prefetch\033[0m"
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
 	reana-dev docker-pull -c ${DEMO}
 
 ci: # Perform full Continuous Integration build and test cycle. [main function]
+	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make ci\033[0m"
 	make setup
 	make clone
 	make prefetch
@@ -166,6 +173,7 @@ ci: # Perform full Continuous Integration build and test cycle. [main function]
 	make example
 
 teardown: # Destroy local host virtual environment and Minikube. All traces go.
+	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make teardown\033[0m"
 	minikube stop --profile ${MINIKUBE_PROFILE}
 	minikube delete --profile ${MINIKUBE_PROFILE}
 	rm -rf ${HOME}/.virtualenvs/${VENV_NAME}
