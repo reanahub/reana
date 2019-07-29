@@ -162,6 +162,7 @@ ci: # Perform full Continuous Integration build and test cycle. [main function]
 	make prefetch
 	make build
 	make deploy
+	sleep ${TIMECHECK} && sleep ${TIMECHECK}
 	make example
 
 teardown: # Destroy local host virtual environment and Minikube. All traces go.
