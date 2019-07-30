@@ -33,6 +33,7 @@ REPO_LIST_ALL = [
     'reana-demo-alice-pt-analysis',
     'reana-demo-bsm-search',
     'reana-demo-cms-h4l',
+    'reana-demo-cms-reco',
     'reana-demo-lhcb-d2pimumu',
     'reana-env-aliphysics',
     'reana-env-jupyter',
