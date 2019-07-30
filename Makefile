@@ -5,16 +5,16 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 
 # configuration options that may be passed as environment variables:
+DEMO ?= DEMO
 GITHUB_USER ?= anonymous
-MINIKUBE_DRIVER ?= kvm2
-MINIKUBE_PROFILE ?= minikube
 MINIKUBE_CPUS ?= 2
-MINIKUBE_MEMORY ?= 3072
 MINIKUBE_DISKSIZE ?= 40g
+MINIKUBE_DRIVER ?= kvm2
+MINIKUBE_MEMORY ?= 3072
+MINIKUBE_PROFILE ?= minikube
 TIMECHECK ?= 5
 TIMEOUT ?= 300
 VENV_NAME ?= reana
-DEMO ?= DEMO
 
 # bash shell is necessary
 SHELL = /usr/bin/env bash
@@ -40,10 +40,13 @@ help:
 	@echo
 	@echo 'Configuration options:'
 	@echo
-	@echo '  CLUSTER_CONFIG    Which cluster configuration to use? [e.g. "dev" for live coding and debugging; default is production]'
+	@echo '  CLUSTER_CONFIG    Which cluster configuration to use for Minikube? [e.g. "dev" for live coding and debugging; default is production]'
 	@echo '  DEMO              Which demo example to run? [e.g. "reana-demo-helloworld"; default is several]'
-	@echo '  GITHUB_USER       Which GitHub user account to use for cloning? [default=anonymous]'
-	@echo '  MINIKUBE_DRIVER   Which Minikube driver to use? [default=kvm2]'
+	@echo '  GITHUB_USER       Which GitHub user account to use for cloning for Minikube? [default=anonymous]'
+	@echo '  MINIKUBE_CPUS     How many CPUs to allocate for Minikube? [default=2]'
+	@echo '  MINIKUBE_DISKSIZE How much disk size to allocate for Minikube? [default=40g]'
+	@echo '  MINIKUBE_DRIVER   Which vm driver to use for Minikube? [default=kvm2]'
+	@echo '  MINIKUBE_MEMORY   How much memory to allocate for Minikube? [default=3072]'
 	@echo '  MINIKUBE_PROFILE  Which Minikube profile to use? [default=minikube]'
 	@echo '  TIMECHECK         Checking frequency in seconds when bringing cluster up and down? [default=5]'
 	@echo '  TIMEOUT           Maximum timeout to wait when bringing cluster up and down? [default=300]'
