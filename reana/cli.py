@@ -595,7 +595,7 @@ def get_current_version(component, dirty=False):
 
 @cli.command()
 def version():
-    """Return REANA version."""
+    """Show version."""
     from reana.version import __version__
     click.echo(__version__)
 
