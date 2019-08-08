@@ -65,6 +65,7 @@ REPO_LIST_CLUSTER = [
     'reana-commons',
     'reana-db',
     # cluster components
+    'reana-ui',
     'reana-job-controller',
     'reana-message-broker',
     'reana-server',
