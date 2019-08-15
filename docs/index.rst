@@ -14,6 +14,7 @@
    userguide
    administratorguide
    developerguide
+   gitlab
    contributing
    changes
    license
