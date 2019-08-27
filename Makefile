@@ -139,7 +139,7 @@ endif
 	done && \
 	minikube ssh --profile ${MINIKUBE_PROFILE} 'sudo rm -rf /var/reana' && \
 	if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
-		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi; \
+		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi --force; \
 	fi && \
 	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml init --traefik --generate-db-secrets && \
 	waited=0 && while true; do \
