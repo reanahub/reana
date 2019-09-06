@@ -181,7 +181,7 @@ def cli():  # noqa: D301
         $ minikube start --vm-driver=kvm2 \\
                          --feature-gates="TTLAfterFinished=true"
         $ eval $(minikube docker-env)
-        # deploy helm inside the Cluster
+        $ # deploy helm inside the Cluster
         $ helm init
         $ # option (a): cluster in production-like mode
         $ reana-dev docker-build
