@@ -62,7 +62,6 @@ help:
 	@echo
 	@echo '  # Example 3: build and deploy REANA in development mode (with live code changes and debugging)'
 	@echo '  $$ minikube mount $$(pwd)/..:/code'
-	@echo '  $$ cd reana-server && pip install -e . && cd ..  # workaround for reana-workflow-controller#64'
 	@echo '  $$ CLUSTER_CONFIG=dev make build deploy'
 	@echo
 	@echo '  # Example 4: run one small demo example to verify the build'
@@ -107,6 +106,12 @@ build: # Build REANA client and cluster components.
 	pip uninstall -y reana-commons reana-client reana-cluster reana-db pytest-reana && \
 	reana-dev install-client && \
 	reana-dev install-cluster && \
+	if [ "${DEBUG}" -gt 0 ]; then \
+		cd ${PWD}/../reana-server/ && \
+		python setup.py bdist_egg && \
+		cd -; \
+	fi && \
+	pip check && \
 	reana-dev git-submodule --update && \
 	reana-dev docker-build -b DEBUG=${DEBUG} && \
 	reana-dev git-submodule --delete && \
