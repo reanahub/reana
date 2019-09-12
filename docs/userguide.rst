@@ -410,9 +410,14 @@ Declare necessary resources
 ---------------------------
 
 You can declare other additional runtime dependencies that your workflow needs
-for successful operation, such as access to `CVMFS
-<https://cernvm.cern.ch/portal/filesystem>`_. This is achieved by means of
-providing a ``resources`` clause in ``reana.yaml``. For example:
+for successful operation.
+
+**CVMFS**
+
+If your workflow needs to access `CVMFS <https://cernvm.cern.ch/portal/filesystem>`_
+filesystem, you should provide a ``cvmfs`` sub-clause of the ``resources`` clause that
+would list all the CVMFS volumes that would be mounted for the workflow execution.
+For example:
 
 .. code-block:: yaml
 
@@ -426,6 +431,68 @@ providing a ``resources`` clause in ``reana.yaml``. For example:
           - environment: 'cern/slc6-base'
             commands:
             - ls -l /cvmfs/fcc.cern.ch/sw/views/releases/
+
+
+**Kerberos**
+
+If your workflow requires Kerberos authentication, you should add ``kerberos: true``
+for the steps that needs it. Please note that you should
+`upload keytab <https://reana-client.readthedocs.io/en/latest/userguide.html#adding-secrets>`_
+file for the Kerberos authentication to work.
+
+Serial example:
+
+.. code-block:: yaml
+
+    workflow:
+      type: serial
+      resources:
+        cvmfs:
+          - fcc.cern.ch
+      specification:
+        steps:
+          kerberos: true
+          - environment: 'cern/slc6-base'
+            commands:
+            - ls -l /cvmfs/fcc.cern.ch/sw/views/releases/
+
+CWL example:
+
+.. code-block:: yaml
+
+    steps:
+      first:
+        hints:
+          reana:
+            kerberos: true
+        run: helloworld.tool
+   	    in:
+   	      helloworld: helloworld
+
+   	      inputfile: inputfile
+   	      sleeptime: sleeptime
+   	      outputfile: outputfile
+   	    out: [result]
+
+Yadage example:
+
+.. code-block:: yaml
+
+    step:
+      process:
+        process_type: 'string-interpolated-cmd'
+        cmd: 'python "{helloworld}" --sleeptime {sleeptime} --inputfile "{inputfile}" --outputfile "{outputfile}"'
+      publisher:
+        publisher_type: 'frompar-pub'
+        outputmap:
+          outputfile: outputfile
+      environment:
+        environment_type: 'docker-encapsulated'
+        image: 'python'
+        imagetag: '2.7-slim'
+        resources:
+          - kerberos: true
+
 
 Run your analysis on REANA cloud
 --------------------------------
