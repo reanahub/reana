@@ -1177,17 +1177,18 @@ def docker_build(user, tag, component, build_arg,
     """
     components = select_components(component)
     for component in components:
+        component_tag = tag
         if is_component_dockerised(component):
             cmd = 'docker build'
             if tag == 'auto':
-                tag = get_current_version(component, dirty=True)
+                component_tag = get_current_version(component, dirty=True)
             for arg in build_arg:
                 cmd += ' --build-arg {0}'.format(arg)
             if no_cache:
                 cmd += ' --no-cache'
             if quiet:
                 cmd += ' --quiet'
-            cmd += ' -t {0}/{1}:{2} .'.format(user, component, tag)
+            cmd += ' -t {0}/{1}:{2} .'.format(user, component, component_tag)
             run_command(cmd, component)
         else:
             msg = 'Ignoring this component that does not contain' \
