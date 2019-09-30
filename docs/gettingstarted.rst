@@ -59,7 +59,10 @@ You can also easily deploy your own REANA cloud instance by using the
    $ # install reana-cluster utility
    $ pip install reana-cluster
    $ # deploy helm inside the cluster
-   $ helm init
+   $ helm init --override spec.selector.matchLabels.'name'='tiller',spec.selector.matchLabels.'app'='helm' \
+               --output yaml | \
+               sed 's@apiVersion: extensions/v1beta1@apiVersion: apps/v1@' | \
+               kubectl create -f -
    $ # deploy new cluster and check progress
    $ reana-cluster init --traefik --generate-db-secrets
    $ reana-cluster status
