@@ -12,6 +12,7 @@ MINIKUBE_DISKSIZE ?= 40g
 MINIKUBE_DRIVER ?= kvm2
 MINIKUBE_MEMORY ?= 3072
 MINIKUBE_PROFILE ?= minikube
+MINIKUBE_KUBERNETES ?= v1.15.4
 TIMECHECK ?= 5
 TIMEOUT ?= 300
 VENV_NAME ?= reana
@@ -40,17 +41,18 @@ help:
 	@echo
 	@echo 'Configuration options:'
 	@echo
-	@echo '  CLUSTER_CONFIG    Which cluster configuration to use for Minikube? [e.g. "dev" for live coding and debugging; default is production]'
-	@echo '  DEMO              Which demo example to run? [e.g. "reana-demo-helloworld"; default is several]'
-	@echo '  GITHUB_USER       Which GitHub user account to use for cloning for Minikube? [default=anonymous]'
-	@echo '  MINIKUBE_CPUS     How many CPUs to allocate for Minikube? [default=2]'
-	@echo '  MINIKUBE_DISKSIZE How much disk size to allocate for Minikube? [default=40g]'
-	@echo '  MINIKUBE_DRIVER   Which vm driver to use for Minikube? [default=kvm2]'
-	@echo '  MINIKUBE_MEMORY   How much memory to allocate for Minikube? [default=3072]'
-	@echo '  MINIKUBE_PROFILE  Which Minikube profile to use? [default=minikube]'
-	@echo '  TIMECHECK         Checking frequency in seconds when bringing cluster up and down? [default=5]'
-	@echo '  TIMEOUT           Maximum timeout to wait when bringing cluster up and down? [default=300]'
-	@echo '  VENV_NAME         Which Python virtual environment name to use? [default=reana]'
+	@echo '  CLUSTER_CONFIG      Which cluster configuration to use for Minikube? [e.g. "dev" for live coding and debugging; default is production]'
+	@echo '  DEMO                Which demo example to run? [e.g. "reana-demo-helloworld"; default is several]'
+	@echo '  GITHUB_USER         Which GitHub user account to use for cloning for Minikube? [default=anonymous]'
+	@echo '  MINIKUBE_CPUS       How many CPUs to allocate for Minikube? [default=2]'
+	@echo '  MINIKUBE_DISKSIZE   How much disk size to allocate for Minikube? [default=40g]'
+	@echo '  MINIKUBE_DRIVER     Which vm driver to use for Minikube? [default=kvm2]'
+	@echo '  MINIKUBE_MEMORY     How much memory to allocate for Minikube? [default=3072]'
+	@echo '  MINIKUBE_PROFILE    Which Minikube profile to use? [default=minikube]'
+	@echo '  MINIKUBE_KUBERNETES Which Kubernetes version to use with Minikube? [default=v1.15.4]'
+	@echo '  TIMECHECK           Checking frequency in seconds when bringing cluster up and down? [default=5]'
+	@echo '  TIMEOUT             Maximum timeout to wait when bringing cluster up and down? [default=300]'
+	@echo '  VENV_NAME           Which Python virtual environment name to use? [default=reana]'
 	@echo
 	@echo 'Examples:'
 	@echo
@@ -88,7 +90,7 @@ endif
 ifndef HAS_MINIKUBE
 	$(error "Please install Minikube v1.0.0 or higher")
 endif
-	minikube status --profile ${MINIKUBE_PROFILE} || minikube start --profile ${MINIKUBE_PROFILE} --vm-driver ${MINIKUBE_DRIVER} --cpus ${MINIKUBE_CPUS} --memory ${MINIKUBE_MEMORY} --disk-size ${MINIKUBE_DISKSIZE} --feature-gates="TTLAfterFinished=true"
+	minikube status --profile ${MINIKUBE_PROFILE} || minikube start --kubernetes-version=${MINIKUBE_KUBERNETES} --profile ${MINIKUBE_PROFILE} --vm-driver ${MINIKUBE_DRIVER} --cpus ${MINIKUBE_CPUS} --memory ${MINIKUBE_MEMORY} --disk-size ${MINIKUBE_DISKSIZE} --feature-gates="TTLAfterFinished=true"
 	helm init
 	test -e ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate || virtualenv ${HOME}/.virtualenvs/${VENV_NAME}
 
