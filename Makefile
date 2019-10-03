@@ -103,7 +103,7 @@ clone: # Clone REANA source code repositories locally.
 build: # Build REANA client and cluster components.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make build\033[0m"
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
-	eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE})  && \
+	minikube docker-env --profile ${MINIKUBE_PROFILE} > /dev/null && eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
 	pip install . --upgrade &&  \
 	pip uninstall -y reana-commons reana-client reana-cluster reana-db pytest-reana && \
 	reana-dev install-client && \
@@ -132,7 +132,7 @@ ifeq ($(SHOULD_MINIKUBE_MOUNT),1)
 	    $$ minikube mount $$(pwd)/..:/code$n$nThis will enable the cluster pods to see the live edits that are necessary for debugging.")
 endif
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
-	eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
+	minikube docker-env --profile ${MINIKUBE_PROFILE} > /dev/null && eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
 	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml down && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
@@ -169,7 +169,7 @@ example: # Run one or several demo examples.
 prefetch: # Prefetch interesting Docker images. Useful to speed things later.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make prefetch\033[0m"
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
-	eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
+	minikube docker-env --profile ${MINIKUBE_PROFILE} > /dev/null && eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
 	reana-dev docker-pull -c ${DEMO}
 
 ci: # Perform full Continuous Integration build and test cycle. [main function]
