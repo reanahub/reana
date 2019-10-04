@@ -100,6 +100,7 @@ EXAMPLE_OUTPUTS = {
     'reana-demo-alice-lego-train-test-run': ('plot.pdf',),
     'reana-demo-alice-pt-analysis': ('plot_eta.pdf', 'plot_pt.pdf'),
     'reana-demo-atlas-recast': ('pre.png', 'limit.png', 'limit_data.json'),
+    'reana-demo-cms-dimuon-mass-spectrum': ('DoubleMu.root',),
     '*': ('plot.png',)
 }
 

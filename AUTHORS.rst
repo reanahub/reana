@@ -12,6 +12,7 @@ The list of contributors in alphabetical order:
 - `Jan Okraska <https://orcid.org/0000-0002-1416-3244>`_
 - `Leticia Wanderley <https://orcid.org/0000-0003-4649-6630>`_
 - `Lukas Heinrich <https://orcid.org/0000-0002-4048-7584>`_
+- `Marco Vidal <https://orcid.org/0000-0002-9363-4971>`_
 - `Michael R. Crusoe <https://orcid.org/0000-0002-2961-9670>`_
 - `Robin Long <https://github.com/longr>`_
 - `Rokas Maciulaitis <https://orcid.org/0000-0003-1064-6967>`_
