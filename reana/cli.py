@@ -179,7 +179,7 @@ def cli():  # noqa: D301
 
         \b
         $ # install minikube and set docker environment
-        $ minikube start --vm-driver=kvm2 \\
+        $ minikube start --vm-driver=virtualbox \\
                          --feature-gates="TTLAfterFinished=true"
         $ eval $(minikube docker-env)
         $ # deploy helm inside the Cluster

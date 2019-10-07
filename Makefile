@@ -9,7 +9,7 @@ DEMO ?= DEMO
 GITHUB_USER ?= anonymous
 MINIKUBE_CPUS ?= 2
 MINIKUBE_DISKSIZE ?= 40g
-MINIKUBE_DRIVER ?= kvm2
+MINIKUBE_DRIVER ?= virtualbox
 MINIKUBE_MEMORY ?= 3072
 MINIKUBE_PROFILE ?= minikube
 MINIKUBE_KUBERNETES ?= v1.15.4
@@ -46,7 +46,7 @@ help:
 	@echo '  GITHUB_USER         Which GitHub user account to use for cloning for Minikube? [default=anonymous]'
 	@echo '  MINIKUBE_CPUS       How many CPUs to allocate for Minikube? [default=2]'
 	@echo '  MINIKUBE_DISKSIZE   How much disk size to allocate for Minikube? [default=40g]'
-	@echo '  MINIKUBE_DRIVER     Which vm driver to use for Minikube? [default=kvm2]'
+	@echo '  MINIKUBE_DRIVER     Which vm driver to use for Minikube? [default=virtualbox]'
 	@echo '  MINIKUBE_MEMORY     How much memory to allocate for Minikube? [default=3072]'
 	@echo '  MINIKUBE_PROFILE    Which Minikube profile to use? [default=minikube]'
 	@echo '  MINIKUBE_KUBERNETES Which Kubernetes version to use with Minikube? [default=v1.15.4]'
@@ -57,7 +57,7 @@ help:
 	@echo 'Examples:'
 	@echo
 	@echo '  # Example 1: set up personal development environment'
-	@echo '  $$ GITHUB_USER=johndoe MINIKUBE_DRIVER=virtualbox make setup prefetch clone'
+	@echo '  $$ GITHUB_USER=johndoe make setup clone prefetch'
 	@echo
 	@echo '  # Example 2: build and deploy REANA in production mode'
 	@echo '  $$ make build deploy'
