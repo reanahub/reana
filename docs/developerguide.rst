@@ -33,17 +33,14 @@ instructions.
 Debugging
 ---------
 
-In order to debug a REANA component, you first have to install REANA cluster in
-the development mode (see
-`reana-cluster documentation <http://reana-cluster.readthedocs.io/en/latest/developerguide.html#deploying-latest-master-branch-versions>`_).
-Once you have done this, you have to build the image of the component you are
-working on in development mode and we restart the corresponding pod:
+In order to debug a REANA component, you first have to mount REANA's source
+code into Minikube's `/code` directory and then build and re-deploy in
+development mode:
 
 .. code-block:: console
 
-   $ cd src/reana-server
-   $ reana-dev docker-build -t latest -c . -b DEBUG=1
-   $ reana-dev kubectl-delete-pod -c .
+   $ minikube mount $(pwd)/..:/code
+   $ CLUSTER_CONFIG=dev make build deploy
 
 Let us now introduce `wdb` breakpoint as the first instruction of the
 first instruction of the `get_workflows()` function located in
@@ -56,7 +53,7 @@ component:
 
 .. code-block:: console
 
-   $ kubectl logs --selector=app="server"
+   $ kubectl logs --selector=app="server" -c server
 
    DB Created.
     * Serving Flask app "/code/reana_server/app.py" (lazy loading)
@@ -68,6 +65,7 @@ component:
     * Restarting with stat
     * Debugger is active!
     * Debugger PIN: 221-564-335
+
    $ curl $REANA_SERVER_URL/api/workflows?access_token=$REANA_ACCESS_TOKEN
 
 After doing that we can go to the `wdb` dashboard:
@@ -82,16 +80,6 @@ After doing that we can go to the `wdb` dashboard:
 And finally select the debugging session.
 
 .. image:: /_static/wdb-debugging-ui.png
-
-
-**Limitations**
-
-It is not possible to get live code updates in workflow engine components since
-celery option `--autoreload` doesn't work and it is deprecated. To debug
-`celery` right now:
-
-* Set breakpoint: ``import wdb; wdb.set_trace()``
-* Kill the workflow engine container: ``kubectl delete pod cwl-default-worker-2461563162-r4hgg``
 
 Port forwarding
 ---------------
