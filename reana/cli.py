@@ -32,6 +32,8 @@ REPO_LIST_ALL = [
     'reana-demo-alice-lego-train-test-run',
     'reana-demo-alice-pt-analysis',
     'reana-demo-bsm-search',
+    'reana-demo-cdci-crab-pulsar-integral-verification',
+    'reana-demo-cdci-integral-data-reduction',
     'reana-demo-cms-dimuon-mass-spectrum',
     'reana-demo-cms-h4l',
     'reana-demo-cms-reco',
