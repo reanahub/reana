@@ -600,7 +600,7 @@ def get_current_version(component, dirty=False):
     """
     cmd = 'git describe'
     if dirty:
-        cmd += ' --dirty'
+        cmd += ' --dirty --always'
     tag = run_command(cmd, component, return_output=True)
     # Remove starting `v` we use for Python/Git versioning
     return tag[1:]
@@ -1144,11 +1144,13 @@ def git_push(component):  # noqa: D301
 @click.option('--build-arg', '-b', default='', multiple=True,
               help='Any build arguments? (e.g. `-b DEBUG=1`)')
 @click.option('--no-cache', is_flag=True)
+@click.option('--output-component-versions', '-o', type=click.File('w'),
+              help='Where to write the list of built image tags.')
 @click.option('-q', '--quiet', is_flag=True,
               help='Suppress the build output and print image ID on success')
 @cli.command(name='docker-build')
 def docker_build(user, tag, component, build_arg,
-                 no_cache, quiet):  # noqa: D301
+                 no_cache, output_component_versions, quiet):  # noqa: D301
     """Build REANA component images.
 
     \b
@@ -1172,14 +1174,19 @@ def docker_build(user, tag, component, build_arg,
         generate git-tag-based value such as '0.5.1-3-g75ae5ce'.
     :param build_arg: Optional docker build argument. (e.g. DEBUG=1)
     :param no_cache: Flag instructing to avoid using cache. [default=False]
+    :param output_component_versions: File where to write the built images
+        tags. Useful when using `--tag auto` since every REANA component
+        will have a different tag.
     :type component: str
     :type user: str
     :type tag: str
     :type build_arg: str
     :type no_cache: bool
-    :type quiet bool
+    :type output_component_versions: File
+    :type quiet: bool
     """
     components = select_components(component)
+    built_components_versions_tags = []
     for component in components:
         component_tag = tag
         if is_component_dockerised(component):
@@ -1192,12 +1199,19 @@ def docker_build(user, tag, component, build_arg,
                 cmd += ' --no-cache'
             if quiet:
                 cmd += ' --quiet'
-            cmd += ' -t {0}/{1}:{2} .'.format(user, component, component_tag)
+            component_version_tag = '{0}/{1}:{2}'.format(
+                user, component, component_tag)
+            cmd += ' -t {0} .'.format(component_version_tag)
             run_command(cmd, component)
+            built_components_versions_tags.append(component_version_tag)
         else:
             msg = 'Ignoring this component that does not contain' \
                   ' a Dockerfile.'
             display_message(msg, component)
+
+    if output_component_versions:
+        output_component_versions.write(
+            '\n'.join(built_components_versions_tags) + '\n')
 
 
 @click.option('--user', '-u', default='reanahub',
