@@ -1391,7 +1391,10 @@ def install_cluster():  # noqa: D301
 
 
 @cli.command(name='setup-environment')
-def setup_environment():  # noqa: D301
+@click.option(
+    '--server-hostname',
+    help='Set customized REANA Server hostname.')
+def setup_environment(server_hostname):  # noqa: D301
     """Display commands to set up shell environment for local cluster.
 
     Display commands how to set up REANA_SERVER_URL and REANA_ACCESS_TOKEN
@@ -1399,9 +1402,10 @@ def setup_environment():  # noqa: D301
     passed to eval.
     """
     try:
-        print(subprocess.check_output(
-            'reana-cluster env --include-admin-token',
-            shell=True).decode().rstrip('\r\n'))
+        flag = ('--server-hostname {}'.format(server_hostname)
+                if server_hostname else '')
+        cmd = 'reana-cluster env --include-admin-token {}'.format(flag)
+        print(subprocess.check_output(cmd, shell=True).decode().rstrip('\r\n'))
     except subprocess.CalledProcessError as err:
         sys.exit(err.returncode)
 

@@ -53,6 +53,7 @@ help:
 	@echo '  TIMECHECK           Checking frequency in seconds when bringing cluster up and down? [default=5]'
 	@echo '  TIMEOUT             Maximum timeout to wait when bringing cluster up and down? [default=300]'
 	@echo '  VENV_NAME           Which Python virtual environment name to use? [default=reana]'
+	@echo '  SERVER_URL          Setting a customized REANA Server hostname? [e.g. "https://myreanaserver.com"; default is Minikube IP]'
 	@echo
 	@echo 'Examples:'
 	@echo
@@ -158,12 +159,13 @@ endif
 		else \
 			sleep ${TIMECHECK}; \
 		fi;\
-	done
+	done && \
+	eval $$(reana-dev setup-environment $(addprefix --server-hostname , ${SERVER_URL}))
 
 example: # Run one or several demo examples.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make example\033[0m"
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
-	eval $$(reana-dev setup-environment) && \
+	eval $$(reana-dev setup-environment $(addprefix --server-hostname , ${SERVER_URL})) && \
 	reana-dev run-example -c ${DEMO}
 
 prefetch: # Prefetch interesting Docker images. Useful to speed things later.
