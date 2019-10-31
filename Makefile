@@ -54,6 +54,7 @@ help:
 	@echo '  TIMEOUT             Maximum timeout to wait when bringing cluster up and down? [default=300]'
 	@echo '  VENV_NAME           Which Python virtual environment name to use? [default=reana]'
 	@echo '  SERVER_URL          Setting a customized REANA Server hostname? [e.g. "https://myreanaserver.com"; default is Minikube IP]'
+	@echo '  CLUSTER_FLAGS       Which flags need to be passed to reana-cluster command? [e.g. "--loglevel --ui"; no flags are passed by default]'
 	@echo
 	@echo 'Examples:'
 	@echo
@@ -67,13 +68,16 @@ help:
 	@echo '  $$ minikube mount $$(pwd)/..:/code'
 	@echo '  $$ CLUSTER_CONFIG=dev make build deploy'
 	@echo
-	@echo '  # Example 4: run one small demo example to verify the build'
+	@echo '  # Example 4: build and deploy REANA with a custom hostname including REANA-UI'
+	@echo '  $$ CLUSTER_FLAGS=--ui SERVER_URL=https://reana-local.cern.ch make build deploy'
+	@echo
+	@echo '  # Example 5: run one small demo example to verify the build'
 	@echo '  $$ DEMO=reana-demo-helloworld make example'
 	@echo
-	@echo '  # Example 5: run several small examples to verify the build'
+	@echo '  # Example 6: run several small examples to verify the build'
 	@echo '  $$ make example'
 	@echo
-	@echo '  # Example 6: perform full CI build-and-test cycle'
+	@echo '  # Example 7: perform full CI build-and-test cycle'
 	@echo '  $$ make ci'
 	@echo
 	@echo '  # Example 7: perform full CI build-and-test cycle in an independent cluster'
@@ -134,7 +138,7 @@ ifeq ($(SHOULD_MINIKUBE_MOUNT),1)
 endif
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	minikube docker-env --profile ${MINIKUBE_PROFILE} > /dev/null && eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml down && \
+	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml $(CLUSTER_FLAGS) down && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
@@ -149,7 +153,7 @@ endif
 	if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
 		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi; \
 	fi && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml init --traefik --generate-db-secrets && \
+	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml $(CLUSTER_FLAGS) init --traefik --generate-db-secrets && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
