@@ -436,8 +436,9 @@ For example:
 **Kerberos**
 
 If your workflow requires Kerberos authentication, you should add ``kerberos: true``
-for the steps that needs it. Please note that you should
-`upload keytab <https://reana-client.readthedocs.io/en/latest/userguide.html#adding-secrets>`_
+for the steps in need. Please note that step's docker image
+(e.g ``environment: 'cern/slc6-base'``) should have Kerberos client installed and
+you should `upload keytab <https://reana-client.readthedocs.io/en/latest/userguide.html#adding-secrets>`_
 file for the Kerberos authentication to work.
 
 Serial example:
@@ -451,8 +452,8 @@ Serial example:
           - fcc.cern.ch
       specification:
         steps:
-          kerberos: true
           - environment: 'cern/slc6-base'
+            kerberos: true
             commands:
             - ls -l /cvmfs/fcc.cern.ch/sw/views/releases/
 
