@@ -158,7 +158,7 @@ endif
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
 			break; \
-		elif [ $$(kubectl logs -l app=server -c server --tail=500 | grep -c '^Created 1st user') -eq 1 ]; then \
+		elif [ $$(kubectl logs -l app=server -c server --tail=500 | grep -c '^Serving Flask app') -eq 1 ]; then \
 			break; \
 		else \
 			sleep ${TIMECHECK}; \
