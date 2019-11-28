@@ -49,7 +49,7 @@ help:
 	@echo '  MINIKUBE_DRIVER     Which vm driver to use for Minikube? [default=virtualbox]'
 	@echo '  MINIKUBE_MEMORY     How much memory to allocate for Minikube? [default=3072]'
 	@echo '  MINIKUBE_PROFILE    Which Minikube profile to use? [default=minikube]'
-	@echo '  MINIKUBE_KUBERNETES Which Kubernetes version to use with Minikube? [default=v1.15.4]'
+	@echo '  MINIKUBE_KUBERNETES Which Kubernetes version to use with Minikube? [default=v1.16.3]'
 	@echo '  TIMECHECK           Checking frequency in seconds when bringing cluster up and down? [default=5]'
 	@echo '  TIMEOUT             Maximum timeout to wait when bringing cluster up and down? [default=300]'
 	@echo '  VENV_NAME           Which Python virtual environment name to use? [default=reana]'
@@ -80,7 +80,7 @@ help:
 	@echo '  # Example 7: perform full CI build-and-test cycle'
 	@echo '  $$ make ci'
 	@echo
-	@echo '  # Example 7: perform full CI build-and-test cycle in an independent cluster'
+	@echo '  # Example 8: perform full CI build-and-test cycle in an independent cluster'
 	@echo '  $$ mkdir /tmp/nightlybuild && cd /tmp/nightlybuild'
 	@echo '  $$ git clone https://github.com/reanahub/reana && cd reana'
 	@echo '  $$ VENV_NAME=nightlybuild MINIKUBE_PROFILE=nightlybuild make ci'
@@ -90,13 +90,12 @@ help:
 setup: # Prepare local host virtual environment and Minikube for REANA building and deployment.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make setup\033[0m"
 ifndef HAS_KUBECTL
-	$(error "Please install Kubectl v1.14.0 or higher")
+	$(error "Please install Kubectl v1.16.3 or higher")
 endif
 ifndef HAS_MINIKUBE
-	$(error "Please install Minikube v1.0.0 or higher")
+	$(error "Please install Minikube v1.5.2 or higher")
 endif
 	minikube status --profile ${MINIKUBE_PROFILE} || minikube start --kubernetes-version=${MINIKUBE_KUBERNETES} --profile ${MINIKUBE_PROFILE} --vm-driver ${MINIKUBE_DRIVER} --cpus ${MINIKUBE_CPUS} --memory ${MINIKUBE_MEMORY} --disk-size ${MINIKUBE_DISKSIZE} --feature-gates="TTLAfterFinished=true"
-	helm init
 	test -e ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate || virtualenv ${HOME}/.virtualenvs/${VENV_NAME}
 
 clone: # Clone REANA source code repositories locally.

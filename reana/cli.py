@@ -185,8 +185,6 @@ def cli():  # noqa: D301
         $ minikube start --vm-driver=virtualbox \\
                          --feature-gates="TTLAfterFinished=true"
         $ eval $(minikube docker-env)
-        $ # deploy helm inside the Cluster
-        $ helm init
         $ # option (a): cluster in production-like mode
         $ reana-dev docker-build
         $ reana-cluster -f reana-cluster-minikube.yaml init \\
