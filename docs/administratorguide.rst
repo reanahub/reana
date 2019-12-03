@@ -193,7 +193,7 @@ script. The typical usage scenario goes as follows:
    $ # install reana-cluster utility
    $ pip install reana-cluster
    $ # deploy new cluster and check progress
-   $ reana-cluster init --traefik --generate-db-secrets
+   $ reana-cluster init
    $ reana-cluster status
    $ # set environment variables for reana-client
    $ eval $(reana-cluster env --include-admin-token) # since you are admin

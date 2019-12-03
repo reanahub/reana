@@ -137,7 +137,7 @@ ifeq ($(SHOULD_MINIKUBE_MOUNT),1)
 endif
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	minikube docker-env --profile ${MINIKUBE_PROFILE} > /dev/null && eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml $(CLUSTER_FLAGS) down && \
+	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml $(CLUSTER_FLAGS) down --delete-traefik --delete-secrets && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
@@ -152,7 +152,7 @@ endif
 	if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
 		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi; \
 	fi && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml $(CLUSTER_FLAGS) init --traefik --generate-db-secrets && \
+	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml $(CLUSTER_FLAGS) init && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \

@@ -187,12 +187,10 @@ def cli():  # noqa: D301
         $ eval $(minikube docker-env)
         $ # option (a): cluster in production-like mode
         $ reana-dev docker-build
-        $ reana-cluster -f reana-cluster-minikube.yaml init \\
-                        --traefik --generate-db-secrets
+        $ reana-cluster -f reana-cluster-minikube.yaml init
         $ # option (b): cluster in developer-like debug-friendly mode
         $ reana-dev docker-build -b DEBUG=1
-        $ reana-cluster -f reana-cluster-minikube-dev.yaml init \\
-                        --traefik --generate-db-secrets
+        $ reana-cluster -f reana-cluster-minikube-dev.yaml init
 
     How to set up your shell environment variables:
 
@@ -245,8 +243,7 @@ def cli():  # noqa: D301
         $ reana-dev docker-build
         $ reana-cluster -f reana-cluster-minikube.yaml down
         $ minikube ssh 'sudo rm -rf /var/reana'
-        $ reana-cluster -f reana-cluster-minikube.yaml init \\
-                        --traefik --generate-db-secrets
+        $ reana-cluster -f reana-cluster-minikube.yaml init
         $ eval $(reana-dev setup-environment)
         $ reana-dev run-example -c r-d-helloworld
         $ reana-dev git-submodule --delete
