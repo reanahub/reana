@@ -494,6 +494,84 @@ Yadage example:
         resources:
           - kerberos: true
 
+Compute backends
+~~~~~~~~~~~~~~~~
+
+REANA supports Kubernetes as a primary compute backend alongside HTCondor and
+Slurm.
+
+In order to use HTCondor or Slurm clusters users should upload their CERN username
+and keytab secrets using:
+
+.. code-block:: console
+
+    $ reana-client secrets-add --env CERN_USER=johndoe
+                               --env CERN_KEYTAB=.keytab
+                               --file ~/.keytab
+
+ .. note::
+    Please note that CERN Slurm cluster access is not granted by
+    `default <https://batchdocs.web.cern.ch/linuxhpc/access.html>`_.
+
+**Kubernetes**
+
+Kubernetes is a default REANA job compute backend. If `step` does not contain
+`compute_backend` specification, it will be executed on the default backend.
+
+.. code-block:: yaml
+
+   # Serial example
+   ...
+   steps:
+      - name: reana_demo_helloworld_htcondorcern
+        environment: 'python:2.7-slim'
+        compute_backend: kubernetes
+        commands:
+            - python "${helloworld}"
+   ...
+
+**HTCondor**
+
+In order to execute the job on the HTCondor cluster user must specify ``htcondorcern``
+as the step's execution backend in the workflow specification.
+
+.. code-block:: yaml
+
+   # Serial example
+   ...
+   steps:
+      - name: reana_demo_helloworld_htcondorcern
+        environment: 'python:2.7-slim'
+        compute_backend: htcondorcern
+        commands:
+            - python "${helloworld}"
+   ...
+
+Examples for CWL and Yadage can be found in
+`REANA example - "hello world"<https://github.com/reanahub/reana-demo-helloworld>``
+
+**Slurm**
+
+In order to execute the job on the Slurm cluster user must specify ``slurmcern``
+as the step's execution backend in the workflow specification.
+
+.. code-block:: yaml
+
+   # Serial example
+   ...
+   steps:
+      - name: reana_demo_helloworld_htcondorcern
+        environment: 'python:2.7-slim'
+        compute_backend: slurmcern
+        commands:
+            - python "${helloworld}"
+   ...
+
+.. note::
+   Please note that REANA copies workflow workspace (with all its files) into
+   user's scratch space on the Slurm cluster and it is user responsibility to
+   delete it afterwards.
+
 
 Run your analysis on REANA cloud
 --------------------------------
