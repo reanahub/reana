@@ -24,6 +24,7 @@ REPO_LIST_DEMO = [
 ]
 
 REPO_LIST_ALL = [
+    'docs.reana.io',
     'reana',
     'reana-client',
     'reana-cluster',
