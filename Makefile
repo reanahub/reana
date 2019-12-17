@@ -157,7 +157,7 @@ endif
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
 			break; \
-		elif [ $$(kubectl logs -l app=server -c server --tail=500 | grep -c '^Invenio database created.') -eq 1 ]; then \
+		elif [ $$(kubectl logs -l app=server -c server --tail=500 | grep -ce 'spawned uWSGI master process\|Serving Flask app') -eq 1 ]; then \
 			break; \
 		else \
 			sleep ${TIMECHECK}; \
