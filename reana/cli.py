@@ -52,7 +52,7 @@ REPO_LIST_ALL = [
     'reana-workflow-engine-serial',
     'reana-workflow-engine-yadage',
     'reana-workflow-monitor',
-    'reana.io',
+    'www.reana.io',
 ] + REPO_LIST_DEMO
 
 REPO_LIST_CLIENT = [
