@@ -1269,7 +1269,9 @@ def docker_rmi(user, tag, component):  # noqa: D301
 @click.option('--user', '-u', default='reanahub',
               help='DockerHub user name [reanahub]')
 @click.option('--tag', '-t', default='latest',
-              help='Image tag [latest]')
+              help='Image tag to push. Default \'latest\'. '
+                   'Use \'auto\' to push git-tag-based value such as '
+                   '\'0.5.1-3-g75ae5ce\'')
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
               help='Which components? [name|CLUSTER]')
 @cli.command(name='docker-push')
@@ -1293,6 +1295,8 @@ def docker_push(user, tag, component):  # noqa: D301
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param user: DockerHub organisation or user name. [default=reanahub]
+    :param tag: Docker image tag to push. Default 'latest'.  Use 'auto' to
+        push git-tag-based value such as '0.5.1-3-g75ae5ce'.
     :param tag: Docker tag to use. [default=latest]
     :type component: str
     :type user: str
@@ -1300,8 +1304,12 @@ def docker_push(user, tag, component):  # noqa: D301
     """
     components = select_components(component)
     for component in components:
+        component_tag = tag
         if is_component_dockerised(component):
-            cmd = 'docker push {0}/{1}:{2}'.format(user, component, tag)
+            if tag == 'auto':
+                component_tag = get_current_version(component, dirty=True)
+            cmd = 'docker push {0}/{1}:{2}'.format(user, component,
+                                                   component_tag)
             run_command(cmd, component)
         else:
             msg = 'Ignoring this component that does not contain' \
