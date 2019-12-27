@@ -17,5 +17,6 @@ The list of contributors in alphabetical order:
 - `Robin Long <https://github.com/longr>`_
 - `Rokas Maciulaitis <https://orcid.org/0000-0003-1064-6967>`_
 - `Ronald Dobos <https://orcid.org/0000-0003-2914-000X>`_
+- `Sasha Baranov <https://github.com/sashabaranov>`_
 - `Sinclert Perez <https://www.linkedin.com/in/sinclert>`_
 - `Tibor Simko <https://orcid.org/0000-0001-7202-5803>`_
