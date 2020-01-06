@@ -16,6 +16,8 @@ import time
 
 import click
 
+from reana.k8s_utils import exec_into_component, get_external_url
+
 REPO_LIST_DEMO = [
     'reana-demo-helloworld',
     'reana-demo-root6-roofit',
@@ -27,7 +29,6 @@ REPO_LIST_ALL = [
     'docs.reana.io',
     'reana',
     'reana-client',
-    'reana-cluster',
     'reana-commons',
     'reana-db',
     'reana-demo-alice-lego-train-test-run',
@@ -77,11 +78,6 @@ REPO_LIST_CLUSTER = [
     'reana-workflow-engine-cwl',
     'reana-workflow-engine-serial',
     'reana-workflow-engine-yadage',
-]
-
-REPO_LIST_CLUSTER_CLI = [
-    'reana-commons',
-    'reana-cluster',
 ]
 
 WORKFLOW_ENGINE_LIST_ALL = [
@@ -188,10 +184,10 @@ def cli():  # noqa: D301
         $ eval $(minikube docker-env)
         $ # option (a): cluster in production-like mode
         $ reana-dev docker-build
-        $ reana-cluster -f reana-cluster-minikube.yaml init
+        $ helm install reana helm/reana
         $ # option (b): cluster in developer-like debug-friendly mode
         $ reana-dev docker-build -b DEBUG=1
-        $ reana-cluster -f reana-cluster-minikube-dev.yaml init
+        $ helm install reana helm/reana --set debug.enabled=true
 
     How to set up your shell environment variables:
 
@@ -242,9 +238,9 @@ def cli():  # noqa: D301
         $ reana-dev install-client
         $ reana-dev install-cluster
         $ reana-dev docker-build
-        $ reana-cluster -f reana-cluster-minikube.yaml down
+        $ helm delete reana
         $ minikube ssh 'sudo rm -rf /var/reana'
-        $ reana-cluster -f reana-cluster-minikube.yaml init
+        $ helm install reana helm/reana
         $ eval $(reana-dev setup-environment)
         $ reana-dev run-example -c r-d-helloworld
         $ reana-dev git-submodule --delete
@@ -261,7 +257,7 @@ def cli():  # noqa: D301
         $ # once it works, we can tag and push
         $ reana-dev docker-build -t 0.3.0.dev20180625
         $ reana-dev docker-push -t 0.3.0.dev20180625
-        $ # we should now make PR for ``reana-cluster.yaml`` to use given tag
+        $ # we should now publish stable helm charts for tag via chartpress
 
     """
     pass
@@ -476,7 +472,7 @@ def is_component_dockerised(component):
     """Return whether the component contains Dockerfile.
 
     Useful to skip some docker-related commands for those components that are
-    not concerned, such as building Docker images for `reana-cluster` that does
+    not concerned, such as building Docker images for `reana-commons` that does
     not provide any.
 
     :param component: standard component name
@@ -1379,26 +1375,18 @@ def install_client():  # noqa: D301
             run_command(cmd, component)
 
 
-@cli.command(name='install-cluster')
-def install_cluster():  # noqa: D301
-    """Install latest REANA cluster Python package and its dependencies.
-
-    \b
-    :param upgrade: Should we upgrade if already installed? [default=True]
-    :type fetch: bool
-    """
-    for component in REPO_LIST_CLUSTER_CLI:
-        for cmd in [
-                'pip install . --upgrade',
-        ]:
-            run_command(cmd, component)
-
-
 @cli.command(name='setup-environment')
 @click.option(
     '--server-hostname',
     help='Set customized REANA Server hostname.')
-def setup_environment(server_hostname):  # noqa: D301
+@click.option(
+    '--insecure-url', is_flag=True,
+    help='REANA Server URL with HTTP.')
+@click.option(
+    '--namespace',
+    default='default',
+    help='Namespace of the components which configuration should be produced.')
+def setup_environment(server_hostname, insecure_url, namespace):  # noqa: D301
     """Display commands to set up shell environment for local cluster.
 
     Display commands how to set up REANA_SERVER_URL and REANA_ACCESS_TOKEN
@@ -1406,12 +1394,33 @@ def setup_environment(server_hostname):  # noqa: D301
     passed to eval.
     """
     try:
-        flag = ('--server-hostname {}'.format(server_hostname)
-                if server_hostname else '')
-        cmd = 'reana-cluster env --include-admin-token {}'.format(flag)
-        print(subprocess.check_output(cmd, shell=True).decode().rstrip('\r\n'))
-    except subprocess.CalledProcessError as err:
-        sys.exit(err.returncode)
+        export_lines = []
+        component_export_line = 'export {env_var_name}={env_var_value}'
+
+        export_lines.append(component_export_line.format(
+            env_var_name='REANA_SERVER_URL',
+            env_var_value=server_hostname or get_external_url(insecure_url)))
+
+        get_admin_token_sql_query_cmd = [
+            'psql', '-U', 'reana', 'reana', '-c',
+            'SELECT access_token FROM user_']
+        sql_query_result = exec_into_component(
+            'reana-db',
+            get_admin_token_sql_query_cmd)
+        # We get the token from the SQL query result
+        admin_access_token = sql_query_result.splitlines()[2].strip()
+        export_lines.append(component_export_line.format(
+            env_var_name='REANA_ACCESS_TOKEN',
+            env_var_value=admin_access_token))
+
+        click.echo('\n'.join(export_lines))
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        click.echo(
+            click.style('Environment variables could not be generated: \n{}'
+                        .format(str(e)), fg='red'),
+            err=True)
 
 
 @click.option('--component', '-c', multiple=True,

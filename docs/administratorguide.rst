@@ -45,16 +45,6 @@ REANA command line client for end users.
 - known issues: `<https://github.com/reanahub/reana-client/issues>`_
 - documentation: `<https://reana-client.readthedocs.io/>`_
 
-reana-cluster
-~~~~~~~~~~~~~
-
-REANA component providing utilities to manage cluster instance.
-
-- source code: `<https://github.com/reanahub/reana-cluster>`_
-- release notes: `<https://github.com/reanahub/reana-cluster/releases>`_
-- known issues: `<https://github.com/reanahub/reana-cluster/issues>`_
-- documentation: `<https://reana-cluster.readthedocs.io/>`_
-
 reana-commons
 ~~~~~~~~~~~~~
 
@@ -182,27 +172,8 @@ The minikube can be started as follows:
 
    $ minikube start --feature-gates="TTLAfterFinished=true"
 
-REANA cluster can be easily deployed by means of the ``reana-cluster`` helper
-script. The typical usage scenario goes as follows:
+REANA cluster can be easily deployed using `Helm <https://helm.sh/>`_:
 
 .. code-block:: console
 
-   $ # create new virtual environment
-   $ virtualenv ~/.virtualenvs/myreana
-   $ source ~/.virtualenvs/myreana/bin/activate
-   $ # install reana-cluster utility
-   $ pip install reana-cluster
-   $ # deploy new cluster and check progress
-   $ reana-cluster init
-   $ reana-cluster status
-   $ # set environment variables for reana-client
-   $ eval $(reana-cluster env --include-admin-token) # since you are admin
-
-For more information, please see `REANA-Cluster's Getting started guide
-<http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_.
-
-Next steps
-----------
-
-For more information, you can explore `REANA-Cluster documentation
-<https://reana-cluster.readthedocs.io/>`_.
+   $ helm install reana helm/reana

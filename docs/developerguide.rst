@@ -40,7 +40,7 @@ development mode:
 .. code-block:: console
 
    $ minikube mount $(pwd)/..:/code
-   $ CLUSTER_CONFIG=dev make build deploy
+   $ CLUSTER_FLAGS=debug.enabled=true make build deploy
 
 Let us now introduce `wdb` breakpoint as the first instruction of the
 first instruction of the `get_workflows()` function located in

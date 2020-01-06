@@ -15,3 +15,7 @@ recursive-include docs *.png
 recursive-include docs *.rst
 recursive-include docs *.txt
 recursive-include tests *.py
+recursive-include helm *.yaml
+recursive-include helm *.txt
+recursive-include helm *.helmignore
+recursive-include helm *.lock

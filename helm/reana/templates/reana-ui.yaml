@@ -1,0 +1,37 @@
+{{- if .Values.ui.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reana-ui
+spec:
+  type: "NodePort"
+  ports:
+  - port: 80
+    targetPort: 80
+    name: "http"
+    protocol: TCP
+  selector:
+    app: reana-ui
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reana-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reana-ui
+  template:
+    metadata:
+      labels:
+        app: reana-ui
+    spec:
+      containers:
+      - name: ui
+        image: {{ .Values.components.reana_ui.image }}:{{ .Values.components.reana_ui.tag }}
+        imagePullPolicy: {{ .Values.components.reana_ui.imagePullPolicy }}
+        ports:
+        - containerPort: 80
+{{- end }}

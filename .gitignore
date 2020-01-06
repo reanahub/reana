@@ -69,5 +69,5 @@ target/
 .idea
 *.iml
 
-# K8S manifests
-configuration-manifests/
+# Helm Chart dependencies
+**/charts/*.tgz

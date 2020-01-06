@@ -44,29 +44,15 @@ token:
    $ export REANA_SERVER_URL=https://reana.cern.ch/
    $ export REANA_ACCESS_TOKEN=XXXXXXX
 
-You can also easily deploy your own REANA cloud instance by using the
-``reana-cluster`` command line utility (see `prerequisites
-<https://reana-cluster.readthedocs.io/en/latest/userguide.html#prerequisites>`_):
+You can also easily deploy your own REANA cloud instance by using
+`Helm <https://helm.sh/>`_:
 
 .. code-block:: console
 
    $ # install kubectl 1.16.3 and minikube 1.5.2
    $ sudo dpkg -i kubectl*.deb minikube*.deb
    $ minikube start --feature-gates="TTLAfterFinished=true"
-   $ # create new virtual environment
-   $ virtualenv ~/.virtualenvs/myreana
-   $ source ~/.virtualenvs/myreana/bin/activate
-   $ # install reana-cluster utility
-   $ pip install reana-cluster
-   $ # deploy new cluster and check progress
-   $ reana-cluster init
-   $ reana-cluster status
-   $ # set environment variables for reana-client
-   $ eval $(reana-cluster env --include-admin-token) # since you are admin
-
-See `REANA-Cluster's Getting started guide
-<http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_ for more
-information.
+   $ helm install reana helm/reana
 
 Step Three: Run REANA client
 ----------------------------
@@ -109,11 +95,6 @@ For more information, please see:
   utility that provides interface to both local and remote REANA cloud
   installations. For more information, please see the :ref:`userguide`. You may
   also be interested in checking out some existing :ref:`examples`.
-
-- Are you an administrator who would like to deploy and manage REANA cloud?
-  You can start by deploying REANA locally on your laptop using `reana-cluster
-  <https://reana-cluster.readthedocs.io/>`_ utility that uses Kubernetes and
-  Minikube. For more information, please see the :ref:`administratorguide`.
 
 - Are you a software developer who would like to contribute to REANA? You may be
   interested in trying out REANA both from the user point of view and the

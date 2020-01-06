@@ -1,0 +1,33 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reana-cache
+spec:
+  type: NodePort
+  selector:
+    app: reana-cache
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reana-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reana-cache
+  template:
+    metadata:
+      labels:
+        app: reana-cache
+    spec:
+      containers:
+      - name: cache
+        image: redis:5.0.5
+        ports:
+        - containerPort: 6379

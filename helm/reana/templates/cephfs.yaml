@@ -1,0 +1,30 @@
+{{- if .Values.cephfs.enabled }}
+---
+  apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    name: reana-cephfs
+  provisioner: {{ .Values.cephfs.provisioner }}
+  parameters:
+    type: {{ .Values.cephfs.type }}
+    zones: {{ .Values.cephfs.zone }}
+    osSecretName: {{ .Values.cephfs.os_necret_name }}
+    osSecretNamespace: {{ .Values.cephfs.os_necret_namespace }}
+    protocol: CEPHFS
+    backend: csi-cephfs
+    csi-driver: cephfs.csi.ceph.com
+    osShareID: {{ .Values.cephfs.cephfs_os_share_id }}
+    osShareAccessID: {{ .Values.cephfs.cephfs_os_share_access_id }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: reana-cephfs
+spec:
+  accessModes:
+  - {{ .Values.cephfs.access_modes }}
+  resources:
+    requests:
+      storage: {{ .Values.cephfs.cephfs_volume_size }}G
+  storageClassName: reana-cephfs
+{{- end }}

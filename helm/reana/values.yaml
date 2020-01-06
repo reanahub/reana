@@ -1,0 +1,121 @@
+# Default values for reana.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# reana_url: reana.cern.ch
+# `reana_url` should be set for third party integrations to work and for
+# production deployments to be secure.
+
+debug:
+  enabled: false
+ui:
+  enabled: false
+eos:
+  enabled: false
+# CERN specific for now
+cephfs:
+  enabled: false
+  cephfs_volume_size: 200
+  access_modes: ReadWriteMany
+  provisioner: manila-provisioner
+  type: "Geneva CephFS Testing"
+  os_necret_name: os-trustee
+  os_necret_namespace: kube-system
+  cephfs_os_share_id: <cephfs-share-id>
+  cephfs_os_share_access_id: <cephfs-share-access-id>
+secrets:
+  database:
+    user: reana
+    # pasword: <my-db-pass>
+  gitlab:
+    REANA_GITLAB_OAUTH_APP_ID: reana
+    # REANA_GITLAB_OAUTH_APP_SECRET: <gitlab_oauth_app_secret>
+    REANA_GITLAB_HOST: gitlab.cern.ch
+  cern:
+    sso:
+      CERN_CONSUMER_KEY: reana
+      # CERN_CONSUMER_SECRET: <cern_consumer_secret>
+
+# External database service configuration
+db_env_config:
+  REANA_DB_NAME: "reana"
+  REANA_DB_HOST: "reana-db"
+  REANA_DB_PORT: "5432"
+  # There are two more environment variables that should be set in order
+  # to connect to a database:
+  # REANA_DB_USERNAME: containing the database user name.
+  # REANA_DB_PASSWORD: containing the password for the user previously set.
+  # Both environment variables should be set inside a Kubernetes secret:
+  # `reana-db-secrets`
+
+# Filesystem related configuration variables
+volume_paths:
+  root_path: "/var/reana"
+  shared_volume_path: "/var/reana"
+  db_persistence_path: "/var/reana/db"
+
+# REANA components configuration
+components:
+  reana_server:
+    imagePullPolicy: IfNotPresent
+    image: reanahub/reana-server
+    tag: latest
+    environment: []
+  reana_workflow_controller:
+    imagePullPolicy: IfNotPresent
+    image: reanahub/reana-workflow-controller
+    tag: latest
+    environment:
+      SHARED_VOLUME_PATH: /var/reana
+  reana_workflow_engine_cwl:
+    image: reanahub/reana-workflow-engine-cwl
+    tag: latest
+  reana_workflow_engine_yadage:
+    image: reanahub/reana-workflow-engine-yadage
+    tag: latest
+  reana_workflow_engine_serial:
+    image: reanahub/reana-workflow-engine-serial
+    tag: latest
+  reana_job_controller:
+    image: reanahub/reana-job-controller
+    tag: latest
+  reana_message_broker:
+    imagePullPolicy: IfNotPresent
+    image: reanahub/reana-message-broker
+    tag: latest
+  reana_ui:
+    imagePullPolicy: IfNotPresent
+    image: reanahub/reana-ui
+    tag: latest
+
+# Accessing the cluster from outside world
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.frontend.entryPoints: "http,https"
+
+# Permissions
+serviceAccount:
+  create: true
+  name: reana
+  namespace: default
+
+# Traefik's chart values.yaml
+traefik:
+  rbac:
+    enabled: true
+  dashboard:
+    enabled: true
+  kubernetes:
+    namespaces:
+      - default
+      - kube-system
+  serviceType: NodePort
+  service:
+    nodePorts:
+      http: 30080
+      https: 30443
+  ssl:
+    enabled: true
+    generateTLS: true

@@ -1,0 +1,37 @@
+apiVersion: v2
+name: reana
+description: REANA reproducible research data analysis platform
+home: www.reana.io
+icon: http://www.reana.io/static/img/logo-reana.svg
+sources:
+  - https://github.com/reanahub/reana
+  - https://github.com/reanahub/reana-client
+  - https://github.com/reanahub/reana-server
+  - https://github.com/reanahub/reana-workflow-controller
+  - https://github.com/reanahub/reana-workflow-engine-cwl
+  - https://github.com/reanahub/reana-workflow-engine-serial
+  - https://github.com/reanahub/reana-workflow-engine-yadage
+  - https://github.com/reanahub/reana-job-controller
+  - https://github.com/reanahub/reana-commons
+  - https://github.com/reanahub/reana-db
+  - https://github.com/reanahub/pytest-reana
+  - https://github.com/reanahub/www.reana.io
+keywords:
+  - research-data
+  - reproducible-analyses
+  - reproducible-workflows
+  - kubernetes
+  - containers
+  - cwl
+  - reusable-science
+type: application
+# Chart version.
+version: 0.1.0
+kubeVersion: ">= 1.13.0 <= 1.16.3"
+dependencies:
+  - name: traefik
+    version: 1.85.x
+    repository: https://kubernetes-charts.storage.googleapis.com/
+    condition: ingress.enabled
+    tags:
+      - ingress

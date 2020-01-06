@@ -23,7 +23,7 @@ SHELL = /usr/bin/env bash
 # let's detect where we are and whether minikube and kubectl are available:
 HAS_KUBECTL := $(shell command -v kubectl 2> /dev/null)
 HAS_MINIKUBE := $(shell command -v minikube 2> /dev/null)
-DEBUG := $(shell test "$$CLUSTER_CONFIG" = dev && echo 1 || echo 0)
+DEBUG := $(shell grep -q 'debug.enabled=true' <(echo ${CLUSTER_FLAGS}) && echo 1 || echo 0)
 SHOULD_MINIKUBE_MOUNT := $(shell [ "${DEBUG}" -gt 0 ] && [ -z "`ps -ef | grep -i '[m]inikube mount' 2> /dev/null`" ] && echo 1 || echo 0)
 PWD := $(shell pwd)
 
@@ -41,7 +41,6 @@ help:
 	@echo
 	@echo 'Configuration options:'
 	@echo
-	@echo '  CLUSTER_CONFIG      Which cluster configuration to use for Minikube? [e.g. "dev" for live coding and debugging; default is production]'
 	@echo '  DEMO                Which demo example to run? [e.g. "reana-demo-helloworld"; default is several]'
 	@echo '  GITHUB_USER         Which GitHub user account to use for cloning for Minikube? [default=anonymous]'
 	@echo '  MINIKUBE_CPUS       How many CPUs to allocate for Minikube? [default=2]'
@@ -54,7 +53,7 @@ help:
 	@echo '  TIMEOUT             Maximum timeout to wait when bringing cluster up and down? [default=300]'
 	@echo '  VENV_NAME           Which Python virtual environment name to use? [default=reana]'
 	@echo '  SERVER_URL          Setting a customized REANA Server hostname? [e.g. "https://myreanaserver.com"; default is Minikube IP]'
-	@echo '  CLUSTER_FLAGS       Which flags need to be passed to reana-cluster command? [e.g. "--loglevel --ui"; no flags are passed by default]'
+	@echo '  CLUSTER_FLAGS       Which values need to be passed to Helm? [e.g. "debug.enabled=true,ui.enabled=true"; no flags are passed by default]'
 	@echo
 	@echo 'Examples:'
 	@echo
@@ -66,10 +65,10 @@ help:
 	@echo
 	@echo '  # Example 3: build and deploy REANA in development mode (with live code changes and debugging)'
 	@echo '  $$ minikube mount $$(pwd)/..:/code'
-	@echo '  $$ CLUSTER_CONFIG=dev make build deploy'
+	@echo '  $$ CLUSTER_FLAGS=debug.enabled=true make build deploy'
 	@echo
 	@echo '  # Example 4: build and deploy REANA with a custom hostname including REANA-UI'
-	@echo '  $$ CLUSTER_FLAGS=--ui SERVER_URL=https://reana-local.cern.ch make build deploy'
+	@echo '  $$ CLUSTER_FLAGS=ui.enabled=true SERVER_URL=https://reana-local.cern.ch make build deploy'
 	@echo
 	@echo '  # Example 5: run one small demo example to verify the build'
 	@echo '  $$ DEMO=reana-demo-helloworld make example'
@@ -109,9 +108,8 @@ build: # Build REANA client and cluster components.
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	minikube docker-env --profile ${MINIKUBE_PROFILE} > /dev/null && eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
 	pip install . --upgrade &&  \
-	pip uninstall -y reana-commons reana-client reana-cluster reana-db pytest-reana && \
+	pip uninstall -y reana-commons reana-client reana-db pytest-reana && \
 	reana-dev install-client && \
-	reana-dev install-cluster && \
 	if [ "${DEBUG}" -gt 0 ]; then \
 		cd ${PWD}/../reana-server/ && \
 		python setup.py bdist_egg && \
@@ -126,7 +124,7 @@ build: # Build REANA client and cluster components.
 		echo "" && \
 		echo "    $$ minikube mount $$(pwd)/..:/code" && \
 		echo "" && \
-		echo "For more information visit the documentation: https://reana-cluster.readthedocs.io/en/latest/developerguide.html#deploying-latest-master-branch-versions"; \
+		echo "For more information visit the documentation: https://docs.reana.io"; \
 	fi
 
 deploy: # Deploy/redeploy previously built REANA cluster.
@@ -137,7 +135,7 @@ ifeq ($(SHOULD_MINIKUBE_MOUNT),1)
 endif
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	minikube docker-env --profile ${MINIKUBE_PROFILE} > /dev/null && eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml $(CLUSTER_FLAGS) down --delete-traefik --delete-secrets && \
+	helm dep update helm/reana && helm uninstall reana || \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
@@ -152,12 +150,12 @@ endif
 	if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
 		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi; \
 	fi && \
-	reana-cluster -f ${PWD}/../reana-cluster/reana_cluster/configurations/reana-cluster-minikube$(addprefix -, ${CLUSTER_CONFIG}).yaml $(CLUSTER_FLAGS) init && \
+	helm install reana helm/reana $(addprefix --set , ${CLUSTER_FLAGS}) --wait && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
 			break; \
-		elif [ $$(kubectl logs -l app=server -c server --tail=500 | grep -ce 'spawned uWSGI master process\|Serving Flask app') -eq 1 ]; then \
+		elif [ $$(kubectl logs -l app=reana-server -c rest-api --tail=500 | grep -ce 'spawned uWSGI master process\|Serving Flask app') -eq 1 ]; then \
 			break; \
 		else \
 			sleep ${TIMECHECK}; \

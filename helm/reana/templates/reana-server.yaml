@@ -1,0 +1,183 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reana-server
+spec:
+  type: "NodePort"
+  ports:
+  - port: 80
+    targetPort: 5000
+    name: "http"
+    protocol: TCP
+  selector:
+    app: reana-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reana-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reana-server
+  template:
+    metadata:
+      labels:
+        app: reana-server
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+      - name: rest-api
+        image: {{ .Values.components.reana_server.image }}:{{ .Values.components.reana_server.tag }}
+        imagePullPolicy: {{ .Values.components.reana_server.imagePullPolicy }}
+        ports:
+        - containerPort: 5000
+          name: http
+        {{- if .Values.debug.enabled }}
+        command: ["/bin/sh", "-c"]
+        args: ["set -e; ./scripts/setup; invenio run -h 0.0.0.0 -p 5000"]
+        tty: true
+        stdin: true
+        {{- end }}
+        volumeMounts:
+          {{- if .Values.debug.enabled }}
+          - mountPath: /code/
+            name: reana-code
+          {{- end }}
+          - mountPath: {{ .Values.volume_paths.shared_volume_path }}
+            name: reana-shared-volume
+        env:
+          {{- range $key, $value := .Values.db_env_config }}
+          - name: {{ $key }}
+            value: {{ $value | quote }}
+          {{- end }}
+          {{- range $key, $value := .Values.components.reana_server.environment }}
+          - name: {{ $key }}
+            value: {{ $value | quote }}
+          {{- end }}
+          {{- if .Values.reana_url }}
+          - name: REANA_URL
+            value: {{ .Values.reana_url }}
+          {{- end }}
+          {{- if .Values.debug.enabled }}
+          # Disable CORS in development environment, for example
+          # to connect from an external React application.
+          - name: INVENIO_CORS_SEND_WILDCARD
+            value: "False"
+          - name: INVENIO_CORS_SUPPORTS_CREDENTIALS
+            value: "True"
+          - name: WDB_SOCKET_SERVER
+            value: "reana-wdb"
+          - name: WDB_NO_BROWSER_AUTO_OPEN
+            value: "True"
+          - name: FLASK_ENV
+            value:  "development"
+          # Hack to not verify SSL connections https://stackoverflow.com/questions/48391750/disable-python-requests-ssl-validation-for-an-imported-module
+          - name: CURL_CA_BUNDLE
+            value: ""
+          - name: GIT_SSL_NO_VERIFY
+            value: "true"
+          {{- else }}
+          - name: REANA_DB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: reana-db-secrets
+                key: user
+          - name: REANA_DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: reana-db-secrets
+                key: password
+          - name: CERN_CONSUMER_KEY
+            valueFrom:
+              secretKeyRef:
+                name: reana-cern-sso-secrets
+                key: CERN_CONSUMER_KEY
+          - name: CERN_CONSUMER_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: reana-cern-sso-secrets
+                key: CERN_CONSUMER_SECRET
+          - name: REANA_GITLAB_OAUTH_APP_ID
+            valueFrom:
+              secretKeyRef:
+                name: reana-cern-gitlab-secrets
+                key: REANA_GITLAB_OAUTH_APP_ID
+          - name: REANA_GITLAB_OAUTH_APP_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: reana-cern-gitlab-secrets
+                key: REANA_GITLAB_OAUTH_APP_SECRET
+          - name: REANA_GITLAB_HOST
+            valueFrom:
+              secretKeyRef:
+                name: reana-cern-gitlab-secrets
+                key: REANA_GITLAB_HOST
+          {{- end }}
+      - name: scheduler
+        image: {{ .Values.components.reana_server.image }}:{{ .Values.components.reana_server.tag }}
+        imagePullPolicy: {{ .Values.components.reana_server.imagePullPolicy }}
+        command: ["flask", "start-scheduler"]
+        volumeMounts:
+          {{- if .Values.debug.enabled }}
+          - mountPath: /code/
+            name: reana-code
+          {{- end }}
+          - mountPath: {{ .Values.volume_paths.shared_volume_path }}
+            name: reana-shared-volume
+        env:
+        {{- range $key, $value := .Values.db_env_config }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- range $key, $value := .Values.components.reana_server.environment }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- if .Values.debug.enabled }}
+        # Disable CORS in development environment, for example
+        # to connect from an external React application.
+        - name: INVENIO_CORS_SEND_WILDCARD
+          value: "False"
+        - name: INVENIO_CORS_SUPPORTS_CREDENTIALS
+          value: "True"
+        - name: WDB_SOCKET_SERVER
+          value: "reana-wdb"
+        - name: WDB_NO_BROWSER_AUTO_OPEN
+          value: "True"
+        - name: FLASK_ENV
+          value:  "development"
+        # Hack to not verify SSL connections https://stackoverflow.com/questions/48391750/disable-python-requests-ssl-validation-for-an-imported-module
+        - name: CURL_CA_BUNDLE
+          value: ""
+        - name: GIT_SSL_NO_VERIFY
+          value: "true"
+        {{- else }}
+        - name: REANA_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: reana-db-secrets
+              key: user
+        - name: REANA_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: reana-db-secrets
+              key: password
+        {{- end }}
+      volumes:
+      - name: reana-shared-volume
+        {{- if .Values.cephfs.enabled }}
+        persistentVolumeClaim:
+          claimName: reana-cephfs
+          readOnly: false
+        {{- else }}
+        hostPath:
+          path:  {{ .Values.volume_paths.root_path }}
+        {{- end }}
+      {{- if .Values.debug.enabled }}
+      - name: reana-code
+        hostPath:
+          path: /code/reana-server
+      {{- end }}

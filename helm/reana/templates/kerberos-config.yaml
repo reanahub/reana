@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: reana-krb5-conf
+data:
+  krb5.conf: |
+        [libdefaults]
+         default_realm = CERN.CH
+         ticket_lifetime = 25h
+         renew_lifetime = 120h
+         forwardable = true
+         proxiable = true
+         default_tkt_enctypes = arcfour-hmac-md5 aes256-cts aes128-cts des3-cbc-sha1 des-cbc-md5 des-cbc-crc
+         allow_weak_crypto = true
+         chpw_prompt = true
+         default_ccache_name = /krb5_cache/krb5_%{uid}
+
+        [realms]
+         CERN.CH = {
+          default_domain = cern.ch
+          kpasswd_server = cerndc.cern.ch
+          admin_server = cerndc.cern.ch
+          kdc = cerndc.cern.ch
+          }
+
+        [domain_realm]
+         .cern.ch = CERN.CH
+
+        pam = {
+           external = true
+           krb4_convert =  false
+           krb4_convert_524 =  false
+           krb4_use_as_req =  false
+           ticket_lifetime = 25h
+           use_shmem = sshd
+         }
