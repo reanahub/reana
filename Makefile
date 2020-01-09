@@ -118,7 +118,6 @@ build: # Build REANA client and cluster components.
 	pip check && \
 	reana-dev git-submodule --update && \
 	reana-dev docker-build -b DEBUG=${DEBUG} && \
-	reana-dev git-submodule --delete && \
 	if [ "${DEBUG}" -gt 0 ]; then \
 		echo "Please run minikube mount in a new terminal to have live code updates." && \
 		echo "" && \
