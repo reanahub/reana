@@ -238,7 +238,7 @@ def cli():  # noqa: D301
         $ reana-dev install-client
         $ reana-dev install-cluster
         $ reana-dev docker-build
-        $ helm delete reana
+        $ helm delete helm/reana
         $ minikube ssh 'sudo rm -rf /var/reana'
         $ helm install reana helm/reana
         $ eval $(reana-dev setup-environment)

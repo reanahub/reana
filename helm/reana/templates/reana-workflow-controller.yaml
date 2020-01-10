@@ -79,6 +79,11 @@ spec:
           - name: REANA_STORAGE_BACKEND
             value: "cephfs"
           {{ end }}
+          - name: REANA_GITLAB_HOST
+            valueFrom:
+              secretKeyRef:
+                name: reana-cern-gitlab-secrets
+                key: REANA_GITLAB_HOST
           {{- if .Values.debug.enabled }}
           - name: WDB_SOCKET_SERVER
             value: "reana-wdb"
@@ -102,11 +107,6 @@ spec:
               secretKeyRef:
                 name: reana-db-secrets
                 key: password
-          - name: REANA_GITLAB_HOST
-            valueFrom:
-              secretKeyRef:
-                name: reana-cern-gitlab-secrets
-                key: REANA_GITLAB_HOST
           {{ end }}
       - name: job-status-consumer
         image: {{ .Values.components.reana_workflow_controller.image }}:{{ .Values.components.reana_workflow_controller.tag }}
@@ -144,6 +144,11 @@ spec:
           value: ""
         - name: GIT_SSL_NO_VERIFY
           value: "true"
+        - name: REANA_GITLAB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: reana-cern-gitlab-secrets
+              key: REANA_GITLAB_HOST
         {{- else }}
         - name: REANA_DB_USERNAME
           valueFrom:

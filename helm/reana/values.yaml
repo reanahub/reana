@@ -28,13 +28,13 @@ secrets:
     user: reana
     # pasword: <my-db-pass>
   gitlab:
-    REANA_GITLAB_OAUTH_APP_ID: reana
-    # REANA_GITLAB_OAUTH_APP_SECRET: <gitlab_oauth_app_secret>
-    REANA_GITLAB_HOST: gitlab.cern.ch
+    REANA_GITLAB_OAUTH_APP_ID: <CHANGEME>
+    REANA_GITLAB_OAUTH_APP_SECRET: <CHANGEME>
+    REANA_GITLAB_HOST: <CHANGEME>
   cern:
     sso:
-      CERN_CONSUMER_KEY: reana
-      # CERN_CONSUMER_SECRET: <cern_consumer_secret>
+      CERN_CONSUMER_KEY: <CHANGEME>
+      CERN_CONSUMER_SECRET: <CHANGEME>
 
 # External database service configuration
 db_env_config:

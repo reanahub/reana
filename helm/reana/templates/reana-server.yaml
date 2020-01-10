@@ -61,6 +61,31 @@ spec:
           - name: REANA_URL
             value: {{ .Values.reana_url }}
           {{- end }}
+          - name: CERN_CONSUMER_KEY
+            valueFrom:
+              secretKeyRef:
+                name: reana-cern-sso-secrets
+                key: CERN_CONSUMER_KEY
+          - name: CERN_CONSUMER_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: reana-cern-sso-secrets
+                key: CERN_CONSUMER_SECRET
+          - name: REANA_GITLAB_OAUTH_APP_ID
+            valueFrom:
+              secretKeyRef:
+                name: reana-cern-gitlab-secrets
+                key: REANA_GITLAB_OAUTH_APP_ID
+          - name: REANA_GITLAB_OAUTH_APP_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: reana-cern-gitlab-secrets
+                key: REANA_GITLAB_OAUTH_APP_SECRET
+          - name: REANA_GITLAB_HOST
+            valueFrom:
+              secretKeyRef:
+                name: reana-cern-gitlab-secrets
+                key: REANA_GITLAB_HOST
           {{- if .Values.debug.enabled }}
           # Disable CORS in development environment, for example
           # to connect from an external React application.
@@ -90,31 +115,6 @@ spec:
               secretKeyRef:
                 name: reana-db-secrets
                 key: password
-          - name: CERN_CONSUMER_KEY
-            valueFrom:
-              secretKeyRef:
-                name: reana-cern-sso-secrets
-                key: CERN_CONSUMER_KEY
-          - name: CERN_CONSUMER_SECRET
-            valueFrom:
-              secretKeyRef:
-                name: reana-cern-sso-secrets
-                key: CERN_CONSUMER_SECRET
-          - name: REANA_GITLAB_OAUTH_APP_ID
-            valueFrom:
-              secretKeyRef:
-                name: reana-cern-gitlab-secrets
-                key: REANA_GITLAB_OAUTH_APP_ID
-          - name: REANA_GITLAB_OAUTH_APP_SECRET
-            valueFrom:
-              secretKeyRef:
-                name: reana-cern-gitlab-secrets
-                key: REANA_GITLAB_OAUTH_APP_SECRET
-          - name: REANA_GITLAB_HOST
-            valueFrom:
-              secretKeyRef:
-                name: reana-cern-gitlab-secrets
-                key: REANA_GITLAB_HOST
           {{- end }}
       - name: scheduler
         image: {{ .Values.components.reana_server.image }}:{{ .Values.components.reana_server.tag }}

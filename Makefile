@@ -68,7 +68,7 @@ help:
 	@echo '  $$ CLUSTER_FLAGS=debug.enabled=true make build deploy'
 	@echo
 	@echo '  # Example 4: build and deploy REANA with a custom hostname including REANA-UI'
-	@echo '  $$ CLUSTER_FLAGS=ui.enabled=true SERVER_URL=https://reana-local.cern.ch make build deploy'
+	@echo '  $$ CLUSTER_FLAGS=ui.enabled=true SERVER_URL=https://example.org make build deploy'
 	@echo
 	@echo '  # Example 5: run one small demo example to verify the build'
 	@echo '  $$ DEMO=reana-demo-helloworld make example'
@@ -134,7 +134,7 @@ ifeq ($(SHOULD_MINIKUBE_MOUNT),1)
 endif
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	minikube docker-env --profile ${MINIKUBE_PROFILE} > /dev/null && eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
-	helm dep update helm/reana && helm uninstall reana || \
+	helm dep update helm/reana && helm ls | grep -q reana && helm uninstall reana || \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
@@ -198,5 +198,6 @@ test: # Run unit tests on the REANA package.
 	sphinx-build -qnNW docs docs/_build/html
 	python setup.py test
 	sphinx-build -qnNW -b doctest docs docs/_build/doctest
+	helm lint helm/reana
 
 # end of file

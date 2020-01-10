@@ -28,6 +28,11 @@ before_install:
 
 install:
   - travis_retry pip install -e .[all]
+  - mkdir bin
+  - wget https://get.helm.sh/helm-v3.0.2-linux-amd64.tar.gz -O helm.tar.gz
+  - tar -xzf helm.tar.gz -C $PWD/bin --strip-components=1
+  - chmod +x $PWD/bin/helm
+  - export PATH=$PWD/bin:$PATH
 
 script:
   - make test
