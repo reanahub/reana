@@ -94,6 +94,7 @@ ingress:
   annotations:
     kubernetes.io/ingress.class: traefik
     traefik.frontend.entryPoints: "http,https"
+    ingress.kubernetes.io/ssl-redirect: "true"
 
 # Permissions
 serviceAccount:
