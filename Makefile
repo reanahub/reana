@@ -111,9 +111,7 @@ build: # Build REANA client and cluster components.
 	pip uninstall -y reana-commons reana-client reana-db pytest-reana && \
 	reana-dev install-client && \
 	if [ "${DEBUG}" -gt 0 ]; then \
-		cd ${PWD}/../reana-server/ && \
-		python setup.py bdist_egg && \
-		cd -; \
+		reana-dev python-install-eggs; \
 	fi && \
 	pip check && \
 	reana-dev git-submodule --update && \
