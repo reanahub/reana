@@ -24,8 +24,8 @@ SHELL = /usr/bin/env bash
 HAS_KUBECTL := $(shell command -v kubectl 2> /dev/null)
 HAS_MINIKUBE := $(shell command -v minikube 2> /dev/null)
 DEBUG := $(shell grep -q 'debug.enabled=true' <(echo ${CLUSTER_FLAGS}) && echo 1 || echo 0)
-SHOULD_MINIKUBE_MOUNT := $(shell [ "${DEBUG}" -gt 0 ] && [ -z "`ps -ef | grep -i '[m]inikube mount' 2> /dev/null`" ] && echo 1 || echo 0)
 PWD := $(shell pwd)
+REANA_CODE_DIR=$(shell cd ..; pwd)
 
 all: help
 
@@ -52,7 +52,7 @@ help:
 	@echo '  TIMECHECK           Checking frequency in seconds when bringing cluster up and down? [default=5]'
 	@echo '  TIMEOUT             Maximum timeout to wait when bringing cluster up and down? [default=300]'
 	@echo '  VENV_NAME           Which Python virtual environment name to use? [default=reana]'
-	@echo '  SERVER_URL          Setting a customized REANA Server hostname? [e.g. "https://myreanaserver.com"; default is Minikube IP]'
+	@echo '  SERVER_URL          Setting a customized REANA Server hostname? [e.g. "https://example.org"; default is Minikube IP]'
 	@echo '  CLUSTER_FLAGS       Which values need to be passed to Helm? [e.g. "debug.enabled=true,ui.enabled=true"; no flags are passed by default]'
 	@echo
 	@echo 'Examples:'
@@ -64,7 +64,6 @@ help:
 	@echo '  $$ make build deploy'
 	@echo
 	@echo '  # Example 3: build and deploy REANA in development mode (with live code changes and debugging)'
-	@echo '  $$ minikube mount $$(pwd)/..:/code'
 	@echo '  $$ CLUSTER_FLAGS=debug.enabled=true make build deploy'
 	@echo
 	@echo '  # Example 4: build and deploy REANA with a custom hostname including REANA-UI'
@@ -96,6 +95,17 @@ ifndef HAS_MINIKUBE
 endif
 	minikube status --profile ${MINIKUBE_PROFILE} || minikube start --kubernetes-version=${MINIKUBE_KUBERNETES} --profile ${MINIKUBE_PROFILE} --vm-driver ${MINIKUBE_DRIVER} --cpus ${MINIKUBE_CPUS} --memory ${MINIKUBE_MEMORY} --disk-size ${MINIKUBE_DISKSIZE} --feature-gates="TTLAfterFinished=true"
 	test -e ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate || virtualenv ${HOME}/.virtualenvs/${VENV_NAME}
+ifeq ($(MINIKUBE_DRIVER),virtualbox)
+	is_vbox_vm_configured=$(shell vboxmanage showvminfo minikube | grep -qw ${REANA_CODE_DIR} && vboxmanage showvminfo minikube | grep -qw "reana-https" && vboxmanage showvminfo minikube | grep -qw "reana-http" && echo 1 || echo 0) && \
+	if [ $$is_vbox_vm_configured -eq 0 ]; then \
+		echo "Configuring VirtualBox for REANA..."; \
+		minikube stop; \
+		(vboxmanage showvminfo minikube | grep -qw ${REANA_CODE_DIR} && echo "REANA code mount already configured in the minikube VM") || (vboxmanage sharedfolder add minikube --name code --hostpath ${REANA_CODE_DIR} --automount && echo "REANA code mount is now configured in the minikube VM"); \
+		(vboxmanage showvminfo minikube | grep -qw "reana-https" && echo "REANA HTTPS port forwarding already configured in the minikube VM") || (vboxmanage modifyvm "minikube" --natpf1 "reana-https,tcp,,443,,30443" && echo "REANA HTTPS port forwarding is now configured in the minikube VM"); \
+		(vboxmanage showvminfo minikube | grep -qw "reana-http" && echo "REANA HTTP port forwarding already configured in the minikube VM") || (vboxmanage modifyvm "minikube" --natpf1 "reana-http,tcp,,80,,30080" && echo "REANA HTTP port forwarding is now configured in the minikube VM"); \
+		minikube start --kubernetes-version=${MINIKUBE_KUBERNETES} --profile ${MINIKUBE_PROFILE} --vm-driver ${MINIKUBE_DRIVER} --cpus ${MINIKUBE_CPUS} --memory ${MINIKUBE_MEMORY} --disk-size ${MINIKUBE_DISKSIZE} --feature-gates="TTLAfterFinished=true"; \
+	fi
+endif
 
 clone: # Clone REANA source code repositories locally.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make clone\033[0m"
@@ -115,21 +125,10 @@ build: # Build REANA client and cluster components.
 	fi && \
 	pip check && \
 	reana-dev git-submodule --update && \
-	reana-dev docker-build -b DEBUG=${DEBUG} && \
-	if [ "${DEBUG}" -gt 0 ]; then \
-		echo "Please run minikube mount in a new terminal to have live code updates." && \
-		echo "" && \
-		echo "    $$ minikube mount $$(pwd)/..:/code" && \
-		echo "" && \
-		echo "For more information visit the documentation: https://docs.reana.io"; \
-	fi
+	reana-dev docker-build -b DEBUG=${DEBUG}
 
 deploy: # Deploy/redeploy previously built REANA cluster.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make deploy\033[0m"
-ifeq ($(SHOULD_MINIKUBE_MOUNT),1)
-	$(error "$nIt seems you are not running 'minikube mount'.  Please run the following command in a different terminal:$n$n\
-	    $$ minikube mount $$(pwd)/..:/code$n$nThis will enable the cluster pods to see the live edits that are necessary for debugging.")
-endif
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	minikube docker-env --profile ${MINIKUBE_PROFILE} > /dev/null && eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
 	helm dep update helm/reana && helm ls | grep -q reana && helm uninstall reana || \
