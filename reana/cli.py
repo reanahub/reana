@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019 CERN.
+# Copyright (C) 2018, 2019, 2020 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -9,10 +9,12 @@
 """Helper scripts for REANA developers. Run `reana-dev --help` for help."""
 
 import datetime
+import logging
 import os
 import subprocess
 import sys
 import time
+import traceback
 
 import click
 
