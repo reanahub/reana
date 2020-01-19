@@ -89,10 +89,10 @@ WORKFLOW_ENGINE_LIST_ALL = [
 ]
 
 COMPONENT_PODS = {
-    'reana-db': 'db',
-    'reana-message-broker': 'message-broker',
-    'reana-server': 'server',
-    'reana-workflow-controller': 'workflow-controller',
+    'reana-db': 'reana-db',
+    'reana-message-broker': 'reana-message-broker',
+    'reana-server': 'reana-server',
+    'reana-workflow-controller': 'reana-workflow-controller',
 }
 
 EXAMPLE_OUTPUTS = {
