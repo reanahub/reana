@@ -30,7 +30,7 @@ spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
       containers:
       - name: rest-api
-        image: {{ .Values.components.reana_workflow_controller.image }}:{{ .Values.components.reana_workflow_controller.tag }}
+        image: {{ .Values.components.reana_workflow_controller.image }}
         imagePullPolicy: {{ .Values.components.reana_workflow_controller.imagePullPolicy }}
         ports:
         - containerPort: 5000
@@ -60,13 +60,13 @@ spec:
           - name: K8S_REANA_SERVICE_ACCOUNT_NAME
             value: {{ .Values.serviceAccount.name }}
           - name: REANA_JOB_CONTROLLER_IMAGE
-            value: {{ .Values.components.reana_job_controller.image }}:{{ .Values.components.reana_job_controller.tag }}
+            value: {{ .Values.components.reana_job_controller.image }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_CWL
-            value: {{ .Values.components.reana_workflow_engine_cwl.image }}:{{ .Values.components.reana_workflow_engine_cwl.tag }}
+            value: {{ .Values.components.reana_workflow_engine_cwl.image }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_YADAGE
-            value: {{ .Values.components.reana_workflow_engine_yadage.image }}:{{ .Values.components.reana_workflow_engine_yadage.tag }}
+            value: {{ .Values.components.reana_workflow_engine_yadage.image }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_SERIAL
-            value: {{ .Values.components.reana_workflow_engine_serial.image }}:{{ .Values.components.reana_workflow_engine_serial.tag }}
+            value: {{ .Values.components.reana_workflow_engine_serial.image }}
           {{- if .Values.reana_url }}
           - name: REANA_URL
             value: {{ .Values.reana_url }}
@@ -109,7 +109,7 @@ spec:
                 key: password
           {{ end }}
       - name: job-status-consumer
-        image: {{ .Values.components.reana_workflow_controller.image }}:{{ .Values.components.reana_workflow_controller.tag }}
+        image: {{ .Values.components.reana_workflow_controller.image }}
         imagePullPolicy: {{ .Values.components.reana_workflow_controller.imagePullPolicy }}
         command: ["flask", "consume-job-queue"]
         volumeMounts:

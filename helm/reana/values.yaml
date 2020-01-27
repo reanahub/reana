@@ -59,34 +59,26 @@ components:
   reana_server:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-server
-    tag: latest
     environment: []
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-workflow-controller
-    tag: latest
     environment:
       SHARED_VOLUME_PATH: /var/reana
   reana_workflow_engine_cwl:
     image: reanahub/reana-workflow-engine-cwl
-    tag: latest
   reana_workflow_engine_yadage:
     image: reanahub/reana-workflow-engine-yadage
-    tag: latest
   reana_workflow_engine_serial:
     image: reanahub/reana-workflow-engine-serial
-    tag: latest
   reana_job_controller:
     image: reanahub/reana-job-controller
-    tag: latest
   reana_message_broker:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-message-broker
-    tag: latest
   reana_ui:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-ui
-    tag: latest
 
 # Accessing the cluster from outside world
 ingress:
@@ -104,6 +96,7 @@ serviceAccount:
 
 # Traefik's chart values.yaml
 traefik:
+  enabled: true
   rbac:
     enabled: true
   dashboard:

@@ -32,6 +32,6 @@ dependencies:
   - name: traefik
     version: 1.85.x
     repository: https://kubernetes-charts.storage.googleapis.com/
-    condition: ingress.enabled
+    condition: traefik.enabled
     tags:
       - ingress

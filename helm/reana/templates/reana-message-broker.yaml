@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
       - name: message-broker
-        image: {{ .Values.components.reana_message_broker.image }}:{{ .Values.components.reana_message_broker.tag }}
+        image: {{ .Values.components.reana_message_broker.image }}
         imagePullPolicy: {{ .Values.components.reana_message_broker.imagePullPolicy }}
         ports:
         - containerPort: 5672

@@ -30,7 +30,7 @@ spec:
     spec:
       containers:
       - name: ui
-        image: {{ .Values.components.reana_ui.image }}:{{ .Values.components.reana_ui.tag }}
+        image: {{ .Values.components.reana_ui.image }}
         imagePullPolicy: {{ .Values.components.reana_ui.imagePullPolicy }}
         ports:
         - containerPort: 80
