@@ -82,6 +82,11 @@ REPO_LIST_CLUSTER = [
     'reana-workflow-engine-yadage',
 ]
 
+REPO_LIST_SHARED = [
+    'reana-db',
+    'reana-commons',
+]
+
 WORKFLOW_ENGINE_LIST_ALL = [
     'cwl',
     'serial',
@@ -1586,3 +1591,81 @@ def python_install_eggs():
     for component in python_cluster_components:
         for cmd in ['python setup.py bdist_egg', ]:
             run_command(cmd, component)
+
+
+@cli.command(name='git-shared-modules-upgrade')
+@click.option('--commit-and-publish', is_flag=True, default=False,
+              help='Should the changes be committed and pull requests created?'
+                   ' If so, a commit and a PR with'
+                   ' "installation: shared packages version bump" message will'
+                   ' be created for all affected CLUSTER components.')
+def git_shared_modules_upgrade(commit_and_publish):
+    """Upgrade all cluster components to latest REANA-Commons version."""
+    def _fetch_latest_pypi_version(package):
+        """Fetch latest released version of a package."""
+        import requests
+        pypi_rc_info = \
+            requests.get(
+                'https://pypi.python.org/pypi/{}/json'.format(package))
+        return sorted(pypi_rc_info.json()['releases'].keys())[-1]
+
+    def _update_module_in_cluster_components(module, new_version):
+        """Update the specified module version in all affected components."""
+        components_to_update = {
+            'reana-commons': COMPONENTS_USING_SHARED_MODULE_COMMONS,
+            'reana-db': COMPONENTS_USING_SHARED_MODULE_DB
+        }
+        for component in components_to_update[module]:
+            update_setup_py_dep_cmd = (
+                'LN=`cat setup.py | grep -n -e "{module}.*>=" | cut -f1 -d: `'
+                '&& sed -i.bk "`echo $LN`s/>=.*,</>={new_version},</" '
+                'setup.py && rm setup.py.bk'.format(module=module,
+                                                    new_version=new_version))
+            run_command(update_setup_py_dep_cmd, component)
+
+    def _commit_and_publish_version_bumps(components):
+        """Create commit and version bump PRs for all specified components."""
+        for component in components:
+            has_changes = run_command(
+                'git status --porcelain --untracked-files=no | '
+                'grep setup.py || echo',
+                component=component,
+                return_output=True
+            )
+            if has_changes:
+                branch_name = \
+                    datetime.datetime.now().strftime('version-bump-%Y%m%d')
+                create_branch = 'git checkout -b {}'.format(branch_name)
+                run_command(create_branch, component)
+                create_commit = (
+                    'git add setup.py && '
+                    'git commit '
+                    '-m "installation: shared packages version bump"')
+                run_command(create_commit, component)
+                create_pr = (
+                    'hub pull-request -p --no-edit && hub pr list -L 1')
+                run_command(create_pr, component)
+            else:
+                click.echo('{} has no changes, skipping.'.format(component))
+
+    cluster_components_with_shared_modules = set(
+        COMPONENTS_USING_SHARED_MODULE_DB).union(
+            set(COMPONENTS_USING_SHARED_MODULE_COMMONS))
+
+    for module in REPO_LIST_SHARED:
+        last_version = _fetch_latest_pypi_version(module)
+        _update_module_in_cluster_components(module, last_version)
+        click.secho(
+            '✅ {module} updated to: {last_version}'.format(
+                module=module, last_version=last_version),
+            bold=True, fg='green')
+
+    if commit_and_publish:
+        click.secho('Creating version bump commits and pull requests...')
+        _commit_and_publish_version_bumps(
+            cluster_components_with_shared_modules)
+        click.secho('\nVersion bump commits and pull requests created ✨',
+                    bold=True, fg='green')
+        click.secho('PR list 👉  https://github.com/search?q='
+                    'org%3Areanahub+is%3Apr+is%3Aopen&'
+                    'unscoped_q=is%3Apr+is%3Aopen', fg='green')
