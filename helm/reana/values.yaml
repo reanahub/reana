@@ -19,6 +19,7 @@ cephfs:
   access_modes: ReadWriteMany
   provisioner: manila-provisioner
   type: "Geneva CephFS Testing"
+  availability_zone: nova
   os_necret_name: os-trustee
   os_necret_namespace: kube-system
   cephfs_os_share_id: <cephfs-share-id>
