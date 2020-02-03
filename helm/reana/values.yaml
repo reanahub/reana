@@ -60,7 +60,8 @@ components:
   reana_server:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-server
-    environment: []
+    environment:
+      REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-workflow-controller
