@@ -125,8 +125,8 @@ def test_construct_workflow_name():
     """Tests for construct_workflow_name()."""
     from reana.cli import construct_workflow_name
     for (input_value, output_expected) in (
-            (('reana', 'cwl'), 'reana.cwl'),
-            (('reana-demo-root6-roofit', 'yadage'), 'root6-roofit.yadage'),
+            (('reana', 'cwl'), 'reana-cwl'),
+            (('reana-demo-root6-roofit', 'yadage'), 'root6-roofit-yadage'),
     ):
         output_obtained = construct_workflow_name(input_value[0],
                                                   input_value[1])

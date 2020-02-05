@@ -519,7 +519,7 @@ def construct_workflow_name(example, workflow_engine):
     :type example: str
     :type workflow_engine: str
     """
-    output = '{0}.{1}'.format(example.replace('reana-demo-', ''),
+    output = '{0}-{1}'.format(example.replace('reana-demo-', ''),
                               workflow_engine)
     return output
 
