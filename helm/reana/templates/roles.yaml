@@ -7,7 +7,7 @@ metadata:
 rules:
 - apiGroups: [""] # "" indicates the core API group
   resources: ["nodes", "nodes/status", "pods", "pods/log", "secrets", "persistentvolumeclaims", "configmaps"]
-  verbs: ["get", "list", "create", "update"]
+  verbs: ["get", "list", "create", "update", "watch"]
 - apiGroups: ["storage.k8s.io"]
   resources: ["storageclasses"]
   verbs: ["*"]
