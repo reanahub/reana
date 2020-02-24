@@ -100,7 +100,7 @@ COMPONENT_PODS = {
     'reana-workflow-controller': 'reana-workflow-controller',
 }
 
-EXAMPLE_OUTPUTS = {
+EXAMPLE_OUTPUT_FILENAMES = {
     'reana-demo-helloworld': ('greetings.txt',),
     'reana-demo-bsm-search': ('prefit.pdf', 'postfit.pdf'),
     'reana-demo-alice-lego-train-test-run': ('plot.pdf',),
@@ -108,6 +108,29 @@ EXAMPLE_OUTPUTS = {
     'reana-demo-atlas-recast': ('pre.png', 'limit.png', 'limit_data.json'),
     'reana-demo-cms-dimuon-mass-spectrum': ('DoubleMu.root',),
     '*': ('plot.png',)
+}
+
+EXAMPLE_LOG_MESSAGES = {
+    'reana-demo-helloworld': (
+        'Parameters: inputfile=',
+    ),
+    'reana-demo-root6-roofit': (
+        'gendata.C',
+        'RooChebychev::bkg',
+        'fitdata.C',
+        'MIGRAD MINIMIZATION HAS CONVERGED',
+    ),
+    'reana-demo-worldpopulation': (
+        'Input Notebook',
+        'Output Notebook',
+    ),
+    'reana-demo-atlas-recast': (
+        'MC channel Number',
+        'MIGRAD MINIMIZATION HAS CONVERGED',
+    ),
+    '*': (
+        'job:',
+    )
 }
 
 EXAMPLE_PREFETCH_IMAGES = {
@@ -575,16 +598,29 @@ def display_message(msg, component=''):
     click.secho('{0}'.format(msg), bold=True)
 
 
-def get_default_output_for_example(example):
-    """Return default output file name for given example.
+def get_expected_output_filenames_for_example(example):
+    """Return expected output file names for given example.
 
     :param example: name of the component
     :return: Tuple with output file name(s)
     """
     try:
-        output = EXAMPLE_OUTPUTS[example]
+        output = EXAMPLE_OUTPUT_FILENAMES[example]
     except KeyError:
-        output = EXAMPLE_OUTPUTS['*']
+        output = EXAMPLE_OUTPUT_FILENAMES['*']
+    return output
+
+
+def get_expected_log_messages_for_example(example):
+    """Return expected log messages for given example.
+
+    :param example: name of the component
+    :return: Tuple with output log messages(s)
+    """
+    try:
+        output = EXAMPLE_LOG_MESSAGES[example]
+    except KeyError:
+        output = EXAMPLE_LOG_MESSAGES['*']
     return output
 
 
@@ -1530,11 +1566,18 @@ def run_example(component, workflow_engine,
                    or 'failed' in status \
                    or 'stopped' in status:
                     break
+            # verify logs message presence
+            for log_message in \
+                    get_expected_log_messages_for_example(component):
+                cmd = 'reana-client logs -w {0} | grep -c \'{1}\''.format(
+                    workflow_name, log_message)
+                run_command(cmd, component)
             # verify output file presence
             cmd = 'reana-client ls -w {0}'.format(workflow_name)
             listing = run_command(cmd, component, return_output=True)
             click.secho(listing)
-            expected_files = file or get_default_output_for_example(component)
+            expected_files = file or \
+                get_expected_output_filenames_for_example(component)
             for expected_file in expected_files:
                 if expected_file not in listing:
                     click.secho('[ERROR] Expected output file {0} not found. '

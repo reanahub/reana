@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019 CERN.
+# Copyright (C) 2018, 2019, 2020 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -24,16 +24,26 @@ def test_shorten_component_name():
         assert name_short == shorten_component_name(name_long)
 
 
-def test_get_default_output_for_example():
-    """Tests for get_default_output_for_example()."""
-    from reana.cli import get_default_output_for_example
+def test_get_expected_output_filenames_for_example():
+    """Tests for get_expected_output_filenames_for_example()."""
+    from reana.cli import get_expected_output_filenames_for_example
     for (example, output) in (
             ('', ('plot.png',)),
             ('reana-demo-helloworld', ('greetings.txt',)),
             ('reana-demo-root6-roofit', ('plot.png',)),
             ('reana-demo-alice-lego-train-test-run', ('plot.pdf', )),
     ):
-        assert output == get_default_output_for_example(example)
+        assert output == get_expected_output_filenames_for_example(example)
+
+
+def test_get_expected_log_message_for_example():
+    """Tests for get_expected_log_messages_for_example()."""
+    from reana.cli import get_expected_log_messages_for_example
+    for (example, output) in (
+        ('', ('job:',)),
+        ('reana-demo-helloworld', ('Parameters: inputfile=',)),
+    ):
+        assert output == get_expected_log_messages_for_example(example)
 
 
 def test_is_component_dockerised():
