@@ -96,13 +96,13 @@ endif
 	minikube status --profile ${MINIKUBE_PROFILE} || minikube start --kubernetes-version=${MINIKUBE_KUBERNETES} --profile ${MINIKUBE_PROFILE} --vm-driver ${MINIKUBE_DRIVER} --cpus ${MINIKUBE_CPUS} --memory ${MINIKUBE_MEMORY} --disk-size ${MINIKUBE_DISKSIZE} --feature-gates="TTLAfterFinished=true"
 	test -e ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate || virtualenv ${HOME}/.virtualenvs/${VENV_NAME}
 ifeq ($(MINIKUBE_DRIVER),virtualbox)
-	is_vbox_vm_configured=$(shell vboxmanage showvminfo minikube | grep -qw ${REANA_CODE_DIR} && vboxmanage showvminfo minikube | grep -qw "reana-https" && vboxmanage showvminfo minikube | grep -qw "reana-http" && echo 1 || echo 0) && \
+	is_vbox_vm_configured=$(shell vboxmanage showvminfo ${MINIKUBE_PROFILE} | grep -qw ${REANA_CODE_DIR} && vboxmanage showvminfo ${MINIKUBE_PROFILE} | grep -qw "reana-https" && vboxmanage showvminfo ${MINIKUBE_PROFILE} | grep -qw "reana-http" && echo 1 || echo 0) && \
 	if [ $$is_vbox_vm_configured -eq 0 ]; then \
 		echo "Configuring VirtualBox for REANA..."; \
-		minikube stop; \
-		(vboxmanage showvminfo minikube | grep -qw ${REANA_CODE_DIR} && echo "REANA code mount already configured in the minikube VM") || (vboxmanage sharedfolder add minikube --name code --hostpath ${REANA_CODE_DIR} --automount && echo "REANA code mount is now configured in the minikube VM"); \
-		(vboxmanage showvminfo minikube | grep -qw "reana-https" && echo "REANA HTTPS port forwarding already configured in the minikube VM") || (vboxmanage modifyvm "minikube" --natpf1 "reana-https,tcp,,443,,30443" && echo "REANA HTTPS port forwarding is now configured in the minikube VM"); \
-		(vboxmanage showvminfo minikube | grep -qw "reana-http" && echo "REANA HTTP port forwarding already configured in the minikube VM") || (vboxmanage modifyvm "minikube" --natpf1 "reana-http,tcp,,80,,30080" && echo "REANA HTTP port forwarding is now configured in the minikube VM"); \
+		minikube stop --profile ${MINIKUBE_PROFILE}; \
+		(vboxmanage showvminfo ${MINIKUBE_PROFILE} | grep -qw ${REANA_CODE_DIR} && echo "REANA code mount already configured in the minikube VM") || (vboxmanage sharedfolder add ${MINIKUBE_PROFILE} --name code --hostpath ${REANA_CODE_DIR} --automount && echo "REANA code mount is now configured in the minikube VM"); \
+		(vboxmanage showvminfo ${MINIKUBE_PROFILE} | grep -qw "reana-https" && echo "REANA HTTPS port forwarding already configured in the minikube VM") || (vboxmanage modifyvm "${MINIKUBE_PROFILE}" --natpf1 "reana-https,tcp,,443,,30443" && echo "REANA HTTPS port forwarding is now configured in the minikube VM"); \
+		(vboxmanage showvminfo ${MINIKUBE_PROFILE} | grep -qw "reana-http" && echo "REANA HTTP port forwarding already configured in the minikube VM") || (vboxmanage modifyvm "${MINIKUBE_PROFILE}" --natpf1 "reana-http,tcp,,80,,30080" && echo "REANA HTTP port forwarding is now configured in the minikube VM"); \
 		minikube start --kubernetes-version=${MINIKUBE_KUBERNETES} --profile ${MINIKUBE_PROFILE} --vm-driver ${MINIKUBE_DRIVER} --cpus ${MINIKUBE_CPUS} --memory ${MINIKUBE_MEMORY} --disk-size ${MINIKUBE_DISKSIZE} --feature-gates="TTLAfterFinished=true"; \
 	fi
 endif
