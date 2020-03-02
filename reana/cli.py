@@ -98,6 +98,7 @@ COMPONENT_PODS = {
     'reana-message-broker': 'reana-message-broker',
     'reana-server': 'reana-server',
     'reana-workflow-controller': 'reana-workflow-controller',
+    'reana-ui': 'reana-ui',
 }
 
 EXAMPLE_OUTPUT_FILENAMES = {
