@@ -7,6 +7,8 @@
 include LICENSE
 include Makefile
 include *.rst
+include *.md
+include *.html
 include *.sh
 include pytest.ini
 prune docs/_build
