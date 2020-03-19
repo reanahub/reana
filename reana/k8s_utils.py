@@ -37,20 +37,23 @@ def exec_into_component(component_name, command):
     return output.decode('UTF-8')
 
 
-def get_external_url(insecure=False):
+def get_external_url(insecure=False, component_prefix='reana'):
     """Get external IP and port to access REANA API.
 
     :param insecure: Whether the URL should be insecure (http) or secure
         (https).
+    :param component_prefix: REANA component name prefix.
     :return: Returns a string which represents the full URL to access REANA.
     """
     minikube_ip = subprocess.check_output(
         ['minikube', 'ip']).strip().decode('UTF-8')
     # get service ports
-    external_ips, external_ports = get_service_ips_and_ports('reana-traefik')
+    traefik_name = get_prefixed_component_name('traefik', component_prefix)
+    server_name = get_prefixed_component_name('server', component_prefix)
+    external_ips, external_ports = get_service_ips_and_ports(traefik_name)
     if not external_ports:
         external_ips, external_ports = \
-            get_service_ips_and_ports('reana-server')
+            get_service_ips_and_ports(server_name)
     if external_ports.get('https') and not insecure:
         scheme = 'https'
     else:
@@ -82,3 +85,22 @@ def get_service_ips_and_ports(component_name):
         return external_ips, ports
     except subprocess.CalledProcessError:
         return ()
+
+
+def get_prefixed_component_name(component, prefix=''):
+    """Get prefixed component name.
+
+    :param component: String representing the component name.
+    :param prefix: Prefix to use.
+
+    :return: Prefixed name.
+    """
+    prefixed_component_name = component
+    if prefix:
+        prefixed_component_name = '-'.join([
+            prefix, component
+        ])
+    else:
+        prefixed_component_name = component
+
+    return prefixed_component_name

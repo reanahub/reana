@@ -13,21 +13,26 @@ ui:
 eos:
   enabled: false
 # CERN specific for now
-cephfs:
-  enabled: false
-  cephfs_volume_size: 200
+
+shared_storage:
+  backend: hostpath # hostpath | cephfs | nfs
+  volume_size: 200
   access_modes: ReadWriteMany
-  provisioner: manila-provisioner
-  type: "Geneva CephFS Testing"
-  availability_zone: nova
-  os_necret_name: os-trustee
-  os_necret_namespace: kube-system
-  cephfs_os_share_id: <cephfs-share-id>
-  cephfs_os_share_access_id: <cephfs-share-access-id>
+  shared_volume_mount_path: "/var/reana"
+  hostpath:
+    root_path: "/var/reana"
+  cephfs:
+    provisioner: manila-provisioner
+    type: "Geneva CephFS Testing"
+    availability_zone: nova
+    os_necret_name: os-trustee
+    os_necret_namespace: kube-system
+    cephfs_os_share_id: <cephfs-share-id>
+    cephfs_os_share_access_id: <cephfs-share-access-id>
+
 secrets:
   database:
     user: reana
-    # pasword: <my-db-pass>
   gitlab:
     REANA_GITLAB_OAUTH_APP_ID: <CHANGEME>
     REANA_GITLAB_OAUTH_APP_SECRET: <CHANGEME>
@@ -40,20 +45,13 @@ secrets:
 # External database service configuration
 db_env_config:
   REANA_DB_NAME: "reana"
-  REANA_DB_HOST: "reana-db"
   REANA_DB_PORT: "5432"
   # There are two more environment variables that should be set in order
   # to connect to a database:
   # REANA_DB_USERNAME: containing the database user name.
   # REANA_DB_PASSWORD: containing the password for the user previously set.
   # Both environment variables should be set inside a Kubernetes secret:
-  # `reana-db-secrets`
-
-# Filesystem related configuration variables
-volume_paths:
-  root_path: "/var/reana"
-  shared_volume_path: "/var/reana"
-  db_persistence_path: "/var/reana/db"
+  # `[release-name]-db-secrets`
 
 # REANA components configuration
 components:

@@ -18,7 +18,8 @@ import traceback
 
 import click
 
-from reana.k8s_utils import exec_into_component, get_external_url
+from reana.k8s_utils import (exec_into_component, get_external_url,
+                             get_prefixed_component_name)
 
 REPO_LIST_DEMO = [
     'reana-demo-helloworld',
@@ -1430,7 +1431,12 @@ def install_client():  # noqa: D301
     '--namespace',
     default='default',
     help='Namespace of the components which configuration should be produced.')
-def setup_environment(server_hostname, insecure_url, namespace):  # noqa: D301
+@click.option(
+    '--component-prefix',
+    default='reana',
+    help='REANA components prefix.')
+def setup_environment(server_hostname, insecure_url, namespace,
+                      component_prefix):  # noqa: D301
     """Display commands to set up shell environment for local cluster.
 
     Display commands how to set up REANA_SERVER_URL and REANA_ACCESS_TOKEN
@@ -1443,13 +1449,14 @@ def setup_environment(server_hostname, insecure_url, namespace):  # noqa: D301
 
         export_lines.append(component_export_line.format(
             env_var_name='REANA_SERVER_URL',
-            env_var_value=server_hostname or get_external_url(insecure_url)))
+            env_var_value=server_hostname or get_external_url(
+                insecure_url, component_prefix)))
 
         get_admin_token_sql_query_cmd = [
             'psql', '-U', 'reana', 'reana', '-c',
             'SELECT access_token FROM user_']
         sql_query_result = exec_into_component(
-            'reana-db',
+            get_prefixed_component_name('db', component_prefix),
             get_admin_token_sql_query_cmd)
         # We get the token from the SQL query result
         admin_access_token = sql_query_result.splitlines()[2].strip()

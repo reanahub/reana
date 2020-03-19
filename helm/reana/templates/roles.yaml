@@ -3,7 +3,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   namespace: default
-  name: reana-deployment-manager
+  name: {{ include "reana.prefix" . }}-deployment-manager
 rules:
 - apiGroups: [""] # "" indicates the core API group
   resources: ["nodes", "nodes/status", "pods", "pods/log", "secrets", "persistentvolumeclaims", "configmaps"]
@@ -22,12 +22,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: reana-manage-deployments
+  name: {{ include "reana.prefix" . }}-manage-deployments
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: reana-deployment-manager
+  name: {{ include "reana.prefix" . }}-deployment-manager
 subjects:
 - kind: ServiceAccount
-  name: {{ .Values.serviceAccount.name }}
+  name: {{ include "reana.prefixed_svaccount_name" . }}
   namespace: default

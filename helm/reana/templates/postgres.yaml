@@ -2,11 +2,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: reana-db
+  name: {{ include "reana.prefix" . }}-db
 spec:
   type: NodePort
   selector:
-    app: reana-db
+    app: {{ include "reana.prefix" . }}-db
   ports:
   - port: 5432
     targetPort: 5432
@@ -15,16 +15,16 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: reana-db
+  name: {{ include "reana.prefix" . }}-db
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: reana-db
+      app: {{ include "reana.prefix" . }}-db
   template:
     metadata:
       labels:
-        app: reana-db
+        app: {{ include "reana.prefix" . }}-db
     spec:
       containers:
       - name: db
@@ -45,12 +45,12 @@ spec:
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
-              name: reana-db-secrets
+              name: {{ include "reana.prefix" . }}-db-secrets
               key: user
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: reana-db-secrets
+              name: {{ include "reana.prefix" . }}-db-secrets
               key: password
         {{- end }}
         volumeMounts:
@@ -59,4 +59,4 @@ spec:
       volumes:
         - name: data
           hostPath:
-            path: {{ .Values.volume_paths.db_persistence_path }}
+            path: /var/reana/db

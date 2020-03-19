@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: reana-server
+  name: {{ include "reana.prefix" . }}-server
 spec:
   type: "NodePort"
   ports:
@@ -11,23 +11,23 @@ spec:
     name: "http"
     protocol: TCP
   selector:
-    app: reana-server
+    app: {{ include "reana.prefix" . }}-server
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: reana-server
+  name: {{ include "reana.prefix" . }}-server
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: reana-server
+      app: {{ include "reana.prefix" . }}-server
   template:
     metadata:
       labels:
-        app: reana-server
+        app: {{ include "reana.prefix" . }}-server
     spec:
-      serviceAccountName: {{ .Values.serviceAccount.name }}
+      serviceAccountName: {{ include "reana.prefixed_svaccount_name" . }}
       containers:
       - name: rest-api
         image: {{ .Values.components.reana_server.image }}
@@ -46,9 +46,11 @@ spec:
           - mountPath: /code/
             name: reana-code
           {{- end }}
-          - mountPath: {{ .Values.volume_paths.shared_volume_path }}
+          - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
             name: reana-shared-volume
         env:
+          - name: REANA_COMPONENT_PREFIX
+            value: {{ include "reana.prefix" . }}
           {{- range $key, $value := .Values.db_env_config }}
           - name: {{ $key }}
             value: {{ $value | quote }}
@@ -64,27 +66,27 @@ spec:
           - name: CERN_CONSUMER_KEY
             valueFrom:
               secretKeyRef:
-                name: reana-cern-sso-secrets
+                name: {{ include "reana.prefix" . }}-cern-sso-secrets
                 key: CERN_CONSUMER_KEY
           - name: CERN_CONSUMER_SECRET
             valueFrom:
               secretKeyRef:
-                name: reana-cern-sso-secrets
+                name: {{ include "reana.prefix" . }}-cern-sso-secrets
                 key: CERN_CONSUMER_SECRET
           - name: REANA_GITLAB_OAUTH_APP_ID
             valueFrom:
               secretKeyRef:
-                name: reana-cern-gitlab-secrets
+                name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
                 key: REANA_GITLAB_OAUTH_APP_ID
           - name: REANA_GITLAB_OAUTH_APP_SECRET
             valueFrom:
               secretKeyRef:
-                name: reana-cern-gitlab-secrets
+                name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
                 key: REANA_GITLAB_OAUTH_APP_SECRET
           - name: REANA_GITLAB_HOST
             valueFrom:
               secretKeyRef:
-                name: reana-cern-gitlab-secrets
+                name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
                 key: REANA_GITLAB_HOST
           {{- if .Values.debug.enabled }}
           # Disable CORS in development environment, for example
@@ -94,7 +96,7 @@ spec:
           - name: INVENIO_CORS_SUPPORTS_CREDENTIALS
             value: "True"
           - name: WDB_SOCKET_SERVER
-            value: "reana-wdb"
+            value: "{{ include "reana.prefix" . }}-wdb"
           - name: WDB_NO_BROWSER_AUTO_OPEN
             value: "True"
           - name: FLASK_ENV
@@ -108,12 +110,12 @@ spec:
           - name: REANA_DB_USERNAME
             valueFrom:
               secretKeyRef:
-                name: reana-db-secrets
+                name: {{ include "reana.prefix" . }}-db-secrets
                 key: user
           - name: REANA_DB_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: reana-db-secrets
+                name: {{ include "reana.prefix" . }}-db-secrets
                 key: password
           {{- end }}
       - name: scheduler
@@ -125,9 +127,11 @@ spec:
           - mountPath: /code/
             name: reana-code
           {{- end }}
-          - mountPath: {{ .Values.volume_paths.shared_volume_path }}
+          - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
             name: reana-shared-volume
         env:
+        - name: REANA_COMPONENT_PREFIX
+          value: {{ include "reana.prefix" . }}
         {{- range $key, $value := .Values.db_env_config }}
         - name: {{ $key }}
           value: {{ $value | quote }}
@@ -144,7 +148,7 @@ spec:
         - name: INVENIO_CORS_SUPPORTS_CREDENTIALS
           value: "True"
         - name: WDB_SOCKET_SERVER
-          value: "reana-wdb"
+          value: "{{ include "reana.prefix" . }}-wdb"
         - name: WDB_NO_BROWSER_AUTO_OPEN
           value: "True"
         - name: FLASK_ENV
@@ -158,23 +162,23 @@ spec:
         - name: REANA_DB_USERNAME
           valueFrom:
             secretKeyRef:
-              name: reana-db-secrets
+              name: {{ include "reana.prefix" . }}-db-secrets
               key: user
         - name: REANA_DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: reana-db-secrets
+              name: {{ include "reana.prefix" . }}-db-secrets
               key: password
         {{- end }}
       volumes:
       - name: reana-shared-volume
-        {{- if .Values.cephfs.enabled }}
+        {{- if not (eq .Values.shared_storage.backend "hostpath") -}}
         persistentVolumeClaim:
-          claimName: reana-cephfs
+          claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
           readOnly: false
         {{- else }}
         hostPath:
-          path:  {{ .Values.volume_paths.root_path }}
+          path:  {{ .Values.shared_storage.hostpath.root_path }}
         {{- end }}
       {{- if .Values.debug.enabled }}
       - name: reana-code

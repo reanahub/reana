@@ -7,6 +7,8 @@
 # configuration options that may be passed as environment variables:
 DEMO ?= DEMO
 GITHUB_USER ?= anonymous
+REANA_COMPONENT_PREFIX ?= reana
+# or REANA_RELEASE_NAME more helm centric
 MINIKUBE_CPUS ?= 2
 MINIKUBE_DISKSIZE ?= 40g
 MINIKUBE_DRIVER ?= virtualbox
@@ -26,6 +28,7 @@ HAS_MINIKUBE := $(shell command -v minikube 2> /dev/null)
 DEBUG := $(shell grep -q 'debug.enabled=true' <(echo ${CLUSTER_FLAGS}) && echo 1 || echo 0)
 PWD := $(shell pwd)
 REANA_CODE_DIR=$(shell cd ..; pwd)
+TRUNC_REANA_COMPONENT_PREFIX=$(shell echo ${REANA_COMPONENT_PREFIX} | head -c 10 | xargs echo)
 
 all: help
 
@@ -41,19 +44,20 @@ help:
 	@echo
 	@echo 'Configuration options:'
 	@echo
-	@echo '  DEMO                Which demo example to run? [e.g. "reana-demo-helloworld"; default is several]'
-	@echo '  GITHUB_USER         Which GitHub user account to use for cloning for Minikube? [default=anonymous]'
-	@echo '  MINIKUBE_CPUS       How many CPUs to allocate for Minikube? [default=2]'
-	@echo '  MINIKUBE_DISKSIZE   How much disk size to allocate for Minikube? [default=40g]'
-	@echo '  MINIKUBE_DRIVER     Which vm driver to use for Minikube? [default=virtualbox]'
-	@echo '  MINIKUBE_MEMORY     How much memory to allocate for Minikube? [default=3072]'
-	@echo '  MINIKUBE_PROFILE    Which Minikube profile to use? [default=minikube]'
-	@echo '  MINIKUBE_KUBERNETES Which Kubernetes version to use with Minikube? [default=v1.16.3]'
-	@echo '  TIMECHECK           Checking frequency in seconds when bringing cluster up and down? [default=5]'
-	@echo '  TIMEOUT             Maximum timeout to wait when bringing cluster up and down? [default=300]'
-	@echo '  VENV_NAME           Which Python virtual environment name to use? [default=reana]'
-	@echo '  SERVER_URL          Setting a customized REANA Server hostname? [e.g. "https://example.org"; default is Minikube IP]'
-	@echo '  CLUSTER_FLAGS       Which values need to be passed to Helm? [e.g. "debug.enabled=true,ui.enabled=true"; no flags are passed by default]'
+	@echo '  DEMO                    Which demo example to run? [e.g. "reana-demo-helloworld"; default is several]'
+	@echo '  GITHUB_USER             Which GitHub user account to use for cloning for Minikube? [default=anonymous]'
+	@echo '  REANA_COMPONENT_PREFIX  Which prefix to use to name REANA components? [default=reana]'
+	@echo '  MINIKUBE_CPUS           How many CPUs to allocate for Minikube? [default=2]'
+	@echo '  MINIKUBE_DISKSIZE       How much disk size to allocate for Minikube? [default=40g]'
+	@echo '  MINIKUBE_DRIVER         Which vm driver to use for Minikube? [default=virtualbox]'
+	@echo '  MINIKUBE_MEMORY         How much memory to allocate for Minikube? [default=3072]'
+	@echo '  MINIKUBE_PROFILE        Which Minikube profile to use? [default=minikube]'
+	@echo '  MINIKUBE_KUBERNETES     Which Kubernetes version to use with Minikube? [default=v1.16.3]'
+	@echo '  TIMECHECK               Checking frequency in seconds when bringing cluster up and down? [default=5]'
+	@echo '  TIMEOUT                 Maximum timeout to wait when bringing cluster up and down? [default=300]'
+	@echo '  VENV_NAME               Which Python virtual environment name to use? [default=reana]'
+	@echo '  SERVER_URL              Setting a customized REANA Server hostname? [e.g. "https://example.org"; default is Minikube IP]'
+	@echo '  CLUSTER_FLAGS           Which values need to be passed to Helm? [e.g. "debug.enabled=true,ui.enabled=true"; no flags are passed by default]'
 	@echo
 	@echo 'Examples:'
 	@echo
@@ -131,7 +135,8 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make deploy\033[0m"
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
 	minikube docker-env --profile ${MINIKUBE_PROFILE} > /dev/null && eval $$(minikube docker-env --profile ${MINIKUBE_PROFILE}) && \
-	helm dep update helm/reana && helm ls | grep -q reana && helm uninstall reana || \
+	kubectl delete secrets --all && \
+	helm dep update helm/reana && helm ls | grep -q ${TRUNC_REANA_COMPONENT_PREFIX} && helm uninstall ${TRUNC_REANA_COMPONENT_PREFIX} || \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
@@ -146,23 +151,23 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 	if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
 		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi; \
 	fi && \
-	helm install reana helm/reana $(addprefix --set , ${CLUSTER_FLAGS}) --wait && \
+	helm install ${TRUNC_REANA_COMPONENT_PREFIX} helm/reana $(addprefix --set , ${CLUSTER_FLAGS}) --wait && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
 			break; \
-		elif [ $$(kubectl logs -l app=reana-server -c rest-api --tail=500 | grep -ce 'spawned uWSGI master process\|Serving Flask app') -eq 1 ]; then \
+		elif [ $$(kubectl logs -l app=${TRUNC_REANA_COMPONENT_PREFIX}-server -c rest-api --tail=500 | grep -ce 'spawned uWSGI master process\|Serving Flask app') -eq 1 ]; then \
 			break; \
 		else \
 			sleep ${TIMECHECK}; \
 		fi;\
 	done && \
-	eval $$(reana-dev setup-environment $(addprefix --server-hostname , ${SERVER_URL}))
+	eval $$(reana-dev setup-environment --component-prefix ${TRUNC_REANA_COMPONENT_PREFIX} $(addprefix --server-hostname , ${SERVER_URL}))
 
 example: # Run one or several demo examples.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make example\033[0m"
 	source ${HOME}/.virtualenvs/${VENV_NAME}/bin/activate && \
-	eval $$(reana-dev setup-environment $(addprefix --server-hostname , ${SERVER_URL})) && \
+	eval $$(reana-dev setup-environment --component-prefix ${TRUNC_REANA_COMPONENT_PREFIX} $(addprefix --server-hostname , ${SERVER_URL})) && \
 	reana-dev run-example -c ${DEMO}
 
 prefetch: # Prefetch interesting Docker images. Useful to speed things later.

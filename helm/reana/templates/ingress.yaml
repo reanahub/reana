@@ -6,7 +6,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: reana-ingress
+  name: {{ include "reana.prefix" . }}-ingress
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -17,40 +17,40 @@ spec:
         paths:
         - path: /api
           backend:
-            serviceName: reana-server
+            serviceName: {{ include "reana.prefix" . }}-server
             servicePort: 80
         - path: /oauth
           backend:
-            serviceName: reana-server
+            serviceName: {{ include "reana.prefix" . }}-server
             servicePort: 80
         - path: /account
           backend:
-            serviceName: reana-server
+            serviceName: {{ include "reana.prefix" . }}-server
             servicePort: 80
         - path: /lost-password
           backend:
-            serviceName: reana-server
+            serviceName: {{ include "reana.prefix" . }}-server
             servicePort: 80
         - path: /confirm
           backend:
-            serviceName: reana-server
+            serviceName: {{ include "reana.prefix" . }}-server
             servicePort: 80
         - path: /login
           backend:
-            serviceName: reana-server
+            serviceName: {{ include "reana.prefix" . }}-server
             servicePort: 80
         - path: /logout
           backend:
-            serviceName: reana-server
+            serviceName: {{ include "reana.prefix" . }}-server
             servicePort: 80
         - path: /sign-up
           backend:
-            serviceName: reana-server
+            serviceName: {{ include "reana.prefix" . }}-server
             servicePort: 80
         {{- if .Values.ui.enabled }}
         - path: /
           backend:
-            serviceName: reana-ui
+            serviceName: {{ include "reana.prefix" . }}-ui
             servicePort: 80
         {{- end }}
       {{- if .Values.reana_url }}
