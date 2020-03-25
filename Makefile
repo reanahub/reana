@@ -41,7 +41,9 @@ help:
 	@echo
 	@echo 'Configuration options:'
 	@echo
+	@echo '  CLUSTER_FLAGS           Which values need to be passed to Helm? [e.g. "debug.enabled=true,ui.enabled=true"; no flags are passed by default]'
 	@echo '  DEMO                    Which demo example to run? [e.g. "reana-demo-helloworld"; default is several]'
+	@echo '  EXCLUDE_COMPONENTS      Which REANA components should be excluded from the build? [e.g. reana-ui,reana-message-broker]'
 	@echo '  GITHUB_USER             Which GitHub user account to use for cloning for Minikube? [default=anonymous]'
 	@echo '  INSTANCE_NAME           Which name/prefix to use for your REANA instance? [default=reana]'
 	@echo '  MINIKUBE_CPUS           How many CPUs to allocate for Minikube? [default=2]'
@@ -52,7 +54,6 @@ help:
 	@echo '  TIMECHECK               Checking frequency in seconds when bringing cluster up and down? [default=5]'
 	@echo '  TIMEOUT                 Maximum timeout to wait when bringing cluster up and down? [default=300]'
 	@echo '  SERVER_URL              Setting a customized REANA Server hostname? [e.g. "https://example.org"; default is Minikube IP]'
-	@echo '  CLUSTER_FLAGS           Which values need to be passed to Helm? [e.g. "debug.enabled=true,ui.enabled=true"; no flags are passed by default]'
 	@echo
 	@echo 'Examples:'
 	@echo
@@ -62,19 +63,22 @@ help:
 	@echo '  # Example 2: build and deploy REANA in production mode'
 	@echo '  $$ make build deploy'
 	@echo
-	@echo '  # Example 3: build and deploy REANA in development mode (with live code changes and debugging)'
+	@echo '  # Example 3: build REANA except REANA-UI and REANA-Message-Broker'
+	@echo '  $$ EXCLUDE_COMPONENTS=r-ui,r-m-broker make build'
+	@echo
+	@echo '  # Example 4: build and deploy REANA in development mode (with live code changes and debugging)'
 	@echo '  $$ CLUSTER_FLAGS=debug.enabled=true make build deploy'
 	@echo
-	@echo '  # Example 4: build and deploy REANA with a custom hostname including REANA-UI'
+	@echo '  # Example 5: build and deploy REANA with a custom hostname including REANA-UI'
 	@echo '  $$ CLUSTER_FLAGS=ui.enabled=true SERVER_URL=https://example.org make build deploy'
 	@echo
-	@echo '  # Example 5: run one small demo example to verify the build'
+	@echo '  # Example 6: run one small demo example to verify the build'
 	@echo '  $$ DEMO=reana-demo-helloworld make example'
 	@echo
-	@echo '  # Example 6: run several small examples to verify the build'
+	@echo '  # Example 7: run several small examples to verify the build'
 	@echo '  $$ make example'
 	@echo
-	@echo '  # Example 7: perform full CI build-and-test cycle'
+	@echo '  # Example 8: perform full CI build-and-test cycle'
 	@echo '  $$ make ci'
 	@echo
 	@echo '  # Example 8: perform full CI build-and-test cycle in an independent cluster'
@@ -124,7 +128,7 @@ build: # Build REANA client and cluster components.
 	fi && \
 	pip check && \
 	reana-dev git-submodule --update && \
-	reana-dev docker-build -b DEBUG=${DEBUG}
+	reana-dev docker-build -b DEBUG=${DEBUG} $(addprefix --exclude-components , ${EXCLUDE_COMPONENTS})
 
 deploy: # Deploy/redeploy previously built REANA cluster.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make deploy\033[0m"

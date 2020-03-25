@@ -314,12 +314,16 @@ def shorten_component_name(component):
     return short_name
 
 
-def find_standard_component_name(short_component_name):
-    """Return standard component name corresponding to the short name.
+def find_standard_component_name(component_name):
+    """Return standard component name corresponding to the component name.
+
+    Note this is an idempotent operation, if ``component_name`` is already
+    standard it will return it as it is.
 
     Example: r-w-controller -> reana-workflow-controller
+             reana-ui       -> reana-ui
 
-    :param short_component_name: short component name
+    :param component_name: component name
     :type component: str
 
     :return: standard component name
@@ -327,15 +331,26 @@ def find_standard_component_name(short_component_name):
 
     :raise: exception in case more than one is found
     """
-    output = []
-    for component in REPO_LIST_ALL:
-        component_short_name = shorten_component_name(component)
-        if component_short_name == short_component_name:
-            output.append(component)
-    if len(output) == 1:
-        return output[0]
-    raise Exception('Component name {0} cannot be uniquely mapped.'.format(
-        'short_component_name'))
+    def _is_standard_name(component_name):
+        """Detect whether the provided component name is already standard."""
+        prefixes = component_name.split('-')[:-1]
+        return all([len(n) > 1 for n in prefixes])
+
+    if _is_standard_name(component_name):
+        standard_component_name = component_name
+    else:
+        output = []
+        for component in REPO_LIST_ALL:
+            component_short_name = shorten_component_name(component)
+            if component_short_name == component_name:
+                output.append(component)
+        if len(output) == 1:
+            standard_component_name = output[0]
+        else:
+            raise Exception('Component name {0} cannot be uniquely '
+                            'mapped.'.format(component_name))
+
+    return standard_component_name
 
 
 def find_reana_srcdir():
@@ -427,7 +442,7 @@ def get_current_commit(srcdir):
         shell=True).decode().rstrip('\r\n')
 
 
-def select_components(components):
+def select_components(components, exclude_components=None):
     """Return expanded and unified component name list based on input values.
 
     :param components: A list of component name that may consist of:
@@ -444,7 +459,9 @@ def select_components(components):
                                 to include several runable REANA demo examples;
                           * (7) special value 'ALL' that will expand to include
                                 all REANA repositories.
+    :param exclude_components: A list of components to exclude.
     :type components: list
+    :type exclude_components: list
 
     :return: Unique standard component names.
     :rtype: list
@@ -477,7 +494,39 @@ def select_components(components):
         else:
             display_message('Ignoring unknown component {0}.'.format(
                 component))
+
+    if exclude_components:
+        output = exclude_components_from_selection(output, exclude_components)
+
     return list(output)
+
+
+def exclude_components_from_selection(selection, exclude_components):
+    """Exclude list of components from list of selections.
+
+    :param selection: List of selected components in standard naming form.
+    :param exclude_components: List of components to exclude, either in short
+        or standard naming form.
+    :type selection: set
+    :type exclude_components: list
+
+    :return: Set of selected components without ``exclude_components``, all in
+        standard naming form.
+    :rtype: set
+    """
+    standard_named_exclude_components = \
+        [find_standard_component_name(c) for c in exclude_components]
+    non_existing_exclude_components = \
+        set(standard_named_exclude_components).difference(selection)
+    if non_existing_exclude_components:
+        display_message('Unknown component(s) to exclude: {}'.format(
+            non_existing_exclude_components))
+        sys.exit(1)
+
+    click.secho(
+        'Excluding component(s) {}'.format(standard_named_exclude_components),
+        fg='yellow')
+    return selection.difference(standard_named_exclude_components)
 
 
 def select_workflow_engines(workflow_engines):
@@ -1178,6 +1227,8 @@ def git_push(component):  # noqa: D301
                    '\'0.5.1-3-g75ae5ce\'')
 @click.option('--component', '-c', multiple=True, default=['CLUSTER'],
               help='Which components? [name|CLUSTER]')
+@click.option('--exclude-components', default='',
+              help='Which components to exclude from build? [c1,c2,c3]')
 @click.option('--build-arg', '-b', default='', multiple=True,
               help='Any build arguments? (e.g. `-b DEBUG=1`)')
 @click.option('--no-cache', is_flag=True)
@@ -1186,8 +1237,10 @@ def git_push(component):  # noqa: D301
 @click.option('-q', '--quiet', is_flag=True,
               help='Suppress the build output and print image ID on success')
 @cli.command(name='docker-build')
-def docker_build(user, tag, component, build_arg,
-                 no_cache, output_component_versions, quiet):  # noqa: D301
+@click.pass_context
+def docker_build(ctx, user, tag, component, build_arg,
+                 no_cache, output_component_versions, quiet,
+                 exclude_components):  # noqa: D301
     """Build REANA component images.
 
     \b
@@ -1206,6 +1259,7 @@ def docker_build(user, tag, component, build_arg,
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param exclude_components: List of components to exclude from the build.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker image tag to generate. Default 'latest'.  Use 'auto' to
         generate git-tag-based value such as '0.5.1-3-g75ae5ce'.
@@ -1215,6 +1269,7 @@ def docker_build(user, tag, component, build_arg,
         tags. Useful when using `--tag auto` since every REANA component
         will have a different tag.
     :type component: str
+    :type exclude_components: str
     :type user: str
     :type tag: str
     :type build_arg: str
@@ -1222,7 +1277,9 @@ def docker_build(user, tag, component, build_arg,
     :type output_component_versions: File
     :type quiet: bool
     """
-    components = select_components(component)
+    if exclude_components:
+        exclude_components = exclude_components.split(',')
+    components = select_components(component, exclude_components)
     built_components_versions_tags = []
     for component in components:
         component_tag = tag

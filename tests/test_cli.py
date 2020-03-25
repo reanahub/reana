@@ -89,6 +89,12 @@ def test_select_components():
         output_obtained = select_components(input_value)
         assert output_obtained.sort() == output_expected.sort()
 
+    num_excluded = 2
+    exclude_components = REPO_LIST_CLUSTER[:num_excluded]
+    output_obtained = select_components(REPO_LIST_CLUSTER, exclude_components)
+    assert len(output_obtained) == (len(REPO_LIST_CLUSTER) - num_excluded)
+    assert not set(exclude_components).intersection(output_obtained)
+
 
 def test_select_workflow_engines():
     """Tests for select_workflow_engines()."""
@@ -115,6 +121,7 @@ def test_find_standard_component_name():
             ('reana', 'reana'),
             ('r-server', 'reana-server'),
             ('r-j-controller', 'reana-job-controller'),
+            ('reana-ui', 'reana-ui')
     ):
         output_obtained = find_standard_component_name(input_value)
         assert output_obtained == output_expected
