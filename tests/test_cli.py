@@ -46,6 +46,13 @@ def test_get_expected_log_message_for_example():
         assert output == get_expected_log_messages_for_example(example)
 
 
+def test_is_component_python_package():
+    """Tests for is_component_python_package()."""
+    from reana.cli import is_component_python_package
+    assert is_component_python_package(
+        'reana') is True
+
+
 def test_is_component_dockerised():
     """Tests for is_component_dockerised()."""
     from reana.cli import is_component_dockerised

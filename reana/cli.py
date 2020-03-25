@@ -11,6 +11,7 @@
 import datetime
 import logging
 import os
+import platform
 import subprocess
 import sys
 import time
@@ -234,6 +235,15 @@ def cli():  # noqa: D301
 
         \b
         $ reana-dev run-example -c reana-demo-root6-roofit -w serial
+
+    How to run Python unit tests in independent virtual environments:
+
+    .. code-block:: console
+
+        \b
+        $ reana-dev python-unit-tests -c r-server -c r-w-controller
+        $ reana-dev python-unit-tests -c CLUSTER
+        $ reana-dev python-unit-tests -c ALL
 
     How to test one component pull request:
 
@@ -547,6 +557,23 @@ def select_workflow_engines(workflow_engines):
             display_message('Ignoring unknown workflow engine {0}.'.format(
                 workflow_engine))
     return list(output)
+
+
+def is_component_python_package(component):
+    """Return whether the component is a Python package.
+
+    Useful to skip running wide unit test commands for those components that
+    are not concerned.
+
+    :param component: standard component name
+    :type component: str
+
+    :return: True/False whether the component is a Python package
+    :rtype: bool
+    """
+    if os.path.exists(get_srcdir(component) + os.sep + 'setup.py'):
+        return True
+    return False
 
 
 def is_component_dockerised(component):
@@ -1464,7 +1491,7 @@ def docker_pull(user, tag, component):  # noqa: D301
 
 @cli.command(name='install-client')
 def install_client():  # noqa: D301
-    """Install latest REANA client Python package and its dependencies.
+    """Install latest REANA client and its dependencies.
 
     \b
     :param upgrade: Should we upgrade? [default=True]
@@ -1671,7 +1698,6 @@ def kubectl_delete_pod(component):  # noqa: D301
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
-
     """
     if "ALL" in component:
         cmd = 'kubectl delete --all pods --wait=false'
@@ -1693,6 +1719,66 @@ def python_install_eggs():
     for component in python_cluster_components:
         for cmd in ['python setup.py bdist_egg', ]:
             run_command(cmd, component)
+
+
+@cli.command(name='python-unit-tests')
+@click.option('--component', '-c', multiple=True, default=['ALL'],
+              help='Which components? [shortname|name|.|CLUSTER|ALL]')
+def python_unit_tests(component):  # noqa: D301
+    """Run Python unit tests in independent environments.
+
+    For each component, create a dedicated throw-away virtual environment,
+    install latest shared modules (reana-commons, reana-db) that are currently
+    checked-out and run the usual component unit tests. Delete the throw-away
+    virtual environment afterwards.
+
+    \b
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :type component: str
+    """
+    components = select_components(component)
+    for component in components:
+        if component == 'reana-job-controller' and \
+           platform.system() == 'Darwin':
+            msg = ('Ignoring component {} that cannot be tested'
+                   ' on a macOS platform yet.'.format(component))
+            display_message(msg, component)
+        elif is_component_python_package(component):
+            cmd_activate_venv = \
+                'source  ~/.virtualenvs/_{}/bin/activate'.format(component)
+            for cmd in ['virtualenv ~/.virtualenvs/_{}'.format(component),
+                        '{} && which python'.format(cmd_activate_venv),
+                        '{} && cd ../pytest-reana && '
+                        ' pip install . --upgrade'.format(cmd_activate_venv),
+                        '{} && cd ../reana-commons && '
+                        ' pip install . --upgrade'.format(cmd_activate_venv),
+                        '{} && cd ../reana-db && '
+                        ' pip install . --upgrade'.format(cmd_activate_venv),
+                        'git clean -d -ff -x',
+                        '{} && pip install ".[tests]" --upgrade'.format(
+                            cmd_activate_venv),
+                        '{} && python setup.py test'.format(cmd_activate_venv),
+                        'rm -rf ~/.virtualenvs/_{}'.format(component),
+                        ]:
+                run_command(cmd, component)
+        else:
+            msg = 'Ignoring this component that does not contain' \
+                  ' a Python setup.py file.'
+            display_message(msg, component)
 
 
 @cli.command(name='git-shared-modules-upgrade')
