@@ -8,7 +8,10 @@
 """REANA Kubernetes cluster utils."""
 
 import json
+import os
 import subprocess
+
+INSTANCE_NAME = os.path.basename(os.environ['VIRTUAL_ENV'])
 
 
 def exec_into_component(component_name, command):
@@ -37,19 +40,19 @@ def exec_into_component(component_name, command):
     return output.decode('UTF-8')
 
 
-def get_external_url(insecure=False, component_prefix='reana'):
+def get_external_url(insecure=False):
     """Get external IP and port to access REANA API.
 
     :param insecure: Whether the URL should be insecure (http) or secure
         (https).
-    :param component_prefix: REANA component name prefix.
     :return: Returns a string which represents the full URL to access REANA.
     """
     minikube_ip = subprocess.check_output(
-        ['minikube', 'ip']).strip().decode('UTF-8')
+        ['minikube', 'ip', '--profile', INSTANCE_NAME]
+    ).strip().decode('UTF-8')
     # get service ports
-    traefik_name = get_prefixed_component_name('traefik', component_prefix)
-    server_name = get_prefixed_component_name('server', component_prefix)
+    traefik_name = get_prefixed_component_name('traefik')
+    server_name = get_prefixed_component_name('server')
     external_ips, external_ports = get_service_ips_and_ports(traefik_name)
     if not external_ports:
         external_ips, external_ports = \
@@ -87,20 +90,11 @@ def get_service_ips_and_ports(component_name):
         return ()
 
 
-def get_prefixed_component_name(component, prefix=''):
+def get_prefixed_component_name(component):
     """Get prefixed component name.
 
     :param component: String representing the component name.
-    :param prefix: Prefix to use.
 
     :return: Prefixed name.
     """
-    prefixed_component_name = component
-    if prefix:
-        prefixed_component_name = '-'.join([
-            prefix, component
-        ])
-    else:
-        prefixed_component_name = component
-
-    return prefixed_component_name
+    return '-'.join([INSTANCE_NAME, component])
