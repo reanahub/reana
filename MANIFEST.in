@@ -22,6 +22,7 @@ recursive-include helm *.txt
 recursive-include helm *.helmignore
 recursive-include helm *.lock
 
-# added by check_manifest.py
+# Helm
 recursive-include helm *.md
 recursive-include helm *.tpl
+include *.yaml

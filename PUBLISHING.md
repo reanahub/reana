@@ -1,6 +1,6 @@
 # Publishing new versions of REANA
 
-## 1. Clone de repository
+## 1. Clone the repository
 
 ```console
 $ git clone https://github.com/reanahub/reana.git
@@ -37,7 +37,8 @@ Before proceeding we need to generate a new personal token with access to the re
 In the following examples, `cr` is the alias name of the command line tool `chart-releaser`.
 
 ```console
-$ cr upload -o reanahub -r reana -p .deploy -t  <TOKEN>
+$ read -s GITHUB_TOKEN
+$ cr upload -o reanahub -r reana -p .deploy -t  $GITHUB_TOKEN
 ```
 
 :warning: the `.deploy` folder should only contain new releases, otherwise chart-releaser will try to push them all and will fail due to "already existing" versions.
@@ -45,7 +46,7 @@ $ cr upload -o reanahub -r reana -p .deploy -t  <TOKEN>
 And finally we should update the chart `index.yaml` file, that will be served to `helm`:
 
 ```console
-$ cr index -i ./index.yaml -p .deploy/ -o reanahub -c https://github.com/reanahub/reana -r reana --token <TOKEN>
+$ cr index -i ./index.yaml -p .deploy/ -o reanahub -c https://github.com/reanahub/reana -r reana --token $GITHUB_TOKEN
 $ git add index.yaml
 $ git commit -m 'release: v0.1.0'
 ```
