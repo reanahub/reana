@@ -1,33 +1,35 @@
 ---
-kind: ClusterRole
+kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  namespace: default
+  namespace: reana-cluster
   name: reana-deployment-manager
 rules:
 - apiGroups: [""] # "" indicates the core API group
-  resources: ["nodes", "nodes/status", "pods", "pods/log", "secrets", "persistentvolumeclaims", "configmaps"]
-  verbs: ["get", "list", "create", "update", "watch"]
-- apiGroups: ["storage.k8s.io"]
-  resources: ["storageclasses"]
-  verbs: ["*"]
-- apiGroups: ["batch", "extensions"]
+  resources: ["pods", "secrets", "persistentvolumeclaims", "configmaps", "services"]
+  verbs: ["get", "list", "create", "update", "watch", "delete"]
+- apiGroups: ["batch"]
   resources: ["jobs"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-# Interactive web notebooks permissions
-- apiGroups: ["", "extensions", "apps", "networking.k8s.io"]
-  resources: ["deployments", "services", "ingresses"]
+- apiGroups: ["extensions"]
+  resources: ["deployments", "ingresses"]
+  verbs: ["get", "create", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "create", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
   verbs: ["get", "create", "delete"]
 ---
+kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
 metadata:
   name: reana-manage-deployments
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: reana-deployment-manager
 subjects:
 - kind: ServiceAccount
   name: {{ .Values.serviceAccount.name }}
-  namespace: default
+  namespace: reana-cluster

@@ -1,0 +1,12 @@
+reana_url: reana.ssl-hep.org
+components:
+  reana_server:
+    image: reanahub/reana-server:0.6.0-26-g7b8f8f6
+  reana_workflow_controller:
+    image: reanahub/reana-workflow-controller:0.6.0-13-g82e18bd
+  reana_message_broker:
+    image: reanahub/reana-message-broker:0.6.0-1-gac35315
+serviceAccount:
+  namespace: reana-cluster
+traefik:
+  enabled: false
