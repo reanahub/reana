@@ -1,0 +1,25 @@
+name: Helm Chart Releaser
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Configure Git
+        run: |
+          git config user.name "REANA"
+          git config user.email "reana-team@cern.ch"
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.0.0-rc.1
+        with:
+          charts_dir: helm/reana
+        env:
+          CR_TOKEN: "${{ secrets.CR_TOKEN }}"
