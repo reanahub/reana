@@ -1,0 +1,18 @@
+# REANA components pointing to `latest`, locally built master branch
+components:
+    reana_server:
+      image: reanahub/reana-server
+    reana_workflow_controller:
+      image: reanahub/reana-workflow-controller
+    reana_workflow_engine_cwl:
+      image: reanahub/reana-workflow-engine-cwl
+    reana_workflow_engine_yadage:
+      image: reanahub/reana-workflow-engine-yadage
+    reana_workflow_engine_serial:
+      image: reanahub/reana-workflow-engine-serial
+    reana_job_controller:
+      image: reanahub/reana-job-controller
+    reana_message_broker:
+      image: reanahub/reana-message-broker
+    reana_ui:
+      image: reanahub/reana-ui

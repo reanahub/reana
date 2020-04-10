@@ -14,8 +14,8 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config user.name "REANA"
-          git config user.email "reana-team@cern.ch"
+          git config user.name "REANA team"
+          git config user.email "team@reana.io"
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.0.0-rc.1

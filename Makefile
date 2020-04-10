@@ -5,6 +5,7 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 
 # configuration options that may be passed as environment variables:
+BUILD_TYPE ?= dev
 DEMO ?= DEMO
 GITHUB_USER ?= anonymous
 INSTANCE_NAME ?= reana
@@ -26,6 +27,7 @@ DEBUG := $(shell grep -q 'debug.enabled=true' <(echo ${CLUSTER_FLAGS}) && echo 1
 PWD := $(shell pwd)
 REANA_CODE_DIR=$(shell cd ..; pwd)
 TRUNC_INSTANCE_NAME=$(shell echo ${INSTANCE_NAME} | head -c 10 | xargs echo)
+VALUES_YAML_PATH := $(shell test "${BUILD_TYPE}" = "dev" && echo helm/configurations/values-dev.yaml || echo helm/reana/values.yaml)
 
 all: help
 
@@ -41,6 +43,8 @@ help:
 	@echo
 	@echo 'Configuration options:'
 	@echo
+	@echo '  BUILD_TYPE              Is it a dev build or a release build? [default=dev]'
+	@echo '  BUILD_ARGUMENTS         Space separated list of build arguments. [e.g. "COMPUTE_BACKENDS=htcondorcern" no build arguments are passed by default]'
 	@echo '  CLUSTER_FLAGS           Which values need to be passed to Helm? [e.g. "debug.enabled=true,ui.enabled=true"; no flags are passed by default]'
 	@echo '  DEMO                    Which demo example to run? [e.g. "reana-demo-helloworld"; default is several]'
 	@echo '  EXCLUDE_COMPONENTS      Which REANA components should be excluded from the build? [e.g. reana-ui,reana-message-broker]'
@@ -81,7 +85,12 @@ help:
 	@echo '  # Example 8: perform full CI build-and-test cycle'
 	@echo '  $$ make ci'
 	@echo
-	@echo '  # Example 8: perform full CI build-and-test cycle in an independent cluster'
+	@echo '  # Example 9: perform full CI build-and-test cycle for a given release before publishing'
+	@echo '  $$ GITHUB_USER=reanahub BUILD_TYPE=release make ci'
+	@echo '  $$ # If everything goes well you can publish all the images to DockerHub'
+	@echo '  $$ reana-dev docker-push -t auto -u reanahub'
+	@echo
+	@echo '  # Example 10: perform full CI build-and-test cycle in an independent cluster'
 	@echo '  $$ mkdir /tmp/nightly && cd /tmp/nightly'
 	@echo '  $$ git clone https://github.com/reanahub/reana && cd reana'
 	@echo '  $$ INSTANCE_NAME=nightly make ci'
@@ -118,6 +127,16 @@ clone: # Clone REANA source code repositories locally.
 
 build: # Build REANA client and cluster components.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make build\033[0m"
+ifeq ($(BUILD_TYPE),release)
+	make release-build
+else ifeq ($(BUILD_TYPE),dev)
+	make dev-build
+else
+	echo "Unknown build type $$BUILD_TYPE"
+endif
+
+dev-build:
+	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make dev-build\033[0m"
 	source ${HOME}/.virtualenvs/${INSTANCE_NAME}/bin/activate && \
 	minikube docker-env --profile ${INSTANCE_NAME} > /dev/null && eval $$(minikube docker-env --profile ${INSTANCE_NAME}) && \
 	pip install . --upgrade &&  \
@@ -129,6 +148,30 @@ build: # Build REANA client and cluster components.
 	pip check && \
 	reana-dev git-submodule --update && \
 	reana-dev docker-build -b DEBUG=${DEBUG} $(addprefix --exclude-components , ${EXCLUDE_COMPONENTS})
+
+release-build:
+	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make release-build\033[0m"
+	source ${HOME}/.virtualenvs/${INSTANCE_NAME}/bin/activate && \
+	minikube docker-env --profile ${INSTANCE_NAME} > /dev/null && eval $$(minikube docker-env --profile ${INSTANCE_NAME}) && \
+	echo "Upgrading REANA to latest master ..." && \
+	reana-dev git-upgrade -c CLUSTER && \
+	echo "Cleaning components directories ..." && \
+	reana-dev git-clean -c CLUSTER && \
+	BUILT_IMAGES_FILE_PATH=$(shell echo /tmp/reana-images-`git describe --dirty`.txt) && \
+	echo "Building images with no cache ..." && \
+	reana-dev docker-build -c CLUSTER --no-cache \
+		$(foreach argument, ${BUILD_ARGUMENTS}, -b ${argument}) \
+		-u "${GITHUB_USER}" -t auto \
+		--output-component-versions $$BUILT_IMAGES_FILE_PATH \
+		$(addprefix --exclude-components , ${EXCLUDE_COMPONENTS}) && \
+	echo "Building reanahub/krb5 image" && \
+	cd ../reana-job-controller && \
+	REANA_KRB5_IMAGE_NAME="reanahub/krb5:latest" && \
+	docker build --file krb5/Dockerfile --tag $$REANA_KRB5_IMAGE_NAME . && \
+	echo $$REANA_KRB5_IMAGE_NAME >> $$BUILT_IMAGES_FILE_PATH && \
+	echo "The following images have been built:" && \
+	./scripts/update_images.sh $$BUILT_IMAGES_FILE_PATH && \
+	rm $$BUILT_IMAGES_FILE_PATH
 
 deploy: # Deploy/redeploy previously built REANA cluster.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make deploy\033[0m"
@@ -150,7 +193,7 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 	if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
 		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi; \
 	fi && \
-	helm install ${TRUNC_INSTANCE_NAME} helm/reana $(addprefix --set , ${CLUSTER_FLAGS}) --wait && \
+	helm install ${TRUNC_INSTANCE_NAME} helm/reana $(addprefix --set , ${CLUSTER_FLAGS}) $(addprefix -f, ${VALUES_YAML_PATH}) --wait && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
