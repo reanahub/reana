@@ -60,6 +60,9 @@ components:
     image: reanahub/reana-server
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
+    uwsgi:
+      processes: 6
+      threads: 4
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-workflow-controller

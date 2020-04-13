@@ -40,6 +40,10 @@ spec:
         args: ["set -e; ./scripts/setup; invenio run -h 0.0.0.0 -p 5000"]
         tty: true
         stdin: true
+        {{- else }}
+        command: ["/bin/sh", "-c"]
+        args: ["./scripts/setup > /var/log/reana-server-init-output.log 2>&1 &&
+                uwsgi --ini /var/reana/uwsgi/uwsgi.ini"]
         {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
@@ -48,6 +52,8 @@ spec:
           {{- end }}
           - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
             name: reana-shared-volume
+          - name: uwsgi-config
+            mountPath: '/var/reana/uwsgi'
         env:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
@@ -185,3 +191,7 @@ spec:
         hostPath:
           path: /code/reana-server
       {{- end }}
+      - name: uwsgi-config
+        configMap:
+          defaultMode: 420
+          name: uwsgi-config
