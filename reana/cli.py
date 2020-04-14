@@ -1525,16 +1525,16 @@ def setup_environment(server_hostname, insecure_url, namespace):  # noqa: D301
     try:
         export_lines = []
         component_export_line = 'export {env_var_name}={env_var_value}'
-
         export_lines.append(component_export_line.format(
             env_var_name='REANA_SERVER_URL',
-            env_var_value=server_hostname or get_external_url(insecure_url)))
+            env_var_value=server_hostname or get_external_url(insecure_url,
+                                                              namespace)))
 
         get_admin_token_sql_query_cmd = [
             'psql', '-U', 'reana', 'reana', '-c',
             'SELECT access_token FROM user_']
         sql_query_result = exec_into_component(
-            get_prefixed_component_name('db'),
+            get_prefixed_component_name('db', namespace),
             get_admin_token_sql_query_cmd)
         # We get the token from the SQL query result
         admin_access_token = sql_query_result.splitlines()[2].strip()

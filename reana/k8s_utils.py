@@ -40,7 +40,7 @@ def exec_into_component(component_name, command):
     return output.decode('UTF-8')
 
 
-def get_external_url(insecure=False):
+def get_external_url(insecure=False, namespace=None):
     """Get external IP and port to access REANA API.
 
     :param insecure: Whether the URL should be insecure (http) or secure
@@ -48,11 +48,11 @@ def get_external_url(insecure=False):
     :return: Returns a string which represents the full URL to access REANA.
     """
     minikube_ip = subprocess.check_output(
-        ['minikube', 'ip', '--profile', INSTANCE_NAME]
+        ['minikube', 'ip', '--profile', namespace or INSTANCE_NAME]
     ).strip().decode('UTF-8')
     # get service ports
-    traefik_name = get_prefixed_component_name('traefik')
-    server_name = get_prefixed_component_name('server')
+    traefik_name = get_prefixed_component_name('traefik', namespace)
+    server_name = get_prefixed_component_name('server', namespace)
     external_ips, external_ports = get_service_ips_and_ports(traefik_name)
     if not external_ports:
         external_ips, external_ports = \
@@ -90,11 +90,11 @@ def get_service_ips_and_ports(component_name):
         return ()
 
 
-def get_prefixed_component_name(component):
+def get_prefixed_component_name(component, namespace):
     """Get prefixed component name.
 
     :param component: String representing the component name.
 
     :return: Prefixed name.
     """
-    return '-'.join([INSTANCE_NAME, component])
+    return '-'.join([namespace or INSTANCE_NAME, component])
