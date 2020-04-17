@@ -19,7 +19,7 @@ readme = open('README.rst').read()
 history = open('CHANGES.rst').read()
 
 tests_require = [
-    'pytest-reana==0.7.0.dev20191219',
+    'pytest-reana>=0.7.0.dev20200417',
 ]
 
 extras_require = {
