@@ -42,8 +42,7 @@ spec:
         stdin: true
         {{- else }}
         command: ["/bin/sh", "-c"]
-        args: ["./scripts/setup > /var/log/reana-server-init-output.log 2>&1 &&
-                uwsgi --ini /var/reana/uwsgi/uwsgi.ini"]
+        args: ["./scripts/setup > /var/log/reana-server-init-output.log 2>&1 && uwsgi --ini /var/reana/uwsgi/uwsgi.ini"]
         {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
@@ -178,7 +177,7 @@ spec:
         {{- end }}
       volumes:
       - name: reana-shared-volume
-        {{- if not (eq .Values.shared_storage.backend "hostpath") -}}
+        {{- if not (eq .Values.shared_storage.backend "hostpath") }}
         persistentVolumeClaim:
           claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
           readOnly: false

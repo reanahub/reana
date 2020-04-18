@@ -51,10 +51,10 @@ spec:
         env:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
-          {{- if .Values.naming_scheme -}}
+          {{- if .Values.naming_scheme }}
           - name: REANA_COMPONENT_NAMING_SCHEME
             value: {{ .Values.naming_scheme }}
-          {{- end -}}
+          {{- end }}
           {{- range $key, $value := .Values.db_env_config }}
           - name: {{ $key }}
             value: {{ $value | quote }}
@@ -81,7 +81,7 @@ spec:
           - name: K8S_CERN_EOS_AVAILABLE
             value: "True"
           {{ end }}
-          {{- if not (eq .Values.shared_storage.backend "hostpath") -}}
+          {{- if not (eq .Values.shared_storage.backend "hostpath") }}
           - name: REANA_STORAGE_BACKEND
             value: "network"
           {{ end }}
@@ -171,7 +171,7 @@ spec:
               key: REANA_GITLAB_HOST
       volumes:
       - name: reana-shared-volume
-        {{- if not (eq .Values.shared_storage.backend "hostpath") -}}
+        {{- if not (eq .Values.shared_storage.backend "hostpath") }}
         persistentVolumeClaim:
           claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
           readOnly: false

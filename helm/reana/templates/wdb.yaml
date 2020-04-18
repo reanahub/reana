@@ -1,4 +1,4 @@
-{{- if .Values.debug.enabled -}}
+{{- if .Values.debug.enabled }}
 ---
 apiVersion: v1
 kind: Service

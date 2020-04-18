@@ -1,4 +1,4 @@
-{{- if not (eq .Values.shared_storage.backend "hostpath") -}}
+{{- if not (eq .Values.shared_storage.backend "hostpath") }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -12,7 +12,7 @@ spec:
       storage: {{ .Values.shared_storage.volume_size }}G
   storageClassName: {{ include "reana.prefix" . }}-shared-volume-storage-class
 # Which storage class to create depending on the backend
-{{- if eq .Values.shared_storage.backend "cephfs" -}}
+{{- if eq .Values.shared_storage.backend "cephfs" }}
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -30,4 +30,4 @@ parameters:
   osShareID: {{ .Values.shared_storage.cephfs.cephfs_os_share_id }}
   osShareAccessID: {{ .Values.shared_storage.cephfs.cephfs_os_share_access_id }}
 {{- end }}
-{{- end -}}
+{{- end }}

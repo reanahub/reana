@@ -33,6 +33,7 @@ shared_storage:
 secrets:
   database:
     user: reana
+    password: <CHANGEME>
   gitlab:
     REANA_GITLAB_OAUTH_APP_ID: <CHANGEME>
     REANA_GITLAB_OAUTH_APP_SECRET: <CHANGEME>
