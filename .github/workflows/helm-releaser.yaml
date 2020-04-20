@@ -2,10 +2,8 @@ name: Helm Chart Releaser
 
 on:
   push:
-    branches:
-      - master
-    paths:
-      - 'helm/reana/**'
+    tags:
+      - reana-*
 
 jobs:
   release:
