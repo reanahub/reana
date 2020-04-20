@@ -28,17 +28,10 @@ shared_storage:
     cephfs_os_share_access_id: <cephfs-share-access-id>
 
 secrets:
-  database:
-    user: reana
-    password: <CHANGEME>
-  gitlab:
-    REANA_GITLAB_OAUTH_APP_ID: <CHANGEME>
-    REANA_GITLAB_OAUTH_APP_SECRET: <CHANGEME>
-    REANA_GITLAB_HOST: <CHANGEME>
+  database: {}
+  gitlab: {}
   cern:
-    sso:
-      CERN_CONSUMER_KEY: <CHANGEME>
-      CERN_CONSUMER_SECRET: <CHANGEME>
+    sso: {}
 
 # External database service configuration
 db_env_config:
