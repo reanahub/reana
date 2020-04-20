@@ -8,22 +8,14 @@ This Helm automatically prefixes all names using the release name to avoid colli
 
 | Parameter                                                | Description                                                                          | Default value                                   |
 |----------------------------------------------------------|--------------------------------------------------------------------------------------|-------------------------------------------------|
-| `shared_storage.backend`                                 | Shared volume storage backend                                                        | hostpath                                        |
-| `shared_storage.access_modes`                            | Shared volume access mode                                                            | ReadWriteMany                                   |
-| `shared_storage.volume_size`                             | Shared volume size                                                                   | 200                                             |
-| `shared_storage.cephfs.availability_zone`                | **[CERN only]** OpenStack Availability zone                                          | nova                                            |
-| `shared_storage.cephfs.cephfs_os_share_access_id`        | **[CERN only]** CephFS share access ID                                               | None                                            |
-| `shared_storage.cephfs.cephfs_os_share_id`               | **[CERN only]** CephFS share id                                                      | None                                            |
-| `shared_storage.cephfs.os_secret_name`                   | **[CERN only]** Name of the Secret object containing OpenStack credentials           | os-trustee                                      |
-| `shared_storage.cephfs.os_secret_namespace`              | **[CERN only]** Namespace of the OpenStack credentials Secret object                 | kube-system                                     |
-| `shared_storage.cephfs.provisioner`                      | **[CERN only]** CephFS provisioner                                                   | manila-provisioner                              |
-| `shared_storage.cephfs.type`                             | **[CERN only]** CephFS availability zone                                             | "Geneva CephFS Testing"                         |
+| `components.reana_db.enabled`                            | Instantiate a PostgreSQL database inside the cluster                                 | true                                        |
 | `components.reana_job_controller.image`                  | [REANA-Job-Controller image](https://hub.docker.com/repository/docker/reanahub/reana-job-controller) to use  | `reanahub/reana-job-controller:<chart-release-verion>` |
 | `components.reana_message_broker.image`                  | [REANA-Meessage-Broker image](https://hub.docker.com/repository/docker/reanahub/reana-message-broker) to use | `reanahub/reana-message-broker:<chart-release-verion>` |
 | `components.reana_message_broker.imagePullPolicy`        | REANA-Message-Broker image pull policy                                               | IfNotPresent                                    |
 | `components.reana_server.environment`                    | REANA-Server environment variables                                                   | {REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30}      |
 | `components.reana_server.image`                          | REANA-Server image to use                                                            | `reanahub/reana-server:<chart-release-verion>`  |
 | `components.reana_server.imagePullPolicy`                | REANA-Server image pull policy                                                       | IfNotPresent                                    |
+| `components.reana_ui.enabled`                            | Instantiate the [REANA-UI](https://github.com/reanahub/reana-ui)                     | false                                           |
 | `components.reana_ui.image`                              | [REANA-UI image](https://hub.docker.com/repository/docker/reanahub/reana-ui) to use  | `reanahub/reana-ui:<chart-release-verion>`      |
 | `components.reana_ui.imagePullPolicy`                    | REANA-UI image pull policy                                                           | IfNotPresent                                    |
 | `components.reana_workflow_controller.environment`       | REANA-Workflow-Controller environment variables                                      | `{SHARED_VOLUME_PATH: /var/reana}`              |
@@ -51,8 +43,17 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `serviceAccount.create`                                  | Create a service account for the REANA system user                                   | true                                            |
 | `serviceAccount.name`                                    | Service account name                                                                 | reana                                           |
 | `serviceAccount.namespace`                               | Service account namespace                                                            | default                                         |
-| `traefik.enabled`                                        | Install Traefik in the cluster when installing REANA                                 | true                                            |
+| `shared_storage.access_modes`                            | Shared volume access mode                                                            | ReadWriteMany                                   |
+| `shared_storage.backend`                                 | Shared volume storage backend                                                        | hostpath                                        |
+| `shared_storage.cephfs.availability_zone`                | **[CERN only]** OpenStack Availability zone                                          | nova                                            |
+| `shared_storage.cephfs.cephfs_os_share_access_id`        | **[CERN only]** CephFS share access ID                                               | None                                            |
+| `shared_storage.cephfs.cephfs_os_share_id`               | **[CERN only]** CephFS share id                                                      | None                                            |
+| `shared_storage.cephfs.os_secret_name`                   | **[CERN only]** Name of the Secret object containing OpenStack credentials           | os-trustee                                      |
+| `shared_storage.cephfs.os_secret_namespace`              | **[CERN only]** Namespace of the OpenStack credentials Secret object                 | kube-system                                     |
+| `shared_storage.cephfs.provisioner`                      | **[CERN only]** CephFS provisioner                                                   | manila-provisioner                              |
+| `shared_storage.cephfs.type`                             | **[CERN only]** CephFS availability zone                                             | "Geneva CephFS Testing"                         |
+| `shared_storage.volume_size`                             | Shared volume size                                                                   | 200                                             |
 | `traefik.*`                                              | Pass any value from [Traefik Helm chart values](https://github.com/helm/charts/tree/master/stable/traefik#configuration) here, i.e. `traefik.rbac.enabled=true` | - |
-| `ui.enabled`                                             | Instantiate the [REANA-UI](https://github.com/reanahub/reana-ui)                     | false                                           |
+| `traefik.enabled`                                        | Install Traefik in the cluster when installing REANA                                 | true                                            |
 | `volume_paths.root_path`                                 | Path to the REANA directory inside the underlying storage volume                     | /var/reana                                      |
 | `volume_paths.shared_volume_path`                        | Path inside the REANA components where the shared volume will be mounted             | /var/reana                                      |

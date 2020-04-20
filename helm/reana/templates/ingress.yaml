@@ -47,7 +47,7 @@ spec:
           backend:
             serviceName: {{ include "reana.prefix" . }}-server
             servicePort: 80
-        {{- if .Values.ui.enabled }}
+        {{- if .Values.components.reana_ui.enabled }}
         - path: /
           backend:
             serviceName: {{ include "reana.prefix" . }}-ui

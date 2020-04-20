@@ -8,11 +8,8 @@
 
 debug:
   enabled: false
-ui:
-  enabled: false
 eos:
   enabled: false
-# CERN specific for now
 
 shared_storage:
   backend: hostpath # hostpath | cephfs | nfs
@@ -56,6 +53,10 @@ db_env_config:
 
 # REANA components configuration
 components:
+  reana_ui:
+    enabled: false
+  reana_db:
+    enabled: true
   reana_server:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-server:0.6.0-35-gafd0a7f

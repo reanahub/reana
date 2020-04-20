@@ -45,7 +45,7 @@ help:
 	@echo
 	@echo '  BUILD_TYPE              Is it a dev build or a release build? [default=dev]'
 	@echo '  BUILD_ARGUMENTS         Space separated list of build arguments. [e.g. "COMPUTE_BACKENDS=htcondorcern" no build arguments are passed by default]'
-	@echo '  CLUSTER_FLAGS           Which values need to be passed to Helm? [e.g. "debug.enabled=true,ui.enabled=true"; no flags are passed by default]'
+	@echo '  CLUSTER_FLAGS           Which values need to be passed to Helm? [e.g. "debug.enabled=true,components.reana_ui.enabled=true"; no flags are passed by default]'
 	@echo '  DEMO                    Which demo example to run? [e.g. "reana-demo-helloworld"; default is several]'
 	@echo '  EXCLUDE_COMPONENTS      Which REANA components should be excluded from the build? [e.g. reana-ui,reana-message-broker]'
 	@echo '  GITHUB_USER             Which GitHub user account to use for cloning for Minikube? [default=anonymous]'
@@ -74,7 +74,7 @@ help:
 	@echo '  $$ CLUSTER_FLAGS=debug.enabled=true make build deploy'
 	@echo
 	@echo '  # Example 5: build and deploy REANA with a custom hostname including REANA-UI'
-	@echo '  $$ CLUSTER_FLAGS=ui.enabled=true SERVER_URL=https://example.org make build deploy'
+	@echo '  $$ CLUSTER_FLAGS=components.reana_ui.enabled=true SERVER_URL=https://example.org make build deploy'
 	@echo
 	@echo '  # Example 6: run one small demo example to verify the build'
 	@echo '  $$ DEMO=reana-demo-helloworld make example'
