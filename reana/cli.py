@@ -1527,7 +1527,7 @@ def setup_environment(server_hostname, insecure_url):  # noqa: D301
 
         get_admin_token_sql_query_cmd = [
             'psql', '-U', 'reana', 'reana', '-c',
-            'SELECT access_token FROM user_']
+            'SELECT token FROM user_token']
         sql_query_result = exec_into_component(
             get_prefixed_component_name('db'),
             get_admin_token_sql_query_cmd)
