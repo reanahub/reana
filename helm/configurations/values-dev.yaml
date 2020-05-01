@@ -16,3 +16,11 @@ components:
       image: reanahub/reana-message-broker
     reana_ui:
       image: reanahub/reana-ui
+
+notifications:
+  enabled: true
+  email_config:
+    # No login nor password as we use a dev mail service
+    receiver: team@reana.io
+    sender: notifications@reana.io
+  system_status: "*/5 * * * *"

@@ -1,0 +1,44 @@
+{{- if .Values.debug.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reana.prefix" . }}-mail
+spec:
+  type: "NodePort"
+  ports:
+  - port: 30025
+    targetPort: 25
+    nodePort: 30025
+    name: "smtp"
+    protocol: TCP
+  - port: 32580
+    targetPort: 80
+    nodePort: 32580
+    name: "ui"
+    protocol: TCP
+  selector:
+    app: {{ include "reana.prefix" . }}-mail
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "reana.prefix" . }}-mail
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "reana.prefix" . }}-mail
+  template:
+    metadata:
+      labels:
+        app: {{ include "reana.prefix" . }}-mail
+    spec:
+      containers:
+      - name: maildev
+        image: maildev/maildev
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        - containerPort: 25
+{{- end }}

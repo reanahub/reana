@@ -5,7 +5,7 @@ kind: CronJob
 metadata:
   name: {{ include "reana.prefix" . }}-system-status
 spec:
-  schedule: {{ .Values.notifications.system_status }}
+  schedule: "{{ .Values.notifications.system_status }}"
   jobTemplate:
     spec:
       template:
@@ -41,10 +41,8 @@ spec:
             {{- else }}
             - name: REANA_EMAIL_SMTP_SERVER
               value: {{ .Values.notifications.email_config.smtp_server }}
-            - name: REANA_SMTP_PORT
+            - name: REANA_EMAIL_SMTP_PORT
               value: {{ .Values.notifications.email_config.smpt_port }}
-            - name: REANA_EMAIL_SENDER
-              value: {{ .Values.notifications.email_config.sender }}
             - name: REANA_EMAIL_LOGIN
               valueFrom:
                 secretKeyRef:
