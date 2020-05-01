@@ -1,0 +1,91 @@
+{{- if .Values.notifications.enabled }}
+{{- if .Values.notifications.system_status }}
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ include "reana.prefix" . }}-system-status
+spec:
+  schedule: {{ .Values.notifications.system_status }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: {{ include "reana.prefix" . }}-system-status
+            image: {{ .Values.components.reana_server.image }}
+            command:
+            - '/bin/sh'
+            - '-c'
+            args:
+            - 'flask reana-admin status-report --email {{ .Values.notifications.email_config.receiver }}'
+            {{- if .Values.debug.enabled }}
+            tty: true
+            stdin: true
+            {{- end }}
+            env:
+            {{- if .Values.reana_url }}
+            - name: REANA_URL
+              value: {{ .Values.reana_url }}
+            {{- end }}
+            {{- range $key, $value := .Values.db_env_config }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- if .Values.debug.enabled }}
+            - name: REANA_EMAIL_SMTP_SERVER
+              value: {{ include "reana.prefix" . }}-mail
+            - name: REANA_EMAIL_SMTP_PORT
+              value: "30025"
+            - name: FLASK_ENV
+              value:  "development"
+            {{- else }}
+            - name: REANA_EMAIL_SMTP_SERVER
+              value: {{ .Values.notifications.email_config.smtp_server }}
+            - name: REANA_SMTP_PORT
+              value: {{ .Values.notifications.email_config.smpt_port }}
+            - name: REANA_EMAIL_SENDER
+              value: {{ .Values.notifications.email_config.sender }}
+            - name: REANA_EMAIL_LOGIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-mail-notification-sender-password
+                  key: REANA_EMAIL_LOGIN
+            - name: REANA_EMAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-mail-notification-sender-password
+                  key: REANA_EMAIL_PASSWORD
+            {{- end }}
+            - name: REANA_COMPONENT_PREFIX
+              value: {{ include "reana.prefix" . }}
+            - name: REANA_EMAIL_SENDER
+              value: {{ .Values.notifications.email_config.sender }}
+            - name: REANA_ADMIN_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-admin-access-token
+                  key: ADMIN_ACCESS_TOKEN
+            volumeMounts:
+              {{- if .Values.debug.enabled }}
+              - mountPath: /code/
+                name: reana-code
+              {{- end }}
+              - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
+                name: reana-shared-volume
+            imagePullPolicy: IfNotPresent
+          restartPolicy: Never
+          volumes:
+          - name: reana-shared-volume
+            {{- if not (eq .Values.shared_storage.backend "hostpath") }}
+            persistentVolumeClaim:
+              claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
+              readOnly: false
+            {{- else }}
+            hostPath:
+              path:  {{ .Values.shared_storage.hostpath.root_path }}
+            {{- end }}
+          - name: reana-code
+            hostPath:
+              path: /code/reana-server
+{{- end }}
+{{- end }}

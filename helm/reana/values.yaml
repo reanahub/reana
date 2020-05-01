@@ -79,6 +79,11 @@ components:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-ui:0.6.0-48-gbe42a5d
 
+notifications:
+  enabled: false
+  email_config: {}
+  system_status: "0 0 * * *"
+
 # Accessing the cluster from outside world
 ingress:
   enabled: true
