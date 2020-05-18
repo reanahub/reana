@@ -32,6 +32,7 @@ secrets:
   gitlab: {}
   cern:
     sso: {}
+  reana: {}
 
 # External database service configuration
 db_env_config:

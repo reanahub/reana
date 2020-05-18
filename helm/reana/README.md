@@ -40,6 +40,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `secrets.gitlab.REANA_GITLAB_HOST`                       | Hostname of the GitLab instance                                                      | None                                            |
 | `secrets.gitlab.REANA_GITLAB_OAUTH_APP_ID`               | GitLab OAuth application id                                                          | None                                            |
 | `secrets.gitlab.REANA_GITLAB_OAUTH_APP_SECRET`           | **[Do not use in production, use secrets instead]** GitLab OAuth application secret  | None                                            |
+| `secrets.reana.REANA_SECRET_KEY`                         | **[Do not use in production, use secrets instead]** REANA encrypytion secret key     | None                                            |
 | `serviceAccount.create`                                  | Create a service account for the REANA system user                                   | true                                            |
 | `serviceAccount.name`                                    | Service account name                                                                 | reana                                           |
 | `serviceAccount.namespace`                               | Service account namespace                                                            | default                                         |

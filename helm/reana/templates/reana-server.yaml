@@ -93,6 +93,11 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
                 key: REANA_GITLAB_HOST
+          - name: REANA_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-secrets
+                key: REANA_SECRET_KEY
           {{- if .Values.debug.enabled }}
           # Disable CORS in development environment, for example
           # to connect from an external React application.
