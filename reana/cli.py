@@ -8,7 +8,9 @@
 
 """Helper scripts for REANA developers. Run `reana-dev --help` for help."""
 
+import base64
 import datetime
+import json
 import logging
 import os
 import platform
@@ -1524,15 +1526,13 @@ def setup_environment(server_hostname, insecure_url):  # noqa: D301
         export_lines.append(component_export_line.format(
             env_var_name='REANA_SERVER_URL',
             env_var_value=server_hostname or get_external_url(insecure_url)))
-
-        get_admin_token_sql_query_cmd = [
-            'psql', '-U', 'reana', 'reana', '-c',
-            'SELECT token FROM user_token']
-        sql_query_result = exec_into_component(
-            get_prefixed_component_name('db'),
-            get_admin_token_sql_query_cmd)
-        # We get the token from the SQL query result
-        admin_access_token = sql_query_result.splitlines()[2].strip()
+        get_access_token_cmd = (
+            'kubectl get secret -o json '
+            f'{get_prefixed_component_name("admin-access-token")}')
+        secret_json = json.loads(subprocess.check_output(
+            get_access_token_cmd, shell=True).decode())
+        admin_access_token_b64 = secret_json['data']['ADMIN_ACCESS_TOKEN']
+        admin_access_token = base64.b64decode(admin_access_token_b64).decode()
         export_lines.append(component_export_line.format(
             env_var_name='REANA_ACCESS_TOKEN',
             env_var_value=admin_access_token))

@@ -204,6 +204,7 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 			sleep ${TIMECHECK}; \
 		fi;\
 	done && \
+	source ${PWD}/scripts/create-admin-user.sh ${TRUNC_INSTANCE_NAME} && \
 	eval $$(reana-dev setup-environment $(addprefix --server-hostname , ${SERVER_URL}))
 
 example: # Run one or several demo examples.
