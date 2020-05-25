@@ -1,67 +1,33 @@
-<html>
-  <head>
-    <title>REANA Helm charts</title>
-  </head>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/3.13.1/js-yaml.min.js"></script>
-  <script type="text/javascript">
-  function indexToTable(index_file) {
-    releases = index_file['entries']['reana'];
-    var tbl = document.createElement("table");
-    var tblBody = document.createElement("tbody");
-    var headerRow = document.createElement("tr");
-    var headerRelease = document.createElement("th");
-    var headerCreated = document.createElement("th");
-    var headerReleaseText = document.createTextNode("Release");
-    var headerCreatedText = document.createTextNode("Created");
-    headerRelease.appendChild(headerReleaseText)
-    headerCreated.appendChild(headerCreatedText)
-    headerRow.appendChild(headerRelease)
-    headerRow.appendChild(headerCreated)
-    tblBody.appendChild(headerRow)
-    for (release in releases) {
-      var row = document.createElement("tr");
-      var versionCell = document.createElement("td");
-      var versionLink = document.createElement("a");
-      versionLink.title = releases[release].version
-      versionLink.href = releases[release].urls[0]
-      var versionText = document.createTextNode(releases[release].version);
-      versionLink.appendChild(versionText)
-      versionCell.appendChild(versionLink)
-      row.appendChild(versionCell)
+<!DOCTYPE html>
+<html lang="en">
 
-      var createdCell = document.createElement("td")
-      var createdDate = new Date(releases[release].created)
-      var createdText = document.createTextNode(createdDate.toLocaleString())
-      createdCell.appendChild(createdText)
-      row.appendChild(createdCell)
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>REANA Helm charts</title>
+</head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/3.13.1/js-yaml.min.js"></script>
+<script type="text/javascript" src="index.js"></script>
 
-      tblBody.appendChild(row)
-    }
-    tbl.appendChild(tblBody)
-    return tbl
-  }
-  async function fetchIndex(url) {
-    const response = await fetch(url)
-      .then(res => res.text())
-      .catch(error => {
-        console.error("Error while fetching index.yaml:", error);
-      });
-    try {
-      const index_file = jsyaml.safeLoad(response);
-      tbl = indexToTable(index_file)
-      document.getElementById('releaseList').appendChild(tbl)
-    } catch (error) {
-      console.log("Error while parsing index.yaml", error);
-    }
-  }
-  fetchIndex("https://reanahub.github.io/reana/index.yaml")
-  </script>
-  <body>
-    <h1>REANA Helm charts repository</h1>
-    See installation instructions at <a href="http://docs.reana.io/development/deploying-at-scale/">REANA documentation.</a>
-    <h2>
+<body>
+  <h1>REANA Helm charts repository</h1>
+  See installation instructions at <a href="http://docs.reana.io/development/deploying-at-scale/">REANA
+    documentation.</a>
+  <h2>
     Release list
-    </h2>
-    <div id='releaseList'></div>
-  </body>
+  </h2>
+  <div>
+    <table>
+      <thead>
+        <tr>
+          <th>Release</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody id='tableBody'>
+      </tbody>
+    </table>
+  </div>
+</body>
+
 </html>
