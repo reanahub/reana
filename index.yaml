@@ -2,14 +2,39 @@ apiVersion: v1
 entries:
   reana:
   - apiVersion: v2
+    created: "2020-05-26T07:14:53.937015167Z"
+    description: REANA reproducible research data analysis platform
+    digest: 939f4d2508c1ae8573e16e007b61ed7e2f8fc1b399111f56b3e07088a0be892b
+    home: www.reana.io
+    icon: http://www.reana.io/static/img/logo-reana.svg
+    keywords:
+    - research-data
+    - reproducible-analyses
+    - reproducible-workflows
+    - kubernetes
+    - containers
+    - cwl
+    - reusable-science
+    kubeVersion: '>= 1.13.0 <= 1.18'
+    name: reana
+    sources:
+    - https://github.com/reanahub/reana
+    - https://github.com/reanahub/reana-client
+    - https://github.com/reanahub/reana-server
+    - https://github.com/reanahub/reana-workflow-controller
+    - https://github.com/reanahub/reana-workflow-engine-cwl
+    - https://github.com/reanahub/reana-workflow-engine-serial
+    - https://github.com/reanahub/reana-workflow-engine-yadage
+    - https://github.com/reanahub/reana-job-controller
+    - https://github.com/reanahub/reana-commons
+    - https://github.com/reanahub/reana-db
+    - https://github.com/reanahub/pytest-reana
+    - https://github.com/reanahub/www.reana.io
+    urls:
+    - https://github.com/reanahub/reana/releases/download/reana-0.7.0-dev20200520/reana-0.7.0-dev20200520.tgz
+    version: 0.7.0-dev20200520
+  - apiVersion: v2
     created: "2020-04-20T09:48:42.156633133Z"
-    dependencies:
-    - condition: traefik.enabled
-      name: traefik
-      repository: https://kubernetes-charts.storage.googleapis.com/
-      tags:
-      - ingress
-      version: 1.85.x
     description: REANA reproducible research data analysis platform
     digest: 3e934fbe41370cff0a03665419287516e62ec2e82f4fe74be670e4da4247885d
     home: www.reana.io
@@ -37,19 +62,11 @@ entries:
     - https://github.com/reanahub/reana-db
     - https://github.com/reanahub/pytest-reana
     - https://github.com/reanahub/www.reana.io
-    type: application
     urls:
     - https://github.com/reanahub/reana/releases/download/reana-0.7.0-dev20200420/reana-0.7.0-dev20200420.tgz
     version: 0.7.0-dev20200420
   - apiVersion: v2
     created: "2020-04-18T13:21:37.712758418Z"
-    dependencies:
-    - condition: traefik.enabled
-      name: traefik
-      repository: https://kubernetes-charts.storage.googleapis.com/
-      tags:
-      - ingress
-      version: 1.85.x
     description: REANA reproducible research data analysis platform
     digest: d5ba1038d29661afcba487c450ec09b54f1906f2c4be41356037d23ee4915c0b
     home: www.reana.io
@@ -77,19 +94,11 @@ entries:
     - https://github.com/reanahub/reana-db
     - https://github.com/reanahub/pytest-reana
     - https://github.com/reanahub/www.reana.io
-    type: application
     urls:
     - https://github.com/reanahub/reana/releases/download/reana-0.7.0-dev20200418/reana-0.7.0-dev20200418.tgz
     version: 0.7.0-dev20200418
   - apiVersion: v2
     created: "2020-04-17T16:53:36.673238326Z"
-    dependencies:
-    - condition: traefik.enabled
-      name: traefik
-      repository: https://kubernetes-charts.storage.googleapis.com/
-      tags:
-      - ingress
-      version: 1.85.x
     description: REANA reproducible research data analysis platform
     digest: 7534b555867b91072f109f5d89667916fdb0bc11bc6530671641aec71be2f595
     home: www.reana.io
@@ -117,19 +126,11 @@ entries:
     - https://github.com/reanahub/reana-db
     - https://github.com/reanahub/pytest-reana
     - https://github.com/reanahub/www.reana.io
-    type: application
     urls:
     - https://github.com/reanahub/reana/releases/download/reana-0.7.0-dev20200417/reana-0.7.0-dev20200417.tgz
     version: 0.7.0-dev20200417
   - apiVersion: v2
     created: "2020-04-16T13:43:48.198133696Z"
-    dependencies:
-    - condition: traefik.enabled
-      name: traefik
-      repository: https://kubernetes-charts.storage.googleapis.com/
-      tags:
-      - ingress
-      version: 1.85.x
     description: REANA reproducible research data analysis platform
     digest: 6bab42c2e304816c49cee5adbd90c0a24541162b7e8286e1844431913fe659e2
     home: www.reana.io
@@ -157,7 +158,6 @@ entries:
     - https://github.com/reanahub/reana-db
     - https://github.com/reanahub/pytest-reana
     - https://github.com/reanahub/www.reana.io
-    type: application
     urls:
     - https://github.com/reanahub/reana/releases/download/reana-0.7.0-dev20200416/reana-0.7.0-dev20200416.tgz
     version: 0.7.0-dev20200416
