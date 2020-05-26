@@ -169,6 +169,7 @@ release-build:
 	REANA_KRB5_IMAGE_NAME="reanahub/krb5:latest" && \
 	docker build --file krb5/Dockerfile --tag $$REANA_KRB5_IMAGE_NAME . && \
 	echo $$REANA_KRB5_IMAGE_NAME >> $$BUILT_IMAGES_FILE_PATH && \
+	cd ../reana && \
 	echo "The following images have been built:" && \
 	./scripts/update_images.sh $$BUILT_IMAGES_FILE_PATH && \
 	rm $$BUILT_IMAGES_FILE_PATH
