@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans&display=swap');
+
+:root {
+  --color-gray: #555555;
+  --color-sepia: #f5ecec;
+  --color-lightgray: #f7f7f7;
+  --color-red: #d71217;
+  --color-lightred: #ff5555;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+}
+
+.wrapper {
+  font-family: 'Open Sans', Arial, sans-serif;
+  color: var(--color-gray);
+  flex-grow: 1;
+  max-width: 800px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  text-align: left;
+  background-color: var(--color-sepia);
+}
+
+table tr:nth-child(2n) {
+  background-color: var(--color-lightgray);
+}
+
+table th, table td {
+  padding: 15px 20px;
+}
+
+a {
+  color: var(--color-red);
+}
+
+a:hover {
+  color:var(--color-lightred);
+}

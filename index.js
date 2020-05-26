@@ -15,7 +15,7 @@ function fillTable(releases) {
 
     const createdCell = document.createElement("td");
     const createdDate = new Date(release.created);
-    const createdText = document.createTextNode(createdDate.toLocaleString());
+    const createdText = document.createTextNode(createdDate.toISOString());
     createdCell.appendChild(createdText);
     row.appendChild(createdCell);
 
