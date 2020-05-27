@@ -199,7 +199,7 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \
 			break; \
-		elif [ $$(kubectl logs -l app=${TRUNC_INSTANCE_NAME}-server -c rest-api --tail=500 | grep -ce 'spawned uWSGI master process\|Serving Flask app') -eq 1 ]; then \
+		elif [ $$(kubectl logs -l app=${TRUNC_INSTANCE_NAME}-server -c rest-api --tail=1000 | grep -ce 'spawned uWSGI master process\|Serving Flask app') -eq 1 ]; then \
 			break; \
 		else \
 			sleep ${TIMECHECK}; \
