@@ -116,25 +116,7 @@ spec:
             value: ""
           - name: GIT_SSL_NO_VERIFY
             value: "true"
-          - name: REANA_EMAIL_SMTP_SERVER
-            value: {{ include "reana.prefix" . }}-mail
-          - name: REANA_EMAIL_SMTP_PORT
-            value: "30025"
           {{- else }}
-          - name: REANA_EMAIL_SMTP_SERVER
-            value: {{ .Values.notifications.email_config.smtp_server }}
-          - name: REANA_EMAIL_SMTP_PORT
-            value: {{ .Values.notifications.email_config.smpt_port }}
-          - name: REANA_EMAIL_LOGIN
-            valueFrom:
-              secretKeyRef:
-                name: {{ include "reana.prefix" . }}-mail-notification-sender-password
-                key: REANA_EMAIL_LOGIN
-          - name: REANA_EMAIL_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: {{ include "reana.prefix" . }}-mail-notification-sender-password
-                key: REANA_EMAIL_PASSWORD
           - name: REANA_DB_USERNAME
             valueFrom:
               secretKeyRef:
@@ -146,8 +128,26 @@ spec:
                 name: {{ include "reana.prefix" . }}-db-secrets
                 key: password
           {{- end }}
+          {{- if .Values.notifications.enabled }}
           - name: REANA_EMAIL_SENDER
             value: {{ .Values.notifications.email_config.sender }}
+          - name: REANA_EMAIL_SMTP_SERVER
+            value: {{ .Values.notifications.email_config.smtp_server | default (printf "%s-mail" (include "reana.prefix" .)) }}
+          - name: REANA_EMAIL_SMTP_PORT
+            value: "{{ .Values.notifications.email_config.smpt_port | default "30025" }}"
+          {{- if not .Values.debug.enabled }}
+          - name: REANA_EMAIL_LOGIN
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-mail-notification-sender-password
+                key: REANA_EMAIL_LOGIN
+          - name: REANA_EMAIL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-mail-notification-sender-password
+                key: REANA_EMAIL_PASSWORD
+          {{- end }}
+          {{- end }}
       - name: scheduler
         image: {{ .Values.components.reana_server.image }}
         imagePullPolicy: {{ .Values.components.reana_server.imagePullPolicy }}
