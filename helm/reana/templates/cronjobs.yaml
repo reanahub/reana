@@ -35,6 +35,16 @@ spec:
             - name: FLASK_ENV
               value:  "development"
             {{- else }}
+            - name: REANA_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-db-secrets
+                  key: user
+            - name: REANA_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-db-secrets
+                  key: password
             - name: REANA_EMAIL_LOGIN
               valueFrom:
                 secretKeyRef:
