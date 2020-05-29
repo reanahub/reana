@@ -134,7 +134,7 @@ spec:
           - name: REANA_EMAIL_SMTP_SERVER
             value: {{ .Values.notifications.email_config.smtp_server | default (printf "%s-mail" (include "reana.prefix" .)) }}
           - name: REANA_EMAIL_SMTP_PORT
-            value: "{{ .Values.notifications.email_config.smpt_port | default "30025" }}"
+            value: "{{ .Values.notifications.email_config.smtp_port | default "30025" }}"
           {{- if not .Values.debug.enabled }}
           - name: REANA_EMAIL_LOGIN
             valueFrom:
