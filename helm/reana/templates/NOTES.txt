@@ -1,7 +1,7 @@
 
 The REANA system has been installed:
 
-There are a few steps left to finalise its configuration
+If you are installing REANA for the first time, there are a few steps left to finalise its configuration.
 
 1. Get the REANA-Server pod name:
 
@@ -11,12 +11,12 @@ There are a few steps left to finalise its configuration
 
     $ kubectl exec $REANA_SERVER -- ./scripts/setup
 
-2. Create your administrator user and store the token:
+3. Create your administrator user and store the token:
 
     $ kubectl exec $REANA_SERVER -- flask reana-admin create-admin-user user@my.org
     <reana-admin-access-token-value>
     $ read -s REANA_ADMIN_ACCESS_TOKEN  # paste the secret here
     $ kubectl create secret generic {{ .Release.Name }}-admin-access-token \
-      --from-literal=ADMIN_ACCESS_TOKEN='$REANA_ADMIN_ACCESS_TOKEN'
+      --from-literal=ADMIN_ACCESS_TOKEN="$REANA_ADMIN_ACCESS_TOKEN"
 
 Thanks for flying REANA 🚀
