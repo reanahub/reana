@@ -90,6 +90,11 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
                 key: REANA_GITLAB_HOST
+          - name: REANA_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-secrets
+                key: REANA_SECRET_KEY
           {{- if .Values.debug.enabled }}
           - name: WDB_SOCKET_SERVER
             value: "{{ include "reana.prefix" . }}-wdb"
