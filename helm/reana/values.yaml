@@ -53,7 +53,7 @@ components:
     enabled: true
   reana_server:
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-server:0.6.0-52-g03b354f
+    image: reanahub/reana-server:0.6.0-53-g7984143
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
     uwsgi:
