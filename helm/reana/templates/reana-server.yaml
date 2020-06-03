@@ -98,6 +98,11 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-secrets
                 key: REANA_SECRET_KEY
+          - name: REANA_UI_ANNOUNCEMENT
+            valueFrom:
+              configMapKeyRef:
+                name: announcement-config
+                key: announcement
           {{- if .Values.debug.enabled }}
           # Disable CORS in development environment, for example
           # to connect from an external React application.
