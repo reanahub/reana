@@ -26,7 +26,7 @@ import os
 
 from locust import HttpLocust, TaskSet, between, task
 
-TOKEN = os.environ.get('REANA_ACCESS_TOKEN')
+TOKEN = os.environ.get("REANA_ACCESS_TOKEN")
 
 dummy_spec = {
     "workflow": {
@@ -34,9 +34,7 @@ dummy_spec = {
             "steps": [
                 {
                     "environment": "reanahub/reana-env-jupyter",
-                    "commands": [
-                        "echo 'Hello REANA'"
-                    ]
+                    "commands": ["echo 'Hello REANA'"],
                 }
             ]
         },
@@ -44,7 +42,7 @@ dummy_spec = {
     },
 }
 
-workflow_name = 'myworkflow'
+workflow_name = "myworkflow"
 
 
 class WorkflowsTaskSet(TaskSet):
@@ -57,27 +55,29 @@ class WorkflowsTaskSet(TaskSet):
     def setup(self):
         """Create 10 workflows to query them."""
         for _ in range(10):
-            self.client.post('/api/workflows',
-                             params=(('workflow_name', workflow_name),
-                                     ('access_token', TOKEN)),
-                             json=dummy_spec, verify=False)
+            self.client.post(
+                "/api/workflows",
+                params=(("workflow_name", workflow_name), ("access_token", TOKEN)),
+                json=dummy_spec,
+                verify=False,
+            )
 
     @task
     def ping(self):
         """Ping reana instance."""
-        self.client.get(f'/api/ping')
+        self.client.get(f"/api/ping")
 
     @task
     def get_worflows(self):
         """Get workflows."""
-        self.client.get(f'/api/workflows',
-                        params=(('access_token', TOKEN),))
+        self.client.get(f"/api/workflows", params=(("access_token", TOKEN),))
 
     @task
     def get_worflow_logs(self):
         """Get workflow logs."""
-        self.client.get(f'/api/workflows/{workflow_name}/logs',
-                        params=(('access_token', TOKEN),))
+        self.client.get(
+            f"/api/workflows/{workflow_name}/logs", params=(("access_token", TOKEN),)
+        )
 
 
 class WebsiteUser(HttpLocust):
