@@ -1,6 +1,23 @@
 Changes
 =======
 
+Version master (UNRELEASED)
+---------------------------
+
+- Moves to Helm deployment.
+- Adds command to bump common packages versions.
+- Supports prefixing by Helm release name.
+- Adds Helm Chart repo site.
+- Adds new ``python-unit-tests`` command.
+- Moves part of the documentation to docs.reana.io.
+- Adds Chart Release GitHub action.
+- Drops Python 2 support.
+- Adds email notificator service.
+- Moves database initialisation and admin creation after Helm installation.
+- Adds cronjob to send periodical status reports.
+- Adds announcement configmap configuration to display on the UI.
+- Adds Black formatter support.
+
 Version 0.6.0 (2019-12-27)
 --------------------------
 
