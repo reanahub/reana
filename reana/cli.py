@@ -37,6 +37,8 @@ REPO_LIST_DEMO = [
 REPO_LIST_ALL = [
     "docs.reana.io",
     "reana",
+    "reana-auth-krb5",
+    "reana-auth-vomsproxy",
     "reana-client",
     "reana-commons",
     "reana-db",
@@ -78,6 +80,9 @@ REPO_LIST_CLUSTER = [
     "pytest-reana",
     "reana-commons",
     "reana-db",
+    # cluster helpers
+    "reana-auth-krb5",
+    "reana-auth-vomsproxy",
     # cluster components
     "reana-ui",
     "reana-job-controller",
