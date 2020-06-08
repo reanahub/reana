@@ -55,11 +55,14 @@ def get_external_url(insecure=False):
         (https).
     :return: Returns a string which represents the full URL to access REANA.
     """
-    minikube_ip = (
-        subprocess.check_output(["minikube", "ip", "--profile", INSTANCE_NAME])
-        .strip()
-        .decode("UTF-8")
-    )
+    try:
+        minikube_ip = (
+            subprocess.check_output(["minikube", "ip", "--profile", INSTANCE_NAME])
+            .strip()
+            .decode("UTF-8")
+        )
+    except:
+        minikube_ip = "0.0.0.0"
     # get service ports
     traefik_name = get_prefixed_component_name("traefik")
     server_name = get_prefixed_component_name("server")
