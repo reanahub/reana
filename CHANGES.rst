@@ -1,6 +1,14 @@
 Changes
 =======
 
+Version 0.6.1 (2020-06-09)
+--------------------------
+
+- Administrators:
+    - Fixes installation troubles for REANA 0.6.x release series by pinning several dependencies.
+    - Upgrades REANA-Commons package to latest Kubernetes Python client version.
+    - Amends documentation for `minikube start` to include VirtualBox hypervisor explicitly.
+
 Version 0.6.0 (2019-12-27)
 --------------------------
 
