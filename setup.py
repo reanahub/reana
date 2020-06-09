@@ -19,6 +19,7 @@ readme = open('README.rst').read()
 history = open('CHANGES.rst').read()
 
 tests_require = [
+    'mock>=3.0,<4.0',
     'pytest-reana>=0.6.0,<0.7.0',
 ]
 
