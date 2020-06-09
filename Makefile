@@ -194,7 +194,8 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 	if [ $$(docker images | grep -c '<none>') -gt 0 ]; then \
 		docker images | grep '<none>' | awk '{print $$3;}' | xargs docker rmi; \
 	fi && \
-	helm install ${TRUNC_INSTANCE_NAME} helm/reana $(addprefix --set , ${CLUSTER_FLAGS}) $(addprefix -f , ${VALUES_YAML_PATH}) --wait && \
+	helm install ${TRUNC_INSTANCE_NAME} helm/reana $(addprefix --set , ${CLUSTER_FLAGS}) $(addprefix -f , ${VALUES_YAML_PATH}) --wait --namespace ${INSTANCE_NAME} --create-namespace && \
+	kubectl config set-context --current --namespace=${INSTANCE_NAME} && \
 	waited=0 && while true; do \
 		waited=$$(($$waited+${TIMECHECK})); \
 		if [ $$waited -gt ${TIMEOUT} ];then \

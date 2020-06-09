@@ -3,6 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ include "reana.prefix" . }}-krb5-conf
+  namespace: {{ .Release.Namespace }}
 data:
   krb5.conf: |
         [libdefaults]

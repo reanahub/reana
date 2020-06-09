@@ -51,7 +51,6 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `secrets.reana.REANA_SECRET_KEY`                         | **[Do not use in production, use secrets instead]** REANA encryption secret key     | None                                            |
 | `serviceAccount.create`                                  | Create a service account for the REANA system user                                   | true                                            |
 | `serviceAccount.name`                                    | Service account name                                                                 | reana                                           |
-| `serviceAccount.namespace`                               | Service account namespace                                                            | default                                         |
 | `shared_storage.access_modes`                            | Shared volume access mode                                                            | ReadWriteMany                                   |
 | `shared_storage.backend`                                 | Shared volume storage backend                                                        | hostpath                                        |
 | `shared_storage.cephfs.availability_zone`                | **[CERN only]** OpenStack Availability zone                                          | nova                                            |

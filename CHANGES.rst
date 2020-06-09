@@ -4,6 +4,7 @@ Changes
 Version master (UNRELEASED)
 ---------------------------
 
+- Adds possibility to install REANA in different namespaces than default.
 - Moves to Helm deployment.
 - Adds command to bump common packages versions.
 - Supports prefixing by Helm release name.

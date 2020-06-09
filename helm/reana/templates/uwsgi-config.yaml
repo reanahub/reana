@@ -3,6 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: uwsgi-config
+  namespace: {{ .Release.Namespace }}
 data:
   uwsgi.ini: |
     [uwsgi]

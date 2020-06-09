@@ -4,6 +4,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   name: {{ include "reana.prefix" . }}-system-status
+  namespace: {{ .Release.Namespace }}
 spec:
   schedule: "{{ .Values.notifications.system_status }}"
   jobTemplate:

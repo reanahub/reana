@@ -96,7 +96,6 @@ ingress:
 serviceAccount:
   create: true
   name: reana
-  namespace: default
 
 # Traefik's chart values.yaml
 traefik:
@@ -105,10 +104,6 @@ traefik:
     enabled: true
   dashboard:
     enabled: true
-  kubernetes:
-    namespaces:
-      - default
-      - kube-system
   serviceType: NodePort
   service:
     nodePorts:
