@@ -2,6 +2,46 @@ apiVersion: v1
 entries:
   reana:
   - apiVersion: v2
+    created: "2020-06-10T13:37:19.103376091Z"
+    dependencies:
+    - condition: traefik.enabled
+      name: traefik
+      repository: https://kubernetes-charts.storage.googleapis.com/
+      tags:
+      - ingress
+      version: 1.85.x
+    description: REANA reproducible research data analysis platform
+    digest: 6032b3843d1ef87defa4b7ab03605ab6d62ec051128f1ed987417a575f3ae9da
+    home: www.reana.io
+    icon: http://www.reana.io/static/img/logo-reana.svg
+    keywords:
+    - research-data
+    - reproducible-analyses
+    - reproducible-workflows
+    - kubernetes
+    - containers
+    - cwl
+    - reusable-science
+    kubeVersion: '>= 1.13.0 <= 1.18'
+    name: reana
+    sources:
+    - https://github.com/reanahub/reana
+    - https://github.com/reanahub/reana-client
+    - https://github.com/reanahub/reana-server
+    - https://github.com/reanahub/reana-workflow-controller
+    - https://github.com/reanahub/reana-workflow-engine-cwl
+    - https://github.com/reanahub/reana-workflow-engine-serial
+    - https://github.com/reanahub/reana-workflow-engine-yadage
+    - https://github.com/reanahub/reana-job-controller
+    - https://github.com/reanahub/reana-commons
+    - https://github.com/reanahub/reana-db
+    - https://github.com/reanahub/pytest-reana
+    - https://github.com/reanahub/www.reana.io
+    type: application
+    urls:
+    - https://github.com/reanahub/reana/releases/download/reana-0.7.0-dev20200610/reana-0.7.0-dev20200610.tgz
+    version: 0.7.0-dev20200610
+  - apiVersion: v2
     created: "2020-06-03T09:26:15.483856859Z"
     dependencies:
     - condition: traefik.enabled
