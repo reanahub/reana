@@ -77,7 +77,7 @@ components:
     image: reanahub/reana-message-broker:0.6.0-1-gac35315
   reana_ui:
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-ui:0.6.0-57-g8761f4f
+    image: reanahub/reana-ui:0.6.0-59-g9dacae5
 
 notifications:
   enabled: false
