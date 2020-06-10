@@ -1869,12 +1869,12 @@ def kubectl_delete_pod(component):  # noqa: D301
 @cli.command(name="python-install-eggs")
 def python_install_eggs():
     """Create eggs-info/ in all REANA infrastructure and runtime components."""
-    python_cluster_components = [c for c in REPO_LIST_CLUSTER if c != "reana-ui"]
-    for component in python_cluster_components:
-        for cmd in [
-            "python setup.py bdist_egg",
-        ]:
-            run_command(cmd, component)
+    for component in REPO_LIST_CLUSTER:
+        if is_component_python_package(component):
+            for cmd in [
+                "python setup.py bdist_egg",
+            ]:
+                run_command(cmd, component)
 
 
 @cli.command(name="python-unit-tests")
