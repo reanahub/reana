@@ -20,7 +20,10 @@ naming spec: `my-reana-batch-yadage-3c640169-d3b7-41ad-9c09-392c903fc1d8`
 {{- end -}}
 {{- end -}}
 
-# Centralise prefixing of
-{{- define "reana.prefixed_svaccount_name" -}}
-{{- include "reana.prefix" . -}}-{{- .Values.serviceAccount.name -}}
+# Centralise prefixing of service account names
+{{- define "reana.prefixed_infrastructure_svaccount_name" -}}
+{{- include "reana.prefix" . -}}-infrastructure
+{{- end -}}
+{{- define "reana.prefixed_runtime_svaccount_name" -}}
+{{- include "reana.prefix" . -}}-runtime
 {{- end -}}

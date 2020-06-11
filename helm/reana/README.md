@@ -41,6 +41,8 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `notifications.email_config.smtp_port`                   | SMTP email server port                                                               | None                                            |
 | `notifications.enabled`                                  | Enable REANA system events notifications                                             | false                                           |
 | `notifications.system_status`                            | Cronjob pattern representing how often the system status notification should be sent. Leave it empty to deactivate it | "0 0 * * *"                                     |
+| `reana_url`                                              | REANA URL host                                                                       | None                                            |
+| `default_runtime_namespace`                              | Namespace in which the REANA runtime pods (workflow engines, jobs etc...) will run   | None                                            |
 | `secrets.cern.sso.CERN_CONSUMER_KEY`                     | CERN SSO consumer key                                                                | None                                            |
 | `secrets.cern.sso.CERN_CONSUMER_SECRET`                  | **[Do not use in production, use secrets instead]** CERN SSO consumer secret         | None                                            |
 | `secrets.database.pasword`                               | **[Do not use in production, use secrets instead]** PostgreSQL database password     | None                                            |

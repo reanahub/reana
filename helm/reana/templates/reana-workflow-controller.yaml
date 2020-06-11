@@ -29,7 +29,7 @@ spec:
       labels:
         app: {{ include "reana.prefix" . }}-workflow-controller
     spec:
-      serviceAccountName: {{ include "reana.prefixed_svaccount_name" . }}
+      serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
       containers:
       - name: rest-api
         image: {{ .Values.components.reana_workflow_controller.image }}
@@ -53,8 +53,10 @@ spec:
         env:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
-          - name: REANA_KUBERNETES_NAMESPACE
+          - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
             value: {{ .Release.Namespace }}
+          - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
+            value: {{ .Values.default_runtime_namespace | default  .Release.Namespace }}
           {{- if .Values.naming_scheme }}
           - name: REANA_COMPONENT_NAMING_SCHEME
             value: {{ .Values.naming_scheme }}
@@ -67,8 +69,12 @@ spec:
           - name: {{ $key }}
             value: {{ $value | quote }}
           {{- end }}
-          - name: K8S_REANA_SERVICE_ACCOUNT_NAME
-            value: {{ include "reana.prefixed_svaccount_name" . }}
+          - name: REANA_INFRASTRUCTURE_KUBERNETES_SERVICEACCOUNT_NAME
+            value: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
+          {{- if .Values.default_runtime_namespace }}
+          - name: REANA_RUNTIME_KUBERNETES_SERVICEACCOUNT_NAME
+            value: {{ include "reana.prefixed_runtime_svaccount_name" . }}
+          {{- end }}
           - name: REANA_JOB_CONTROLLER_IMAGE
             value: {{ .Values.components.reana_job_controller.image }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_CWL
@@ -137,8 +143,10 @@ spec:
         env:
         - name: REANA_COMPONENT_PREFIX
           value: {{ include "reana.prefix" . }}
-        - name: REANA_KUBERNETES_NAMESPACE
+        - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
           value: {{ .Release.Namespace }}
+        - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
+          value: {{ .Values.default_runtime_namespace | default  .Release.Namespace }}
         {{- range $key, $value := .Values.db_env_config }}
         - name: {{ $key }}
           value: {{ $value | quote }}

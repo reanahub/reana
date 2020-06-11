@@ -30,5 +30,10 @@ roleRef:
   name: {{ include "reana.prefix" . }}-deployment-manager
 subjects:
 - kind: ServiceAccount
-  name: {{ include "reana.prefixed_svaccount_name" . }}
+  name: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
   namespace: {{ .Release.Namespace }}
+{{- if .Values.default_runtime_namespace }}
+- kind: ServiceAccount
+  name: {{ include "reana.prefixed_runtime_svaccount_name" . }}
+  namespace: {{ .Values.default_runtime_namespace }}
+{{- end }}

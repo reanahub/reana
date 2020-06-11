@@ -29,7 +29,7 @@ spec:
       labels:
         app: {{ include "reana.prefix" . }}-server
     spec:
-      serviceAccountName: {{ include "reana.prefixed_svaccount_name" . }}
+      serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
       containers:
       - name: rest-api
         image: {{ .Values.components.reana_server.image }}
@@ -58,6 +58,10 @@ spec:
         env:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
+          - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
+            value: {{ .Release.Namespace }}
+          - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
+            value: {{ .Values.default_runtime_namespace | default  .Release.Namespace }}
           {{- range $key, $value := .Values.db_env_config }}
           - name: {{ $key }}
             value: {{ $value | quote }}
@@ -169,6 +173,10 @@ spec:
         env:
         - name: REANA_COMPONENT_PREFIX
           value: {{ include "reana.prefix" . }}
+        - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
+          value: {{ .Release.Namespace }}
+        - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
+          value: {{ .Values.default_runtime_namespace | default  .Release.Namespace }}
         {{- range $key, $value := .Values.db_env_config }}
         - name: {{ $key }}
           value: {{ $value | quote }}
