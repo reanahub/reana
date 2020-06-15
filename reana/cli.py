@@ -71,6 +71,7 @@ REPO_LIST_CLIENT = [
     # shared utils
     "pytest-reana",
     "reana-commons",
+    "reana-db",
     # client
     "reana-client",
 ]
@@ -135,16 +136,6 @@ EXAMPLE_LOG_MESSAGES = {
     "*": ("job:",),
 }
 
-EXAMPLE_PREFETCH_IMAGES = {
-    "reana-demo-helloworld": ["python:2.7-slim",],
-    "reana-demo-worldpopulation": ["reanahub/reana-env-jupyter",],
-    "reana-demo-root6-roofit": ["reanahub/reana-env-root6:6.18.04",],
-    "reana-demo-atlas-recast": [
-        "reanahub/reana-demo-atlas-recast-eventselection",
-        "reanahub/reana-demo-atlas-recast-statanalysis",
-    ],
-}
-
 COMPONENTS_USING_SHARED_MODULE_COMMONS = [
     "reana-job-controller",
     "reana-server",
@@ -159,6 +150,17 @@ COMPONENTS_USING_SHARED_MODULE_DB = [
     "reana-server",
     "reana-workflow-controller",
 ]
+
+DOCKER_PREFETCH_IMAGES = {
+    "reana": ["postgres:9.6.2", "kozea/wdb:3.2.5", "maildev/maildev", "redis:5.0.5"],
+    "reana-demo-helloworld": ["python:2.7-slim",],
+    "reana-demo-worldpopulation": ["reanahub/reana-env-jupyter",],
+    "reana-demo-root6-roofit": ["reanahub/reana-env-root6:6.18.04",],
+    "reana-demo-atlas-recast": [
+        "reanahub/reana-demo-atlas-recast-eventselection",
+        "reanahub/reana-demo-atlas-recast-statanalysis",
+    ],
+}
 
 TIMECHECK = 5
 
@@ -195,23 +197,21 @@ def cli():  # noqa: D301
         $ eval "$(reana-dev git-fork -c ALL)"
         $ reana-dev git-clone -c ALL -u tiborsimko
 
-    How to install latest ``master`` REANA cluster and client CLI scripts:
+    How to install latest ``master`` REANA client CLI scripts:
 
     .. code-block:: console
 
         \b
-        $ reana-dev install-client
-        $ reana-dev install-cluster
+        $ reana-dev client-install
 
     How to compile and deploy latest ``master`` REANA cluster:
 
     .. code-block:: console
 
         \b
-        $ # install minikube and set docker environment
-        $ minikube start --vm-driver=virtualbox \\
-                         --feature-gates="TTLAfterFinished=true"
-        $ eval $(minikube docker-env)
+        $ # create cluster and set docker environment
+        $ reana-dev cluster-create
+        $ kubectl cluster-info --context kind-kind
         $ # option (a): cluster in production-like mode
         $ reana-dev docker-build
         $ helm install reana helm/reana
@@ -224,7 +224,7 @@ def cli():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ eval $(reana-dev setup-environment)
+        $ eval $(reana-dev client-setup-environment)
 
     How to run full REANA example using a given workflow engine:
 
@@ -274,13 +274,13 @@ def cli():  # noqa: D301
         $ reana-dev git-checkout -b reana-workflow-controller 98
         $ reana-dev git-checkout -b reana-server 112
         $ reana-dev git-submodule --update
-        $ reana-dev install-client
+        $ reana-dev client-install
         $ reana-dev install-cluster
         $ reana-dev docker-build
         $ helm delete helm/reana
-        $ minikube ssh 'sudo rm -rf /var/reana'
+        $ docker-exec -i -t kind-control-plane sh -c 'sudo rm -rf /var/reana'
         $ helm install reana helm/reana
-        $ eval $(reana-dev setup-environment)
+        $ eval $(reana-dev client-setup-environment)
         $ reana-dev run-example -c r-d-helloworld
         $ reana-dev git-submodule --delete
         $ reana-dev git-status -s
@@ -1605,8 +1605,8 @@ def docker_pull(user, tag, component):  # noqa: D301
     """
     components = select_components(component)
     for component in components:
-        if component in EXAMPLE_PREFETCH_IMAGES:
-            for image in EXAMPLE_PREFETCH_IMAGES[component]:
+        if component in DOCKER_PREFETCH_IMAGES:
+            for image in DOCKER_PREFETCH_IMAGES[component]:
                 cmd = "docker pull {0}".format(image)
                 run_command(cmd, component)
         elif is_component_dockerised(component):
@@ -1617,25 +1617,97 @@ def docker_pull(user, tag, component):  # noqa: D301
             display_message(msg, component)
 
 
-@cli.command(name="install-client")
-def install_client():  # noqa: D301
-    """Install latest REANA client and its dependencies.
-
-    \b
-    :param upgrade: Should we upgrade? [default=True]
-    :type fetch: bool
-    """
+@cli.command(name="client-install")
+def client_install():  # noqa: D301
+    """Install latest REANA client and its dependencies."""
     for component in REPO_LIST_CLIENT:
         for cmd in [
             "pip install . --upgrade",
         ]:
             run_command(cmd, component)
+    run_command("pip check")
 
 
-@cli.command(name="setup-environment")
+@cli.command(name="client-uninstall")
+def client_uninstall():  # noqa: D301
+    """Uninstall REANA client and its dependencies."""
+    cmd = "pip uninstall -y " + " ".join(REPO_LIST_CLIENT)
+    run_command(cmd, "reana")
+    run_command("pip check")
+
+
+@cli.command(name="cluster-build")
+def cluster_build():  # noqa: D301
+    """Build REANA cluster."""
+    for cmd in [
+        "reana-dev git-submodule --update",
+        "reana-dev docker-build --exclude-components r-ui,r-a-vomsproxy",
+    ]:
+        run_command(cmd, "reana")
+
+
+@cli.command(name="cluster-deploy")
+def cluster_deploy():  # noqa: D301
+    """Deploy REANA cluster."""
+    for cmd in [
+        "helm install reana helm/reana -f helm/configurations/values-dev.yaml -n default --wait",
+        os.path.join(get_srcdir("reana"), "scripts/create-admin-user.sh"),
+    ]:
+        run_command(cmd, "reana")
+
+
+@cli.command(name="cluster-undeploy")
+def cluster_undeploy():  # noqa: D301
+    """Undeploy REANA cluster."""
+    is_deployed = run_command("helm ls", "reana", return_output=True)
+    if "reana" in is_deployed:
+        for cmd in [
+            "helm uninstall reana -n default",
+            "kubectl get secrets -o custom-columns=':metadata.name' | grep reana | xargs kubectl delete secret",
+            "docker exec -i -t kind-control-plane sh -c '/bin/rm -rf /var/reana'",
+        ]:
+            run_command(cmd, "reana")
+    else:
+        msg = "No REANA cluster to undeploy."
+        display_message(msg, "reana")
+
+
+@click.option(
+    "--recreate",
+    "-r",
+    is_flag=True,
+    default=False,
+    help="Destroy and recreate cluster from scratch?",
+)
+@cli.command(name="run-ci")
+def run_ci(recreate):  # noqa: D301
+    """Run CI build.
+
+    Builds and installs REANA and runs a demo example. Optionally, destroys
+    and recreates cluster from scratch."""
+    if recreate:
+        for cmd in [
+            "reana-dev cluster-delete",
+            "reana-dev cluster-create",
+            "reana-dev docker-pull -c reana -c DEMO",
+            "reana-dev kind-load-docker-image -c reana -c DEMO",
+        ]:
+            run_command(cmd, "reana")
+    for cmd in [
+        "reana-dev cluster-undeploy",
+        "reana-dev client-install",
+        "reana-dev cluster-build",
+        "reana-dev kind-load-docker-image -c CLUSTER --exclude-components=r-ui,r-a-vomsproxy",
+        "reana-dev cluster-deploy",
+        "eval $(reana-dev client-setup-environment) && reana-dev run-example",
+    ]:
+        run_command(cmd, "reana")
+
+
+@cli.command(name="client-setup-environment")
 @click.option("--server-hostname", help="Set customized REANA Server hostname.")
 @click.option("--insecure-url", is_flag=True, help="REANA Server URL with HTTP.")
-def setup_environment(server_hostname, insecure_url):  # noqa: D301
+def client_setup_environment(server_hostname, insecure_url):  # noqa: D301
     """Display commands to set up shell environment for local cluster.
 
     Display commands how to set up REANA_SERVER_URL and REANA_ACCESS_TOKEN
@@ -1728,7 +1800,8 @@ def run_example(
 
     \b
     :param component: The option ``component`` can be repeated. The value is
-                      the repository name of the example.
+                      the repository name of the example. The special value `DEMO`
+                      will run all examples.
                       [default=reana-demo-root6-roofit]
     :param workflow_engine: The option ``workflow_engine`` can be repeated. The
                             value is the workflow engine to use to run the
@@ -1820,6 +1893,106 @@ def run_example(
                     sys.exit(1)
     # report that everything was OK
     run_command("echo OK", component)
+
+
+@cli.command(name="cluster-create")
+def cluster_create():
+    """Create cluster."""
+    cmd = """cat <<EOF | kind create cluster --config=-
+    kind: Cluster
+    apiVersion: kind.x-k8s.io/v1alpha4
+    nodes:
+    - role: control-plane
+      kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+      extraPortMappings:
+      - containerPort: 30080
+        hostPort: 30080
+        protocol: TCP
+      - containerPort: 30443
+        hostPort: 30443
+        protocol: TCP
+EOF"""
+    run_command(cmd, "reana")
+
+
+@cli.command(name="cluster-pause")
+def cluster_pause():
+    """Pause cluster."""
+    cmd = "docker pause kind-control-plane"
+    run_command(cmd, "reana")
+
+
+@cli.command(name="cluster-unpause")
+def cluster_unpause():
+    """Unpause cluster."""
+    cmd = "docker unpause kind-control-plane"
+    run_command(cmd, "reana")
+
+
+@cli.command(name="cluster-delete")
+def cluster_delete():
+    """Delete cluster."""
+    cmd = "kind delete cluster"
+    run_command(cmd, "reana")
+
+
+@click.option("--user", "-u", default="reanahub", help="DockerHub user name [reanahub]")
+@click.option(
+    "--component",
+    "-c",
+    multiple=True,
+    default=["CLUSTER"],
+    help="Which components? [name|CLUSTER]",
+)
+@click.option(
+    "--exclude-components",
+    default="",
+    help="Which components to exclude from build? [c1,c2,c3]",
+)
+@cli.command(name="kind-load-docker-image")
+def kind_load_docker_image(user, component, exclude_components):  # noqa: D301
+    """Load Docker images to the cluster.
+
+    \b
+    :param user: DockerHub organisation or user name. [default=reanahub]
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :param exclude_components: List of components to exclude from the build.
+    :type user: str
+    :type component: str
+    :type exclude_components: str
+    """
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    for component in select_components(component, exclude_components):
+        if component in DOCKER_PREFETCH_IMAGES:
+            for image in DOCKER_PREFETCH_IMAGES[component]:
+                cmd = "kind load docker-image {0}".format(image)
+                run_command(cmd, component)
+        elif is_component_dockerised(component):
+            cmd = "kind load docker-image {0}/{1}".format(user, component)
+            run_command(cmd, component)
+        else:
+            msg = "Ignoring this component that does not contain" " a Dockerfile."
+            display_message(msg, component)
 
 
 @click.option(
