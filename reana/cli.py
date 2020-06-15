@@ -138,7 +138,7 @@ EXAMPLE_LOG_MESSAGES = {
 EXAMPLE_PREFETCH_IMAGES = {
     "reana-demo-helloworld": ["python:2.7-slim",],
     "reana-demo-worldpopulation": ["reanahub/reana-env-jupyter",],
-    "reana-demo-root6-roofit": ["reanahub/reana-env-root6",],
+    "reana-demo-root6-roofit": ["reanahub/reana-env-root6:6.18.04",],
     "reana-demo-atlas-recast": [
         "reanahub/reana-demo-atlas-recast-eventselection",
         "reanahub/reana-demo-atlas-recast-statanalysis",
