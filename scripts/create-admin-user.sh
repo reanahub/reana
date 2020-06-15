@@ -3,8 +3,7 @@
 instance_name=$1
 
 # Get REANA Server pod name
-REANA_SERVER=$(kubectl get pod -l "app=$instance_name-server" -o name \
-               -o jsonpath='{.items[0].metadata.name}')
+REANA_SERVER=$(kubectl get pod -l "app=$instance_name-server" | grep Running | awk '{print $1}')
 
 # Initialise DB
 kubectl exec "$REANA_SERVER" -- ./scripts/setup
