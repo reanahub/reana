@@ -207,12 +207,12 @@ deploy: # Deploy/redeploy previously built REANA cluster.
 		fi;\
 	done && \
 	source ${PWD}/scripts/create-admin-user.sh ${TRUNC_INSTANCE_NAME} && \
-	eval $$(reana-dev setup-environment $(addprefix --server-hostname , ${SERVER_URL}))
+	eval $$(reana-dev client-setup-environment $(addprefix --server-hostname , ${SERVER_URL}))
 
 example: # Run one or several demo examples.
 	@echo -e "\033[1;32m[$$(date +%Y-%m-%dT%H:%M:%S)]\033[1;33m reana:\033[0m\033[1m make example\033[0m"
 	source ${HOME}/.virtualenvs/${INSTANCE_NAME}/bin/activate && \
-	eval $$(reana-dev setup-environment $(addprefix --server-hostname , ${SERVER_URL})) && \
+	eval $$(reana-dev client-setup-environment $(addprefix --server-hostname , ${SERVER_URL})) && \
 	reana-dev run-example -c ${DEMO}
 
 prefetch: # Prefetch interesting Docker images. Useful to speed things later.
