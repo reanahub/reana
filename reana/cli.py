@@ -389,7 +389,7 @@ def find_reana_srcdir():
         return srcdir
     # fail if not found
     raise Exception(
-        "Cannot find REANA component source directory " "in {1}.".format(srcdir)
+        "Cannot find REANA component source directory " "in {0}.".format(srcdir)
     )
 
 
