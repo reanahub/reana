@@ -13,7 +13,7 @@ If you are installing REANA for the first time, there are a few steps left to fi
 
 3. Create your administrator user and store the token:
 
-    $ kubectl exec $REANA_SERVER -- flask reana-admin create-admin-user user@my.org
+    $ kubectl exec $REANA_SERVER -- flask reana-admin create-admin-user john.doe@example.org
     <reana-admin-access-token-value>
     $ read -s REANA_ADMIN_ACCESS_TOKEN  # paste the secret here
     $ kubectl create secret generic {{ .Release.Name }}-admin-access-token \
