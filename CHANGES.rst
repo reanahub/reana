@@ -18,6 +18,7 @@ Version master (UNRELEASED)
 - Adds cronjob to send periodical status reports.
 - Adds announcement configmap configuration to display on the UI.
 - Adds Black formatter support.
+- Stops exposing unused Invenio-Accounts views.
 
 Version 0.6.1 (2020-06-09)
 --------------------------
