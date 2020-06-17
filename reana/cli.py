@@ -278,7 +278,7 @@ def cli():  # noqa: D301
         $ reana-dev install-cluster
         $ reana-dev docker-build
         $ helm delete helm/reana
-        $ docker-exec -i -t kind-control-plane sh -c 'sudo rm -rf /var/reana'
+        $ docker-exec -i -t kind-control-plane sh -c 'sudo rm -rf /var/reana/*'
         $ helm install reana helm/reana
         $ eval $(reana-dev client-setup-environment)
         $ reana-dev run-example -c r-d-helloworld
@@ -1664,7 +1664,7 @@ def cluster_undeploy():  # noqa: D301
         for cmd in [
             "helm uninstall reana -n default",
             "kubectl get secrets -o custom-columns=':metadata.name' | grep reana | xargs kubectl delete secret",
-            "docker exec -i -t kind-control-plane sh -c '/bin/rm -rf /var/reana'",
+            "docker exec -i -t kind-control-plane sh -c '/bin/rm -rf /var/reana/*'",
         ]:
             run_command(cmd, "reana")
     else:
@@ -1673,6 +1673,13 @@ def cluster_undeploy():  # noqa: D301
 
 
 @click.option(
+    "-m",
+    "--mount",
+    is_flag=True,
+    default=False,
+    help="Should we mount /var/reana from host?"
+)
+@click.option(
     "--recreate",
     "-r",
     is_flag=True,
@@ -1680,7 +1687,7 @@ def cluster_undeploy():  # noqa: D301
     help="Destroy and recreate cluster from scratch?",
 )
 @cli.command(name="run-ci")
-def run_ci(recreate):  # noqa: D301
+def run_ci(mount, recreate):  # noqa: D301
     """Run CI build.
 
     Builds and installs REANA and runs a demo example. Optionally, destroys
@@ -1688,7 +1695,7 @@ def run_ci(recreate):  # noqa: D301
     if recreate:
         for cmd in [
             "reana-dev cluster-delete",
-            "reana-dev cluster-create",
+            mount and "reana-dev cluster-create -m" or "reana-dev cluster-create",
             "reana-dev docker-pull -c reana -c DEMO",
             "reana-dev kind-load-docker-image -c reana -c DEMO",
         ]:
@@ -1895,8 +1902,15 @@ def run_example(
     run_command("echo OK", component)
 
 
+@click.option(
+    "-m",
+    "--mount",
+    is_flag=True,
+    default=False,
+    help="Should we mount /var/reana from host?"
+)
 @cli.command(name="cluster-create")
-def cluster_create():
+def cluster_create(mount):
     """Create cluster."""
     cmd = """cat <<EOF | kind create cluster --config=-
     kind: Cluster
@@ -1915,7 +1929,13 @@ def cluster_create():
         protocol: TCP
       - containerPort: 30443
         hostPort: 30443
-        protocol: TCP
+        protocol: TCP"""
+    if mount:
+        cmd += """
+      extraMounts:
+      - hostPath: /var/reana
+        containerPath: /var/reana"""
+    cmd += """
 EOF"""
     run_command(cmd, "reana")
 
