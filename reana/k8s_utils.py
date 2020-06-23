@@ -48,38 +48,6 @@ def exec_into_component(component_name, command):
     return output.decode("UTF-8")
 
 
-def get_external_url(insecure=False):
-    """Get external IP and port to access REANA API.
-
-    :param insecure: Whether the URL should be insecure (http) or secure
-        (https).
-    :return: Returns a string which represents the full URL to access REANA.
-    """
-    try:
-        minikube_ip = (
-            subprocess.check_output(["minikube", "ip", "--profile", INSTANCE_NAME])
-            .strip()
-            .decode("UTF-8")
-        )
-    except:
-        minikube_ip = "0.0.0.0"
-    # get service ports
-    traefik_name = get_prefixed_component_name("traefik")
-    server_name = get_prefixed_component_name("server")
-    external_ips, external_ports = get_service_ips_and_ports(traefik_name)
-    if not external_ports:
-        external_ips, external_ports = get_service_ips_and_ports(server_name)
-    if external_ports.get("https") and not insecure:
-        scheme = "https"
-    else:
-        scheme = "http"
-    return "{scheme}://{host}:{port}".format(
-        scheme=scheme,
-        host=minikube_ip or external_ips[0],
-        port=external_ports.get(scheme),
-    )
-
-
 def get_service_ips_and_ports(component_name):
     """Get external IPs and ports for a given component service.
 
