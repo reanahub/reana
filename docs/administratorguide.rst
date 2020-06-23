@@ -170,7 +170,7 @@ The minikube can be started as follows:
 
 .. code-block:: console
 
-   $ minikube start --feature-gates="TTLAfterFinished=true"
+   $ minikube start --vm-driver=virtualbox --feature-gates="TTLAfterFinished=true"
 
 REANA cluster can be easily deployed using `Helm <https://helm.sh/>`_:
 
