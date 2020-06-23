@@ -18,12 +18,12 @@ import subprocess
 import sys
 import time
 import traceback
+import yaml
 
 import click
 
 from reana.k8s_utils import (
     exec_into_component,
-    get_external_url,
     get_prefixed_component_name,
 )
 
@@ -743,6 +743,27 @@ def get_current_version(component, dirty=False):
     tag = run_command(cmd, component, return_output=True)
     # Remove starting `v` we use for Python/Git versioning
     return tag[1:]
+
+
+def volume_mounts_to_list(ctx, param, value):
+    """Convert tuple params to dictionary. e.g `(foo:bar)` to `{'foo': 'bar'}`.
+
+    :param options: A tuple with CLI options.
+    :returns: A list with all parsed mounts.
+    """
+    try:
+        return [
+            {"hostPath": op.split(":")[0], "containerPath": op.split(":")[1]}
+            for op in value
+        ]
+    except ValueError:
+        click.secho(
+            '[ERROR] Option "{0}" is not valid. '
+            'It must follow format "param=value".'.format(" ".join(value)),
+            err=True,
+            fg="red",
+        ),
+        sys.exit(1)
 
 
 @cli.command()
@@ -1691,7 +1712,7 @@ def cluster_undeploy():  # noqa: D301
     "--mount",
     is_flag=True,
     default=False,
-    help="Should we mount /var/reana from host?"
+    help="Should we mount /var/reana from host?",
 )
 @click.option(
     "--recreate",
@@ -1741,7 +1762,7 @@ def client_setup_environment(server_hostname, insecure_url):  # noqa: D301
         export_lines.append(
             component_export_line.format(
                 env_var_name="REANA_SERVER_URL",
-                env_var_value=server_hostname or get_external_url(insecure_url),
+                env_var_value=server_hostname or "https://localhost:30443",
             )
         )
         get_access_token_cmd = (
@@ -1919,38 +1940,70 @@ def run_example(
 @click.option(
     "-m",
     "--mount",
+    "mounts",
+    multiple=True,
+    callback=volume_mounts_to_list,
+    help="Which local directories whould be mounted in the Kind nodes? local_path=reana_system_path",
+)
+@click.option(
+    "--debug",
     is_flag=True,
     default=False,
-    help="Should we mount /var/reana from host?"
+    help="Should we mount the REANA source code for live code updates?",
+)
+@click.option(
+    "-n", "--worker-nodes", default=0, help="How many worker nodes? default 0"
 )
 @cli.command(name="cluster-create")
-def cluster_create(mount):
+def cluster_create(mounts, debug, worker_nodes):
     """Create cluster."""
-    cmd = """cat <<EOF | kind create cluster --config=-
-    kind: Cluster
-    apiVersion: kind.x-k8s.io/v1alpha4
-    nodes:
-    - role: control-plane
-      kubeadmConfigPatches:
-      - |
-        kind: InitConfiguration
-        nodeRegistration:
-          kubeletExtraArgs:
-            node-labels: "ingress-ready=true"
-      extraPortMappings:
-      - containerPort: 30080
-        hostPort: 30080
-        protocol: TCP
-      - containerPort: 30443
-        hostPort: 30443
-        protocol: TCP"""
-    if mount:
-        cmd += """
-      extraMounts:
-      - hostPath: /var/reana
-        containerPath: /var/reana"""
-    cmd += """
-EOF"""
+
+    class literal_str(str):
+        pass
+
+    def literal_unicode_str(dumper, data):
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+
+    def add_volume_mounts(node):
+        """Add needed volumen mounts to the provided node."""
+
+    yaml.add_representer(literal_str, literal_unicode_str)
+
+    mounts = mounts or [
+        {"hostPath": "/var/reana"},
+        {"containerPath": "/var/reana"},
+    ]
+    if debug:
+        mounts.append({"hostPath": find_reana_srcdir(), "containerPath": "/code"})
+
+    control_plane = {
+        "role": "control-plane",
+        "kubeadmConfigPatches": [
+            literal_str(
+                "kind: InitConfiguration\n"
+                "nodeRegistration:\n"
+                "  kubeletExtraArgs:\n"
+                '    node-labels: "ingress-ready=true"\n'
+            )
+        ],
+        "extraPortMappings": [
+            {"containerPort": 30080, "hostPort": 30080, "protocol": "TCP"},
+            {"containerPort": 30443, "hostPort": 30443, "protocol": "TCP"},
+        ],
+    }
+
+    nodes = [{"role": "worker"} for _ in range(worker_nodes)] + [control_plane]
+    for node in nodes:
+        node["extraMounts"] = mounts
+
+    cluster_config = {
+        "kind": "Cluster",
+        "apiVersion": "kind.x-k8s.io/v1alpha4",
+        "nodes": nodes,
+    }
+
+    cmd = "cat <<EOF | kind create cluster --config=-\n{cluster_config}\nEOF"
+    cmd = cmd.format(cluster_config=yaml.dump(cluster_config))
     run_command(cmd, "reana")
 
 
