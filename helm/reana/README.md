@@ -18,6 +18,12 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_ui.enabled`                            | Instantiate the [REANA-UI](https://github.com/reanahub/reana-ui)                     | false                                           |
 | `components.reana_ui.image`                              | [REANA-UI image](https://hub.docker.com/repository/docker/reanahub/reana-ui) to use  | `reanahub/reana-ui:<chart-release-verion>`      |
 | `components.reana_ui.imagePullPolicy`                    | REANA-UI image pull policy                                                           | IfNotPresent                                    |
+| `components.reana_ui.pooling_secs`                       | Frecuency of workflow list page reload in seconds                                    | 15                                              |
+| `components.reana_ui.docs_url`                           | URL of documentation site (footer icon)                                              | None                                            |
+| `components.reana_ui.forum_url`                          | URL of forum site (footer icon)                                                      | None                                            |
+| `components.reana_ui.chat_url`                           | URL of chat channel (footer icon)                                                    | None                                            |
+| `components.reana_ui.cern_sso`                           | Enable CERN SSO sign in                                                              | false                                           |
+| `components.reana_ui.local_users`                        | Enable local users sign in/up                                                        | true                                            |
 | `components.reana_workflow_controller.environment`       | REANA-Workflow-Controller environment variables                                      | `{SHARED_VOLUME_PATH: /var/reana}`              |
 | `components.reana_workflow_controller.image`             |                                                                                      | `reanahub/reana-workflow-controller:<chart-release-verion>` |
 | `components.reana_workflow_controller.imagePullPolicy`   | REANA-Workflow-Controller image pull policy                                          | IfNotPresent                                    |

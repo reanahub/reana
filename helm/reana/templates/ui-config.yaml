@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ui-config
+  namespace: {{ .Release.Namespace }}
+data:
+  ui-config.yaml: |
+    announcement: {{ .Values.components.reana_ui.announcement | quote | default "null"  }}
+    pooling_secs: {{ .Values.components.reana_ui.pooling_secs | default 15 }}
+    docs_url: {{ .Values.components.reana_ui.docs_url | quote | default "null" }}
+    forum_url: {{ .Values.components.reana_ui.forum_url | quote | default "null" }}
+    chat_url: {{ .Values.components.reana_ui.chat_url | quote | default "null" }}
+    cern_sso: {{ .Values.components.reana_ui.cern_sso | default false }}
+    local_users: {{ .Values.components.reana_ui.local_users | default true }}

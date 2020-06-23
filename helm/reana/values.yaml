@@ -49,6 +49,8 @@ db_env_config:
 components:
   reana_ui:
     enabled: false
+    imagePullPolicy: IfNotPresent
+    image: reanahub/reana-ui:0.6.0-59-g9dacae5
   reana_db:
     enabled: true
   reana_server:
@@ -75,9 +77,6 @@ components:
   reana_message_broker:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-message-broker:0.6.0-1-gac35315
-  reana_ui:
-    imagePullPolicy: IfNotPresent
-    image: reanahub/reana-ui:0.6.0-59-g9dacae5
 
 notifications:
   enabled: false

@@ -55,6 +55,8 @@ spec:
             name: reana-shared-volume
           - name: uwsgi-config
             mountPath: '/var/reana/uwsgi'
+          - name: ui-config
+            mountPath: '/var/reana/config'
         env:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
@@ -104,11 +106,6 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-secrets
                 key: REANA_SECRET_KEY
-          - name: REANA_UI_ANNOUNCEMENT
-            valueFrom:
-              configMapKeyRef:
-                name: announcement-config
-                key: announcement
           {{- if .Values.debug.enabled }}
           # Disable CORS in development environment, for example
           # to connect from an external React application.
@@ -234,3 +231,7 @@ spec:
         configMap:
           defaultMode: 420
           name: uwsgi-config
+      - name: ui-config
+        configMap:
+          defaultMode: 420
+          name: ui-config
