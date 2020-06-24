@@ -1,4 +1,5 @@
 # REANA components pointing to `latest`, locally built master branch
+
 components:
     reana_server:
       image: reanahub/reana-server

@@ -1682,12 +1682,35 @@ def cluster_build():  # noqa: D301
 
 
 @cli.command(name="cluster-deploy")
-def cluster_deploy():  # noqa: D301
+@click.option(
+    "--namespace", "-n", default="default", help="Kubernetes namespace [default]"
+)
+@click.option(
+    "-d",
+    "--debug",
+    is_flag=True,
+    default=False,
+    help="Should we deploy REANA in production mode? ",
+)
+def cluster_deploy(namespace, debug):  # noqa: D301
     """Deploy REANA cluster."""
-    for cmd in [
-        "helm install reana helm/reana -f helm/configurations/values-dev.yaml -n default --wait",
+    dev_values_yaml = "helm/configurations/values-dev.yaml"
+    debug_flags = "--set debug.enabled=true" if debug else ""
+    helm_install = "helm install reana helm/reana -n {namespace} -f {values} --create-namespace {debug_flags} --wait".format(
+        namespace=namespace, values=dev_values_yaml, debug_flags=debug_flags
+    )
+    deploy_cmds = [
+        helm_install,
+        "kubectl config set-context --current --namespace={}".format(namespace),
+        "sleep 5",  # Let the database initialise.
         os.path.join(get_srcdir("reana"), "scripts/create-admin-user.sh"),
-    ]:
+    ]
+    dev_deploy_cmds = [
+        "reana-dev git-submodule --update",
+        "reana-dev python-install-eggs",
+    ]
+    cmds = dev_deploy_cmds + deploy_cmds if debug else deploy_cmds
+    for cmd in cmds:
         run_command(cmd, "reana")
 
 
@@ -1765,10 +1788,7 @@ def client_setup_environment(server_hostname, insecure_url):  # noqa: D301
                 env_var_value=server_hostname or "https://localhost:30443",
             )
         )
-        get_access_token_cmd = (
-            "kubectl get secret -o json "
-            f'{get_prefixed_component_name("admin-access-token")}'
-        )
+        get_access_token_cmd = "kubectl get secret -o json reana-admin-access-token"
         secret_json = json.loads(
             subprocess.check_output(get_access_token_cmd, shell=True).decode()
         )
@@ -1973,8 +1993,6 @@ def cluster_create(mounts, debug, worker_nodes):
         {"hostPath": "/var/reana"},
         {"containerPath": "/var/reana"},
     ]
-    if debug:
-        mounts.append({"hostPath": find_reana_srcdir(), "containerPath": "/code"})
 
     control_plane = {
         "role": "control-plane",
@@ -1991,6 +2009,15 @@ def cluster_create(mounts, debug, worker_nodes):
             {"containerPort": 30443, "hostPort": 30443, "protocol": "TCP"},
         ],
     }
+
+    if debug:
+        mounts.append({"hostPath": find_reana_srcdir(), "containerPath": "/code"})
+        control_plane["extraPortMappings"].extend(
+            [
+                {"containerPort": 31984, "hostPort": 31984, "protocol": "TCP"},
+                {"containerPort": 32580, "hostPort": 32580, "protocol": "TCP"},
+            ]
+        )
 
     nodes = [{"role": "worker"} for _ in range(worker_nodes)] + [control_plane]
     for node in nodes:
