@@ -1657,13 +1657,24 @@ def client_uninstall():  # noqa: D301
     run_command("pip check")
 
 
+@click.option(
+    "-d",
+    "--debug",
+    is_flag=True,
+    default=False,
+    help="Should we build REANA in debug mode? ",
+)
 @cli.command(name="cluster-build")
-def cluster_build():  # noqa: D301
+def cluster_build(debug):  # noqa: D301
     """Build REANA cluster."""
-    for cmd in [
-        "reana-dev git-submodule --update",
-        "reana-dev docker-build --exclude-components r-ui,r-a-vomsproxy",
-    ]:
+    cmds = ["reana-dev git-submodule --update"]
+    if debug:
+        cmds.append("reana-dev python-install-eggs")
+    cmds.append(
+        "reana-dev docker-build --exclude-components r-ui,r-a-vomsproxy"
+        + (" -b DEBUG=1" if debug else "")
+    )
+    for cmd in cmds:
         run_command(cmd, "reana")
 
 
@@ -1672,23 +1683,62 @@ def cluster_build():  # noqa: D301
     "--namespace", "-n", default="default", help="Kubernetes namespace [default]"
 )
 @click.option(
+    "-j",
+    "--job-mounts",
+    multiple=True,
+    callback=volume_mounts_to_list,
+    help="Which directories from the Kubernetes nodes to mount inside the job pods? "
+    "cluster_node_path:job_pod_mountpath, e.g /var/reana/mydata:/mydata",
+)
+@click.option(
     "-d",
     "--debug",
     is_flag=True,
     default=False,
-    help="Should we deploy REANA in production mode? ",
+    help="Should we deploy REANA in debug mode? ",
 )
-def cluster_deploy(namespace, debug):  # noqa: D301
+def cluster_deploy(namespace, job_mounts, debug):  # noqa: D301
     """Deploy REANA cluster."""
-    dev_values_yaml = "helm/configurations/values-dev.yaml"
-    debug_flags = "--set debug.enabled=true" if debug else ""
-    helm_install = "helm install reana helm/reana -n {namespace} -f {values} --create-namespace {debug_flags} --wait".format(
-        namespace=namespace, values=dev_values_yaml, debug_flags=debug_flags
+
+    def job_mounts_to_config(job_mounts):
+        job_mount_list = []
+        for mount in job_mounts:
+            job_mount_list.append(
+                {
+                    "name": mount["containerPath"].replace("/", "-")[1:],
+                    "hostPath": mount["hostPath"],
+                    "mountPath": mount["containerPath"],
+                }
+            )
+
+        job_mount_config = ""
+        if job_mount_list:
+            job_mount_config = json.dumps(job_mount_list)
+        else:
+            job_mount_config = ""
+
+        return job_mount_config
+
+    values_yaml = "helm/configurations/values-dev.yaml"
+    values_dict = {}
+    with open(os.path.join(get_srcdir("reana"), values_yaml)) as f:
+        values_dict = yaml.safe_load(f.read())
+
+    job_mount_config = job_mounts_to_config(job_mounts)
+    if job_mount_config:
+        values_dict.setdefault("components", {}).setdefault(
+            "reana_workflow_controller", {}
+        ).setdefault("environment", {})["REANA_JOB_HOSTPATH_MOUNTS"] = job_mount_config
+    if debug:
+        values_dict.setdefault("debug", {})["enabled"] = True
+
+    helm_install = "cat <<EOF | helm install reana helm/reana -n {namespace} --create-namespace --wait -f -\n{values}\nEOF".format(
+        namespace=namespace, values=yaml.dump(values_dict),
     )
     deploy_cmds = [
+        "helm dep update helm/reana",
         helm_install,
         "kubectl config set-context --current --namespace={}".format(namespace),
-        "sleep 5",  # Let the database initialise.
         os.path.join(get_srcdir("reana"), "scripts/create-admin-user.sh"),
     ]
     dev_deploy_cmds = [
@@ -1717,39 +1767,24 @@ def cluster_undeploy():  # noqa: D301
 
 
 @click.option(
-    "-m",
-    "--mount",
+    "-d",
+    "--debug",
     is_flag=True,
     default=False,
-    help="Should we mount /var/reana from host?",
-)
-@click.option(
-    "--recreate",
-    "-r",
-    is_flag=True,
-    default=False,
-    help="Destroy and recreate cluster from scratch?",
+    help="Should we deploy REANA in debug mode? ",
 )
 @cli.command(name="run-ci")
-def run_ci(mount, recreate):  # noqa: D301
+def run_ci(debug):  # noqa: D301
     """Run CI build.
 
-    Builds and installs REANA and runs a demo example. Optionally, destroys
-    and recreates cluster from scratch."""
-    if recreate:
-        for cmd in [
-            "reana-dev cluster-delete",
-            mount and "reana-dev cluster-create -m" or "reana-dev cluster-create",
-            "reana-dev docker-pull -c reana -c DEMO",
-            "reana-dev kind-load-docker-image -c reana -c DEMO",
-        ]:
-            run_command(cmd, "reana")
+    Builds and installs REANA and runs a demo example.
+    """
     for cmd in [
         "reana-dev cluster-undeploy",
         "reana-dev client-install",
-        "reana-dev cluster-build",
+        "reana-dev cluster-build" + (" --debug" if debug else ""),
         "reana-dev kind-load-docker-image -c CLUSTER --exclude-components=r-ui,r-a-vomsproxy",
-        "reana-dev cluster-deploy",
+        "reana-dev cluster-deploy" + (" --debug" if debug else ""),
         "eval $(reana-dev client-setup-environment) && reana-dev run-example",
     ]:
         run_command(cmd, "reana")
@@ -1949,7 +1984,7 @@ def run_example(
     "mounts",
     multiple=True,
     callback=volume_mounts_to_list,
-    help="Which local directories whould be mounted in the Kind nodes? local_path=reana_system_path",
+    help="Which local directories would be mounted in the Kind nodes? local_path:cluster_node_path",
 )
 @click.option(
     "--debug",
@@ -1957,9 +1992,7 @@ def run_example(
     default=False,
     help="Should we mount the REANA source code for live code updates?",
 )
-@click.option(
-    "-n", "--worker-nodes", default=0, help="How many worker nodes? default 0"
-)
+@click.option("--worker-nodes", default=0, help="How many worker nodes? default 0")
 @cli.command(name="cluster-create")
 def cluster_create(mounts, debug, worker_nodes):
     """Create cluster."""
@@ -1974,11 +2007,6 @@ def cluster_create(mounts, debug, worker_nodes):
         """Add needed volumen mounts to the provided node."""
 
     yaml.add_representer(literal_str, literal_unicode_str)
-
-    mounts = mounts or [
-        {"hostPath": "/var/reana"},
-        {"containerPath": "/var/reana"},
-    ]
 
     control_plane = {
         "role": "control-plane",
@@ -2015,9 +2043,14 @@ def cluster_create(mounts, debug, worker_nodes):
         "nodes": nodes,
     }
 
-    cmd = "cat <<EOF | kind create cluster --config=-\n{cluster_config}\nEOF"
-    cmd = cmd.format(cluster_config=yaml.dump(cluster_config))
-    run_command(cmd, "reana")
+    cluster_create = "cat <<EOF | kind create cluster --config=-\n{cluster_config}\nEOF"
+    cluster_create = cluster_create.format(cluster_config=yaml.dump(cluster_config))
+    for cmd in [
+        cluster_create,
+        "reana-dev docker-pull -c reana -c DEMO",
+        "reana-dev kind-load-docker-image -c reana -c DEMO",
+    ]:
+        run_command(cmd, "reana")
 
 
 @cli.command(name="cluster-pause")
