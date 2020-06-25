@@ -13,6 +13,16 @@ fi
 # Get REANA Server pod name
 REANA_SERVER=$(kubectl get pod -l "app=$instance_name-server" | grep Running | awk '{print $1}')
 
+# Wait for DB to be ready
+REANA_DB=$(kubectl get pod -l "app=$instance_name-db" | grep Running | awk '{print $1}')
+echo $REANA_DB
+while [ "0" -ne "$(kubectl exec "$REANA_DB" -- pg_isready -U reana -h 127.0.0.1 -p 5432 &> /dev/null && echo $? || echo 1)" ]
+do
+    echo "Waiting for REANA-DB to be ready."
+    sleep 5;
+done
+echo "REANA-DB ready"
+
 # Initialise DB
 kubectl exec "$REANA_SERVER" -- ./scripts/setup
 
