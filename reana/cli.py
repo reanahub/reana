@@ -152,7 +152,12 @@ COMPONENTS_USING_SHARED_MODULE_DB = [
 ]
 
 DOCKER_PREFETCH_IMAGES = {
-    "reana": ["postgres:9.6.2", "kozea/wdb:3.2.5", "maildev/maildev", "redis:5.0.5"],
+    "reana": [
+        "postgres:9.6.2",
+        "kozea/wdb:3.2.5",
+        "maildev/maildev:1.1.0",
+        "redis:5.0.5",
+    ],
     "reana-demo-helloworld": ["python:2.7-slim",],
     "reana-demo-worldpopulation": ["reanahub/reana-env-jupyter",],
     "reana-demo-root6-roofit": ["reanahub/reana-env-root6:6.18.04",],
