@@ -159,11 +159,11 @@ DOCKER_PREFETCH_IMAGES = {
         "redis:5.0.5",
     ],
     "reana-demo-helloworld": ["python:2.7-slim",],
-    "reana-demo-worldpopulation": ["reanahub/reana-env-jupyter",],
+    "reana-demo-worldpopulation": ["reanahub/reana-env-jupyter:1.0.0",],
     "reana-demo-root6-roofit": ["reanahub/reana-env-root6:6.18.04",],
     "reana-demo-atlas-recast": [
-        "reanahub/reana-demo-atlas-recast-eventselection",
-        "reanahub/reana-demo-atlas-recast-statanalysis",
+        "reanahub/reana-demo-atlas-recast-eventselection:1.0",
+        "reanahub/reana-demo-atlas-recast-statanalysis:1.0",
     ],
 }
 
