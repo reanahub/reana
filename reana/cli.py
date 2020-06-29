@@ -185,8 +185,8 @@ def cli():  # noqa: D301
         $ mkdir -p ~/project/reana/src
         $ cd ~/project/reana/src
         $ # create new virtual environment
-        $ virtualenv ~/.virtualenvs/myreana
-        $ source ~/.virtualenvs/myreana/bin/activate
+        $ virtualenv ~/.virtualenvs/reana
+        $ source ~/.virtualenvs/reana/bin/activate
         $ # install reana-dev developer helper script
         $ pip install git+git://github.com/reanahub/reana.git#egg=reana
         $ # run ssh-agent locally to simplify GitHub interaction
@@ -202,27 +202,31 @@ def cli():  # noqa: D301
         $ eval "$(reana-dev git-fork -c ALL)"
         $ reana-dev git-clone -c ALL -u tiborsimko
 
-    How to install latest ``master`` REANA client CLI scripts:
+    How to run CI tests:
 
     .. code-block:: console
 
         \b
-        $ reana-dev client-install
+        $ # example (a): fast, CLI mode only, fast example
+        $ reana-dev cluster-delete
+        $ reana-dev run-ci -m /var/reana:/var/reana -c r-d-helloworld --exclude-components=r-ui,r-a-vomsproxy
+        $ # example (b): slow, CLI and Web modes, all examples
+        $ reana-dev cluster-delete
+        $ reana-dev run-ci
 
-    How to compile and deploy latest ``master`` REANA cluster:
+    How to create REANA cluster:
 
     .. code-block:: console
 
         \b
-        $ # create cluster and set docker environment
+        $ # example (a): simple cluster creation
         $ reana-dev cluster-create
-        $ kubectl cluster-info --context kind-kind
-        $ # option (a): cluster in production-like mode
-        $ reana-dev docker-build
-        $ helm install reana helm/reana
-        $ # option (b): cluster in developer-like debug-friendly mode
-        $ reana-dev docker-build -b DEBUG=1
-        $ helm install reana helm/reana --set debug.enabled=true
+        $ # example (b): mount sharing /var/reana with host
+        $ reana-dev cluster-create -m /var/reana:/var/reana
+        $ # example (c): mount sharing /var/reana with host and /cvmfs for jobs
+        $ reana-dev cluster-create -m /var/reana:/var/reana -j /cvmfs:/cvmfs
+        $ # example (d): debug mode with code sharing as well
+        $ reana-dev cluster-create -m /var/reana:/var/reana --debug
 
     How to set up your shell environment variables:
 
@@ -255,6 +259,7 @@ def cli():  # noqa: D301
         $ cd reana-workflow-controller
         $ reana-dev git-checkout -b . 72 --fetch
         $ reana-dev docker-build -c .
+        $ reana-dev kind-load-docker-image -c .
         $ reana-dev kubectl-delete-pod -c .
 
     How to test multiple component branches:
@@ -266,7 +271,9 @@ def cli():  # noqa: D301
         $ reana-dev git-checkout -b reana-workflow-controller 98
         $ reana-dev git-status
         $ reana-dev docker-build
+        $ reana-dev kind-load-docker-image -c reana-server
         $ reana-dev kubectl-delete-pod -c reana-server
+        $ reana-dev kind-load-docker-image -c reana-workflow-controller
         $ reana-dev kubectl-delete-pod -c reana-workflow-controller
 
     How to test multiple component branches with commits to shared modules:
@@ -278,17 +285,7 @@ def cli():  # noqa: D301
         $ reana-dev git-checkout -b reana-db 73
         $ reana-dev git-checkout -b reana-workflow-controller 98
         $ reana-dev git-checkout -b reana-server 112
-        $ reana-dev git-submodule --update
-        $ reana-dev client-install
-        $ reana-dev install-cluster
-        $ reana-dev docker-build
-        $ helm delete helm/reana
-        $ docker-exec -i -t kind-control-plane sh -c 'sudo rm -rf /var/reana/*'
-        $ helm install reana helm/reana
-        $ eval $(reana-dev client-setup-environment)
-        $ reana-dev run-example -c r-d-helloworld
-        $ reana-dev git-submodule --delete
-        $ reana-dev git-status -s
+        $ reana-dev run-ci [using same old options]
 
     How to release and push cluster component images:
 
@@ -769,6 +766,15 @@ def volume_mounts_to_list(ctx, param, value):
             fg="red",
         ),
         sys.exit(1)
+
+
+def is_cluster_created():
+    """Return True/False based on whether there is a cluster created already."""
+    cmd = "kind get clusters"
+    output = run_command(cmd, "reana", return_output=True)
+    if "kind" in output:
+        return True
+    return False
 
 
 @cli.command()
@@ -1822,27 +1828,120 @@ def cluster_undeploy():  # noqa: D301
 
 
 @click.option(
+    "--build-arg",
+    "-b",
+    default="",
+    multiple=True,
+    help="Any build arguments? (e.g. `-b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern`)",
+)
+@click.option(
     "-d",
     "--debug",
     is_flag=True,
     default=False,
     help="Should we deploy REANA in debug mode? ",
 )
+@click.option(
+    "--exclude-components",
+    default="",
+    help="Which components to exclude from build? [c1,c2,c3]",
+)
+@click.option(
+    "-m",
+    "--mount",
+    "mounts",
+    multiple=True,
+    help="Which local directories to mount in the cluster nodes? [local_path:cluster_node_path]",
+)
+@click.option(
+    "-j",
+    "--job-mounts",
+    multiple=True,
+    help="Which directories from the Kubernetes nodes to mount inside the job pods? "
+    "cluster_node_path:job_pod_mountpath, e.g /var/reana/mydata:/mydata",
+)
+@click.option("--no-cache", is_flag=True, help="Do not use Docker image layer cache.")
+@click.option(
+    "--component",
+    "-c",
+    multiple=True,
+    default=["DEMO"],
+    help="Which examples to run? [default=DEMO]",
+)
 @cli.command(name="run-ci")
-def run_ci(debug):  # noqa: D301
+def run_ci(
+    build_arg, debug, exclude_components, mounts, job_mounts, no_cache, component,
+):  # noqa: D301
     """Run CI build.
 
     Builds and installs REANA and runs a demo example.
+
+    \b
+    Basically it runs the following sequence of commands:
+       $ reana-dev client-install
+       $ reana-dev cluster-undeploy
+       $ reana-dev cluster-build
+       $ reana-dev cluster-deploy
+       $ eval "$(reana-dev client-setup-environment)" && reana-dev run-example
+
+    in the appropriate order and with the appropriate mounting or debugging
+    arguments.
+
+    \b
+    Example:
+       $ reana-dev run-cli -m /var/reana:/var/reana
+                           -m /usr/share/local/mydata:/mydata
+                           -j /mydata:/mydata
+                           -c r-d-helloworld
+                           --exclude-components=r-ui,r-a-vomsproxy
+                           --debug
     """
+    # parse arguments
+    components = select_components(component)
+    # create cluster if needed
+    if not is_cluster_created():
+        cmd = "reana-dev cluster-create"
+        for mount in mounts:
+            cmd += " -m {}".format(mount)
+        if debug:
+            cmd += " --debug"
+        run_command(cmd, "reana")
+    # prefetch and load images for selected demo examples
+    for component in components:
+        for cmd in [
+            "reana-dev docker-pull -c {}".format(component),
+            "reana-dev kind-load-docker-image -c {}".format(component),
+        ]:
+            run_command(cmd, "reana")
+    # undeploy cluster and install latest client
     for cmd in [
         "reana-dev cluster-undeploy",
         "reana-dev client-install",
-        "reana-dev cluster-build" + (" --debug" if debug else ""),
-        "reana-dev kind-load-docker-image -c CLUSTER --exclude-components=r-ui,r-a-vomsproxy",
-        "reana-dev cluster-deploy" + (" --debug" if debug else ""),
-        "eval $(reana-dev client-setup-environment) && reana-dev run-example",
     ]:
         run_command(cmd, "reana")
+    # build cluster
+    cmd = "reana-dev cluster-build"
+    if exclude_components:
+        cmd += " --exclude-components {}".format(exclude_components)
+    for arg in build_arg:
+        cmd += " -b {0}".format(arg)
+    if debug:
+        cmd += " --debug"
+    if no_cache:
+        cmd += " --no-cache"
+    run_command(cmd, "reana")
+    # deploy cluster
+    cmd = "reana-dev cluster-deploy"
+    if debug:
+        cmd += " --debug"
+    for job_mount in job_mounts:
+        cmd += " -j {}".format(job_mount)
+    run_command(cmd, "reana")
+    # run demo examples
+    cmd = "eval $(reana-dev client-setup-environment) && reana-dev run-example"
+    for component in components:
+        cmd += " -c {}".format(component)
+    run_command(cmd, "reana")
 
 
 @cli.command(name="client-setup-environment")
@@ -2043,7 +2142,7 @@ def run_example(
     "mounts",
     multiple=True,
     callback=volume_mounts_to_list,
-    help="Which local directories would be mounted in the Kind nodes? local_path:cluster_node_path",
+    help="Which local directories to mount in the cluster nodes? [local_path:cluster_node_path]",
 )
 @click.option(
     "--debug",
@@ -2053,8 +2152,15 @@ def run_example(
 )
 @click.option("--worker-nodes", default=0, help="How many worker nodes? [default=0]")
 @cli.command(name="cluster-create")
-def cluster_create(mounts, debug, worker_nodes):
-    """Create cluster."""
+def cluster_create(mounts, debug, worker_nodes):  # noqa: D301
+    """Create cluster.
+
+    \b
+    Example:
+       $ reana-dev cluster-create -m /var/reana:/var/reana
+                                  -m /usr/share/local/mydata:/mydata
+                                  --debug
+    """
 
     class literal_str(str):
         pass
