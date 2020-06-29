@@ -1663,22 +1663,58 @@ def client_uninstall():  # noqa: D301
 
 
 @click.option(
+    "--build-arg",
+    "-b",
+    default="",
+    multiple=True,
+    help="Any build arguments? (e.g. `-b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern`)",
+)
+@click.option(
     "-d",
     "--debug",
     is_flag=True,
     default=False,
     help="Should we build REANA in debug mode? ",
 )
+@click.option(
+    "--exclude-components",
+    default="",
+    help="Which components to exclude from build? [c1,c2,c3]",
+)
+@click.option("--no-cache", is_flag=True, help="Do not use Docker image layer cache.")
 @cli.command(name="cluster-build")
-def cluster_build(debug):  # noqa: D301
-    """Build REANA cluster."""
+def cluster_build(build_arg, debug, exclude_components, no_cache):  # noqa: D301
+    """Build REANA cluster.
+
+    \b
+    Example:
+       $ reana-dev cluster-build --exclude-components=r-ui,r-a-vomsproxy
+                                 -b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern
+                                 --debug
+                                 --no-cache
+    """
+    # initalise common submodules
     cmds = ["reana-dev git-submodule --update"]
     if debug:
+        # do we mount Python code live?
         cmds.append("reana-dev python-install-eggs")
-    cmds.append(
-        "reana-dev docker-build --exclude-components r-ui,r-a-vomsproxy"
-        + (" -b DEBUG=1" if debug else "")
-    )
+    # build Docker images
+    cmd = "reana-dev docker-build"
+    if exclude_components:
+        cmd += " --exclude-components {}".format(exclude_components)
+    for arg in build_arg:
+        cmd += " -b {0}".format(arg)
+    if debug:
+        cmd += " -b DEBUG=1"
+    if no_cache:
+        cmd += " --no-cache"
+    cmds.append(cmd)
+    # load built Docker images into cluster
+    cmd = "reana-dev kind-load-docker-image -c CLUSTER"
+    if exclude_components:
+        cmd += " --exclude-components {}".format(exclude_components)
+    cmds.append(cmd)
+    # execute commands
     for cmd in cmds:
         run_command(cmd, "reana")
 
