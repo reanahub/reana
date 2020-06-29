@@ -1671,7 +1671,7 @@ def client_install():  # noqa: D301
             "pip install . --upgrade",
         ]:
             run_command(cmd, component)
-    run_command("pip check")
+    run_command("pip check", "reana")
 
 
 @cli.command(name="client-uninstall")
@@ -1679,7 +1679,7 @@ def client_uninstall():  # noqa: D301
     """Uninstall REANA client and its dependencies."""
     cmd = "pip uninstall -y " + " ".join(REPO_LIST_CLIENT)
     run_command(cmd, "reana")
-    run_command("pip check")
+    run_command("pip check", "reana")
 
 
 @click.option(
