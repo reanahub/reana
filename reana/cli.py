@@ -1879,8 +1879,8 @@ def client_setup_environment(server_hostname, insecure_url):  # noqa: D301
     "--component",
     "-c",
     multiple=True,
-    default=["reana-demo-root6-roofit"],
-    help="Which examples to run? [reana-demo-root6-roofit]",
+    default=["DEMO"],
+    help="Which examples to run? [default=DEMO]",
 )
 @click.option(
     "--workflow_engine",
@@ -1921,6 +1921,10 @@ def run_example(
     component, workflow_engine, file, timecheck, timeout, parameters, options
 ):  # noqa: D301
     """Run given REANA example with given workflow engine.
+
+    \b
+    Example:
+       $ reana-dev run-example -c r-d-r-roofit
 
     \b
     :param component: The option ``component`` can be repeated. The value is
@@ -2033,7 +2037,7 @@ def run_example(
     default=False,
     help="Should we mount the REANA source code for live code updates?",
 )
-@click.option("--worker-nodes", default=0, help="How many worker nodes? default 0")
+@click.option("--worker-nodes", default=0, help="How many worker nodes? [default=0]")
 @cli.command(name="cluster-create")
 def cluster_create(mounts, debug, worker_nodes):
     """Create cluster."""
@@ -2088,8 +2092,8 @@ def cluster_create(mounts, debug, worker_nodes):
     cluster_create = cluster_create.format(cluster_config=yaml.dump(cluster_config))
     for cmd in [
         cluster_create,
-        "reana-dev docker-pull -c reana -c DEMO",
-        "reana-dev kind-load-docker-image -c reana -c DEMO",
+        "reana-dev docker-pull -c reana",
+        "reana-dev kind-load-docker-image -c reana",
     ]:
         run_command(cmd, "reana")
 
