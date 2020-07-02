@@ -2147,6 +2147,7 @@ def cluster_create(mounts, debug, worker_nodes):  # noqa: D301
                                   -m /usr/share/local/mydata:/mydata
                                   --debug
     """
+    import sys
 
     class literal_str(str):
         pass
@@ -2155,7 +2156,7 @@ def cluster_create(mounts, debug, worker_nodes):  # noqa: D301
         return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
 
     def add_volume_mounts(node):
-        """Add needed volumen mounts to the provided node."""
+        """Add needed volumes mounts to the provided node."""
 
     yaml.add_representer(literal_str, literal_unicode_str)
 
@@ -2183,6 +2184,20 @@ def cluster_create(mounts, debug, worker_nodes):  # noqa: D301
                 {"containerPort": 32580, "hostPort": 32580, "protocol": "TCP"},
             ]
         )
+
+    # check whether we mount shared volume for multi-node deployments:
+    if worker_nodes > 0:
+        mount_targets = [x["containerPath"].strip("/") for x in mounts]
+        if "var/reana" in mount_targets or "var" in mount_targets:
+            pass
+        else:
+            click.echo(
+                "[ERROR] For multi-node deployments, one has to use a shared storage volume for cluster nodes."
+            )
+            click.echo(
+                "[ERROR] Example: reana-dev cluster-create -m /var/reana:/var/reana --worker-nodes 2."
+            )
+            sys.exit(1)
 
     nodes = [{"role": "worker"} for _ in range(worker_nodes)] + [control_plane]
     for node in nodes:
