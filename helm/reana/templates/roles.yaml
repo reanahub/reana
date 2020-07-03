@@ -32,8 +32,8 @@ subjects:
 - kind: ServiceAccount
   name: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
   namespace: {{ .Release.Namespace }}
-{{- if .Values.default_runtime_namespace }}
+{{- if .Values.namespace_runtime }}
 - kind: ServiceAccount
   name: {{ include "reana.prefixed_runtime_svaccount_name" . }}
-  namespace: {{ .Values.default_runtime_namespace }}
+  namespace: {{ .Values.namespace_runtime }}
 {{- end }}

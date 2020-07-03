@@ -42,4 +42,9 @@ spec:
         ports:
         - containerPort: 1984
         - containerPort: 19840
+      {{- if .Values.node_label_infrastructure }}
+      {{- $full_label := split "=" .Values.node_label_infrastructure }}
+      nodeSelector:
+        {{ $full_label._0 }}: {{ $full_label._1 }}
+      {{- end }}
 {{- end }}

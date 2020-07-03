@@ -56,7 +56,7 @@ spec:
           - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
             value: {{ .Release.Namespace }}
           - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-            value: {{ .Values.default_runtime_namespace | default  .Release.Namespace }}
+            value: {{ .Values.namespace_runtime | default .Release.Namespace }}
           {{- if .Values.naming_scheme }}
           - name: REANA_COMPONENT_NAMING_SCHEME
             value: {{ .Values.naming_scheme }}
@@ -71,9 +71,13 @@ spec:
           {{- end }}
           - name: REANA_INFRASTRUCTURE_KUBERNETES_SERVICEACCOUNT_NAME
             value: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
-          {{- if .Values.default_runtime_namespace }}
+          {{- if .Values.namespace_runtime }}
           - name: REANA_RUNTIME_KUBERNETES_SERVICEACCOUNT_NAME
             value: {{ include "reana.prefixed_runtime_svaccount_name" . }}
+          {{- end }}
+          {{- if .Values.node_label_runtime }}
+          - name: REANA_RUNTIME_KUBERNETES_NODE_LABEL
+            value: {{ .Values.node_label_runtime }}
           {{- end }}
           - name: REANA_JOB_CONTROLLER_IMAGE
             value: {{ .Values.components.reana_job_controller.image }}
@@ -146,7 +150,7 @@ spec:
         - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
           value: {{ .Release.Namespace }}
         - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-          value: {{ .Values.default_runtime_namespace | default  .Release.Namespace }}
+          value: {{ .Values.namespace_runtime | default .Release.Namespace }}
         {{- range $key, $value := .Values.db_env_config }}
         - name: {{ $key }}
           value: {{ $value | quote }}
@@ -202,4 +206,9 @@ spec:
       - name: reana-code
         hostPath:
           path: /code/reana-workflow-controller
+      {{- end }}
+      {{- if .Values.node_label_infrastructure }}
+      {{- $full_label := split "=" .Values.node_label_infrastructure }}
+      nodeSelector:
+        {{ $full_label._0 }}: {{ $full_label._1 }}
       {{- end }}

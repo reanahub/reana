@@ -63,7 +63,7 @@ spec:
           - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
             value: {{ .Release.Namespace }}
           - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-            value: {{ .Values.default_runtime_namespace | default  .Release.Namespace }}
+            value: {{ .Values.namespace_runtime | default .Release.Namespace }}
           {{- range $key, $value := .Values.db_env_config }}
           - name: {{ $key }}
             value: {{ $value | quote }}
@@ -173,7 +173,7 @@ spec:
         - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
           value: {{ .Release.Namespace }}
         - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-          value: {{ .Values.default_runtime_namespace | default  .Release.Namespace }}
+          value: {{ .Values.namespace_runtime | default .Release.Namespace }}
         {{- range $key, $value := .Values.db_env_config }}
         - name: {{ $key }}
           value: {{ $value | quote }}
@@ -235,3 +235,8 @@ spec:
         configMap:
           defaultMode: 420
           name: ui-config
+      {{- if .Values.node_label_infrastructure }}
+      {{- $full_label := split "=" .Values.node_label_infrastructure }}
+      nodeSelector:
+        {{ $full_label._0 }}: {{ $full_label._1 }}
+      {{- end }}
