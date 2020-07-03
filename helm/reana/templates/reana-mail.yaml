@@ -43,4 +43,9 @@ spec:
         ports:
         - containerPort: 80
         - containerPort: 25
+      {{- if .Values.node_label_infrastructure }}
+      {{- $full_label := split "=" .Values.node_label_infrastructure }}
+      nodeSelector:
+        {{ $full_label._0 }}: {{ $full_label._1 }}
+      {{- end }}
 {{- end }}
