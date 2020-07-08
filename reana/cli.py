@@ -627,6 +627,20 @@ def is_component_runnable_example(component):
     return False
 
 
+def does_component_need_db(component):
+    """Return whether the component needs DB to run tests.
+
+    Useful to determine which components need a Postgres DB container to run the tests.
+
+    :param component: standard component name
+    :type component: str
+
+    :return: True/False whether the component needs DB
+    :rtype: bool
+    """
+    return component in (COMPONENTS_USING_SHARED_MODULE_DB + ["reana-db"])
+
+
 def construct_workflow_name(example, workflow_engine):
     """Construct suitable workflow name for given REANA example.
 
@@ -1923,6 +1937,13 @@ def python_unit_tests(component):  # noqa: D301
             cmd_activate_venv = "source  ~/.virtualenvs/_{}/bin/activate".format(
                 component
             )
+            if does_component_need_db(component):
+                run_command(
+                    f"docker stop postgres__{component}\n"
+                    f"docker run --rm --name postgres__{component} -p 5432:5432 "
+                    "-e POSTGRES_PASSWORD=mysecretpassword -d postgres:9.6.2"
+                )
+
             for cmd in [
                 "virtualenv ~/.virtualenvs/_{}".format(component),
                 "{} && which python".format(cmd_activate_venv),
@@ -1934,10 +1955,18 @@ def python_unit_tests(component):  # noqa: D301
                 " pip install . --upgrade".format(cmd_activate_venv),
                 "git clean -d -ff -x",
                 '{} && pip install ".[tests]" --upgrade'.format(cmd_activate_venv),
-                "{} && python setup.py test".format(cmd_activate_venv),
+                "{} && {} python setup.py test".format(
+                    cmd_activate_venv,
+                    "REANA_SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://postgres:mysecretpassword@localhost/postgres"
+                    if does_component_need_db(component)
+                    else "",
+                ),
                 "rm -rf ~/.virtualenvs/_{}".format(component),
             ]:
                 run_command(cmd, component)
+
+            if does_component_need_db(component):
+                run_command(f"docker stop postgres__{component}")
         else:
             msg = (
                 "Ignoring this component that does not contain"

@@ -70,6 +70,14 @@ def test_is_component_runnable_example():
     assert is_component_runnable_example("reana") is False
 
 
+def test_does_component_need_db():
+    """Tests for does_component_need_db()."""
+    from reana.cli import does_component_need_db
+
+    assert does_component_need_db("reana-server")
+    assert not does_component_need_db("reana")
+
+
 def test_select_components():
     """Tests for select_components()."""
     from reana.cli import (

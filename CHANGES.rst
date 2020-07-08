@@ -19,6 +19,7 @@ Version master (UNRELEASED)
 - Adds announcement configmap configuration to display on the UI.
 - Adds Black formatter support.
 - Stops exposing unused Invenio-Accounts views.
+- Starts up Postgres DB container to run tests for componentes installing reana-db.
 
 Version 0.6.1 (2020-06-09)
 --------------------------
