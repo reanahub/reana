@@ -1742,9 +1742,15 @@ def cluster_build(build_arg, debug, exclude_components, no_cache):  # noqa: D301
     "--debug",
     is_flag=True,
     default=False,
-    help="Should we deploy REANA in debug mode? ",
+    help="Should we deploy REANA in debug mode?",
 )
-def cluster_deploy(namespace, job_mounts, debug):  # noqa: D301
+@click.option(
+    "-v",
+    "--values",
+    default="helm/configurations/values-dev.yaml",
+    help="Which Helm configuration values file to use? [default=helm/configurations/values-dev.yaml]",
+)
+def cluster_deploy(namespace, job_mounts, debug, values):  # noqa: D301
     """Deploy REANA cluster."""
 
     def job_mounts_to_config(job_mounts):
@@ -1766,9 +1772,8 @@ def cluster_deploy(namespace, job_mounts, debug):  # noqa: D301
 
         return job_mount_config
 
-    values_yaml = "helm/configurations/values-dev.yaml"
     values_dict = {}
-    with open(os.path.join(get_srcdir("reana"), values_yaml)) as f:
+    with open(os.path.join(get_srcdir("reana"), values)) as f:
         values_dict = yaml.safe_load(f.read())
 
     job_mount_config = job_mounts_to_config(job_mounts)
@@ -1780,7 +1785,7 @@ def cluster_deploy(namespace, job_mounts, debug):  # noqa: D301
         values_dict.setdefault("debug", {})["enabled"] = True
 
     helm_install = "cat <<EOF | helm install reana helm/reana -n {namespace} --create-namespace --wait -f -\n{values}\nEOF".format(
-        namespace=namespace, values=yaml.dump(values_dict),
+        namespace=namespace, values=values_dict and yaml.dump(values_dict) or '',
     )
     deploy_cmds = [
         "helm dep update helm/reana",
@@ -1825,7 +1830,7 @@ def cluster_undeploy():  # noqa: D301
     "--debug",
     is_flag=True,
     default=False,
-    help="Should we deploy REANA in debug mode? ",
+    help="Should we deploy REANA in debug mode?",
 )
 @click.option(
     "--exclude-components",
