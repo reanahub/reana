@@ -226,7 +226,7 @@ def cli():  # noqa: D301
         $ # example (c): mount sharing /var/reana with host and /cvmfs for jobs
         $ reana-dev cluster-create -m /var/reana:/var/reana -j /cvmfs:/cvmfs
         $ # example (d): debug mode with code sharing as well
-        $ reana-dev cluster-create -m /var/reana:/var/reana --debug
+        $ reana-dev cluster-create -m /var/reana:/var/reana --mode debug
 
     How to set up your shell environment variables:
 
@@ -1690,11 +1690,9 @@ def client_uninstall():  # noqa: D301
     help="Any build arguments? (e.g. `-b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern`)",
 )
 @click.option(
-    "-d",
-    "--debug",
-    is_flag=True,
-    default=False,
-    help="Should we build REANA in debug mode? ",
+    "--mode",
+    default="latest",
+    help="In which mode to run REANA cluster? (releasehelm,releasepypi,latest,debug) [default=latest]",
 )
 @click.option(
     "--exclude-components",
@@ -1703,20 +1701,23 @@ def client_uninstall():  # noqa: D301
 )
 @click.option("--no-cache", is_flag=True, help="Do not use Docker image layer cache.")
 @cli.command(name="cluster-build")
-def cluster_build(build_arg, debug, exclude_components, no_cache):  # noqa: D301
+def cluster_build(
+    build_arg, mode, exclude_components, no_cache,
+):  # noqa: D301
     """Build REANA cluster.
 
     \b
     Example:
        $ reana-dev cluster-build --exclude-components=r-ui,r-a-vomsproxy
                                  -b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern
-                                 --debug
+                                 --mode debug
                                  --no-cache
     """
+    cmds = []
     # initalise common submodules
-    cmds = ["reana-dev git-submodule --update"]
-    if debug:
-        # do we mount Python code live?
+    if mode in ("latest", "debug"):
+        cmds.append("reana-dev git-submodule --update")
+    if mode in ("debug"):
         cmds.append("reana-dev python-install-eggs")
     # build Docker images
     cmd = "reana-dev docker-build"
@@ -1724,16 +1725,17 @@ def cluster_build(build_arg, debug, exclude_components, no_cache):  # noqa: D301
         cmd += " --exclude-components {}".format(exclude_components)
     for arg in build_arg:
         cmd += " -b {0}".format(arg)
-    if debug:
+    if mode in ("debug"):
         cmd += " -b DEBUG=1"
     if no_cache:
         cmd += " --no-cache"
     cmds.append(cmd)
     # load built Docker images into cluster
-    cmd = "reana-dev kind-load-docker-image -c CLUSTER"
-    if exclude_components:
-        cmd += " --exclude-components {}".format(exclude_components)
-    cmds.append(cmd)
+    if mode in ("releasepypi", "latest", "debug"):
+        cmd = "reana-dev kind-load-docker-image -c CLUSTER"
+        if exclude_components:
+            cmd += " --exclude-components {}".format(exclude_components)
+        cmds.append(cmd)
     # execute commands
     for cmd in cmds:
         run_command(cmd, "reana")
@@ -1752,11 +1754,9 @@ def cluster_build(build_arg, debug, exclude_components, no_cache):  # noqa: D301
     "cluster_node_path:job_pod_mountpath, e.g /var/reana/mydata:/mydata",
 )
 @click.option(
-    "-d",
-    "--debug",
-    is_flag=True,
-    default=False,
-    help="Should we deploy REANA in debug mode?",
+    "--mode",
+    default="latest",
+    help="In which mode to run REANA cluster? (releasehelm,releasepypi,latest,debug) [default=latest]",
 )
 @click.option(
     "-v",
@@ -1764,7 +1764,7 @@ def cluster_build(build_arg, debug, exclude_components, no_cache):  # noqa: D301
     default="helm/configurations/values-dev.yaml",
     help="Which Helm configuration values file to use? [default=helm/configurations/values-dev.yaml]",
 )
-def cluster_deploy(namespace, job_mounts, debug, values):  # noqa: D301
+def cluster_deploy(namespace, job_mounts, mode, values):  # noqa: D301
     """Deploy REANA cluster."""
 
     def job_mounts_to_config(job_mounts):
@@ -1786,6 +1786,9 @@ def cluster_deploy(namespace, job_mounts, debug, values):  # noqa: D301
 
         return job_mount_config
 
+    if mode in ("releasehelm") and values == "helm/configurations/values-dev.yaml":
+        values = "helm/reana/values.yaml"
+
     values_dict = {}
     with open(os.path.join(get_srcdir("reana"), values)) as f:
         values_dict = yaml.safe_load(f.read())
@@ -1795,23 +1798,23 @@ def cluster_deploy(namespace, job_mounts, debug, values):  # noqa: D301
         values_dict.setdefault("components", {}).setdefault(
             "reana_workflow_controller", {}
         ).setdefault("environment", {})["REANA_JOB_HOSTPATH_MOUNTS"] = job_mount_config
-    if debug:
+
+    if mode in ("debug"):
         values_dict.setdefault("debug", {})["enabled"] = True
 
     helm_install = "cat <<EOF | helm install reana helm/reana -n {namespace} --create-namespace --wait -f -\n{values}\nEOF".format(
-        namespace=namespace, values=values_dict and yaml.dump(values_dict) or '',
+        namespace=namespace, values=values_dict and yaml.dump(values_dict) or "",
     )
-    deploy_cmds = [
+    cmds = [
         "helm dep update helm/reana",
         helm_install,
         "kubectl config set-context --current --namespace={}".format(namespace),
         os.path.join(get_srcdir("reana"), "scripts/create-admin-user.sh"),
     ]
-    dev_deploy_cmds = [
-        "reana-dev git-submodule --update",
-        "reana-dev python-install-eggs",
-    ]
-    cmds = dev_deploy_cmds + deploy_cmds if debug else deploy_cmds
+    if mode in ("latest", "debug"):
+        cmds.append("reana-dev git-submodule --update")
+    if mode in ("debug"):
+        cmds.append("reana-dev python-install-eggs")
     for cmd in cmds:
         run_command(cmd, "reana")
 
@@ -1840,11 +1843,9 @@ def cluster_undeploy():  # noqa: D301
     help="Any build arguments? (e.g. `-b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern`)",
 )
 @click.option(
-    "-d",
-    "--debug",
-    is_flag=True,
-    default=False,
-    help="Should we deploy REANA in debug mode?",
+    "--mode",
+    default="latest",
+    help="In which mode to run REANA cluster? (releasehelm,releasepypi,latest,debug) [default=latest]",
 )
 @click.option(
     "--exclude-components",
@@ -1875,7 +1876,7 @@ def cluster_undeploy():  # noqa: D301
 )
 @cli.command(name="run-ci")
 def run_ci(
-    build_arg, debug, exclude_components, mounts, job_mounts, no_cache, component,
+    build_arg, mode, exclude_components, mounts, job_mounts, no_cache, component,
 ):  # noqa: D301
     """Run CI build.
 
@@ -1899,25 +1900,24 @@ def run_ci(
                            -j /mydata:/mydata
                            -c r-d-helloworld
                            --exclude-components=r-ui,r-a-vomsproxy
-                           --debug
+                           --mode debug
     """
     # parse arguments
     components = select_components(component)
     # create cluster if needed
     if not is_cluster_created():
-        cmd = "reana-dev cluster-create"
+        cmd = "reana-dev cluster-create --mode {}".format(mode)
         for mount in mounts:
             cmd += " -m {}".format(mount)
-        if debug:
-            cmd += " --debug"
         run_command(cmd, "reana")
     # prefetch and load images for selected demo examples
-    for component in components:
-        for cmd in [
-            "reana-dev docker-pull -c {}".format(component),
-            "reana-dev kind-load-docker-image -c {}".format(component),
-        ]:
-            run_command(cmd, "reana")
+    if mode in ("releasepypi", "latest", "debug"):
+        for component in components:
+            for cmd in [
+                "reana-dev docker-pull -c {}".format(component),
+                "reana-dev kind-load-docker-image -c {}".format(component),
+            ]:
+                run_command(cmd, "reana")
     # undeploy cluster and install latest client
     for cmd in [
         "reana-dev cluster-undeploy",
@@ -1925,20 +1925,17 @@ def run_ci(
     ]:
         run_command(cmd, "reana")
     # build cluster
-    cmd = "reana-dev cluster-build"
-    if exclude_components:
-        cmd += " --exclude-components {}".format(exclude_components)
-    for arg in build_arg:
-        cmd += " -b {0}".format(arg)
-    if debug:
-        cmd += " --debug"
-    if no_cache:
-        cmd += " --no-cache"
-    run_command(cmd, "reana")
+    if mode in ("releasepypi", "latest", "debug"):
+        cmd = "reana-dev cluster-build --mode {}".format(mode)
+        if exclude_components:
+            cmd += " --exclude-components {}".format(exclude_components)
+        for arg in build_arg:
+            cmd += " -b {0}".format(arg)
+        if no_cache:
+            cmd += " --no-cache"
+        run_command(cmd, "reana")
     # deploy cluster
-    cmd = "reana-dev cluster-deploy"
-    if debug:
-        cmd += " --debug"
+    cmd = "reana-dev cluster-deploy --mode {}".format(mode)
     for job_mount in job_mounts:
         cmd += " -j {}".format(job_mount)
     run_command(cmd, "reana")
@@ -2150,21 +2147,20 @@ def run_example(
     help="Which local directories to mount in the cluster nodes? [local_path:cluster_node_path]",
 )
 @click.option(
-    "--debug",
-    is_flag=True,
-    default=False,
-    help="Should we mount the REANA source code for live code updates?",
+    "--mode",
+    default="latest",
+    help="In which mode to run REANA cluster? (releasehelm,releasepypi,latest,debug) [default=latest]",
 )
 @click.option("--worker-nodes", default=0, help="How many worker nodes? [default=0]")
 @cli.command(name="cluster-create")
-def cluster_create(mounts, debug, worker_nodes):  # noqa: D301
+def cluster_create(mounts, mode, worker_nodes):  # noqa: D301
     """Create cluster.
 
     \b
     Example:
        $ reana-dev cluster-create -m /var/reana:/var/reana
                                   -m /usr/share/local/mydata:/mydata
-                                  --debug
+                                  --mode debug
     """
     import sys
 
@@ -2190,17 +2186,21 @@ def cluster_create(mounts, debug, worker_nodes):  # noqa: D301
             )
         ],
         "extraPortMappings": [
-            {"containerPort": 30080, "hostPort": 30080, "protocol": "TCP"},
-            {"containerPort": 30443, "hostPort": 30443, "protocol": "TCP"},
+            {"containerPort": 30080, "hostPort": 30080, "protocol": "TCP"},  # HTTP
+            {"containerPort": 30443, "hostPort": 30443, "protocol": "TCP"},  # HTTPS
         ],
     }
 
-    if debug:
+    if mode in ("debug"):
         mounts.append({"hostPath": find_reana_srcdir(), "containerPath": "/code"})
         control_plane["extraPortMappings"].extend(
             [
-                {"containerPort": 31984, "hostPort": 31984, "protocol": "TCP"},
-                {"containerPort": 32580, "hostPort": 32580, "protocol": "TCP"},
+                {"containerPort": 31984, "hostPort": 31984, "protocol": "TCP"},  # wdb
+                {
+                    "containerPort": 32580,
+                    "hostPort": 32580,
+                    "protocol": "TCP",
+                },  # maildev
             ]
         )
 
@@ -2230,12 +2230,17 @@ def cluster_create(mounts, debug, worker_nodes):  # noqa: D301
 
     cluster_create = "cat <<EOF | kind create cluster --config=-\n{cluster_config}\nEOF"
     cluster_create = cluster_create.format(cluster_config=yaml.dump(cluster_config))
-    for cmd in [
-        cluster_create,
-        "reana-dev docker-pull -c reana",
-        "reana-dev kind-load-docker-image -c reana",
-    ]:
-        run_command(cmd, "reana")
+
+    # create cluster
+    run_command(cluster_create, "reana")
+
+    # pull Docker images
+    if mode in ("releasepypi", "latest", "debug"):
+        for cmd in [
+            "reana-dev docker-pull -c reana",
+            "reana-dev kind-load-docker-image -c reana",
+        ]:
+            run_command(cmd, "reana")
 
 
 @cli.command(name="cluster-pause")
