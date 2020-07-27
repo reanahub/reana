@@ -234,7 +234,7 @@ teardown: # Destroy local host virtual environment and Minikube. All traces go.
 test: # Run unit tests on the REANA package.
 	pydocstyle reana
 	black --check .
-	check-manifest --ignore ".travis-*"
+	check-manifest
 	sphinx-build -qnNW docs docs/_build/html
 	python setup.py test
 	sphinx-build -qnNW -b doctest docs docs/_build/doctest

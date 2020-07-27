@@ -46,8 +46,6 @@ extensions = [
     "sphinx.ext.graphviz",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
-    "sphinx_click.ext",
-    "sphinxcontrib.programoutput",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -64,7 +62,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "reana"
-copyright = "2017, 2018, 2019, info@reana.io"
+copyright = "2017-2020 info@reana.io"
 author = "info@reana.io"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -122,30 +120,9 @@ html_theme_options = {
     "github_user": "reanahub",
     "github_repo": "reana",
     "github_button": False,
-    "github_banner": True,
+    "github_banner": False,
     "show_powered_by": False,
-    "extra_nav_links": {
-        "REANA@DockerHub": "https://hub.docker.com/u/reanahub/",
-        "REANA@GitHub": "https://github.com/reanahub",
-        "REANA@Twitter": "https://twitter.com/reanahub",
-        "REANA@Web": "http://www.reana.io",
-    },
-}
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
-
-# Custom sidebar templates, maps document names to template names.
-html_sidebars = {
-    "**": [
-        "about.html",
-        "navigation.html",
-        "relations.html",
-        "searchbox.html",
-        "donate.html",
-    ]
+    "nosidebar": True,
 }
 
 # -- Options for HTMLHelp output ------------------------------------------

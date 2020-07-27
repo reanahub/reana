@@ -1,3 +1,7 @@
+.. image:: docs/logo-reana.png
+   :target: http://docs.reana.io
+   :align: center
+
 ===========================
  REANA - Reusable Analyses
 ===========================
@@ -44,11 +48,24 @@ Features
 - support for several shared storage systems (Ceph)
 - support for several container technologies (Docker)
 
+Getting started
+---------------
+
+You can `install REANA locally <http://docs.reana.io/development/deploying-locally/>`_, `deploy it at scale on premises
+<http://docs.reana.io/development/deploying-at-scale/>`_ (in about 10 minutes) or use https://reana.cern.ch. Once the system
+is ready, you can follow the guide to run `your first example <http://docs.reana.io/getting-started/first-example/>`_.
+For more in depth information visit the `official REANA documentation <http://docs.reana.io/>`_.
+
+Community
+---------
+
+- Discuss `on Forum <https://forum.reana.io/>`_
+- Chat on `Mattermost <https://mattermost.web.cern.ch/it-dep/channels/reana>`_ or `Gitter <https://gitter.im/reanahub/reana>`_
+- Follow us `on Twitter <https://twitter.com/reanahub>`_
+
 Useful links
 ------------
 
 - `REANA home page <http://www.reana.io/>`_
+- `REANA documentation <http://docs.reana.io/>`_
 - `REANA on DockerHub <https://hub.docker.com/u/reanahub/>`_
-- `REANA on GitHub <https://github.com/reanahub/>`_
-- `REANA on ReadTheDocs <https://reana.readthedocs.io/>`_
-- `REANA on Twitter <https://twitter.com/reanahub>`_
