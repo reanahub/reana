@@ -1801,6 +1801,14 @@ def cluster_deploy(namespace, job_mounts, mode, values):  # noqa: D301
 
     if mode in ("debug"):
         values_dict.setdefault("debug", {})["enabled"] = True
+        values_dict.setdefault("notifications", {})["enabled"] = True
+        values_dict["notifications"].setdefault("email_config", {})[
+            "receiver"
+        ] = "team@reana.io"
+        values_dict["notifications"]["email_config"][
+            "sender"
+        ] = "notifications@reana.io"
+        values_dict["notifications"]["system_status"] = "*/5 * * * *"
 
     helm_install = "cat <<EOF | helm install reana helm/reana -n {namespace} --create-namespace --wait -f -\n{values}\nEOF".format(
         namespace=namespace, values=values_dict and yaml.dump(values_dict) or "",

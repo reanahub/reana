@@ -35,6 +35,10 @@ spec:
             {{- if .Values.debug.enabled }}
             - name: FLASK_ENV
               value:  "development"
+            - name: REANA_EMAIL_SMTP_SERVER
+              value: {{ printf "%s-mail" (include "reana.prefix" .) }}
+            - name: REANA_EMAIL_SMTP_PORT
+              value: "30025"
             {{- else }}
             - name: REANA_DB_USERNAME
               valueFrom:
@@ -46,6 +50,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "reana.prefix" . }}-db-secrets
                   key: password
+            - name: REANA_EMAIL_SMTP_SERVER
+              value: {{ .Values.notifications.email_config.smtp_server }}
+            - name: REANA_EMAIL_SMTP_PORT
+              value: "{{ .Values.notifications.email_config.smtp_port }}"
             - name: REANA_EMAIL_LOGIN
               valueFrom:
                 secretKeyRef:
@@ -57,10 +65,6 @@ spec:
                   name: {{ include "reana.prefix" . }}-mail-notification-sender-password
                   key: REANA_EMAIL_PASSWORD
             {{- end }}
-            - name: REANA_EMAIL_SMTP_SERVER
-              value: {{ .Values.notifications.email_config.smtp_server | default (printf "%s-mail" (include "reana.prefix" .)) }}
-            - name: REANA_EMAIL_SMTP_PORT
-              value: "{{ .Values.notifications.email_config.smtp_port | default "30025" }}"
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
             - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
