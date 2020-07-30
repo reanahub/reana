@@ -7,6 +7,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   schedule: "{{ .Values.notifications.system_status }}"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
       template:
