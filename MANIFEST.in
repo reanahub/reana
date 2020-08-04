@@ -12,6 +12,7 @@ include *.html
 include *.sh
 include pytest.ini
 prune docs/_build
+recursive-include reana *.py
 recursive-include docs *.py
 recursive-include docs *.png
 recursive-include docs *.rst

@@ -5,13 +5,16 @@
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
-"""REANA Kubernetes cluster utils."""
+
+"""`reana-dev`'s kubectl commands."""
 
 import json
-import os
 import subprocess
 
-INSTANCE_NAME = os.path.basename(os.environ["VIRTUAL_ENV"])
+import click
+
+from reana.config import COMPONENT_PODS
+from reana.reana_dev.utils import run_command, select_components
 
 
 def exec_into_component(component_name, command):
@@ -70,11 +73,53 @@ def get_service_ips_and_ports(component_name):
         return ()
 
 
-def get_prefixed_component_name(component):
-    """Get prefixed component name.
+@click.group()
+def kubectl_commands():
+    """Kubectl commands group."""
 
-    :param component: String representing the component name.
 
-    :return: Prefixed name.
+@click.option(
+    "--component",
+    "-c",
+    multiple=True,
+    default=["ALL"],
+    help="Which components? [shortname|name|.|CLUSTER|ALL]",
+)
+@kubectl_commands.command(name="kubectl-delete-pod")
+def kubectl_delete_pod(component):  # noqa: D301
+    """Delete REANA component's pod.
+
+    If option ``component`` is not used, all pods will be deleted.
+
+    \b
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :type component: str
     """
-    return "-".join([INSTANCE_NAME, component])
+    if "ALL" in component:
+        cmd = "kubectl delete --all pods --wait=false"
+        run_command(cmd)
+    else:
+        components = select_components(component)
+        for component in components:
+            if component in COMPONENT_PODS:
+                cmd = "kubectl delete pod --wait=false -l app={0}".format(
+                    COMPONENT_PODS[component]
+                )
+                run_command(cmd, component)
+
+
+kubectl_commands_list = list(kubectl_commands.commands.values())

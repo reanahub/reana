@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of REANA.
+# This file is part of REANA
 # Copyright (C) 2018, 2019, 2020 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
@@ -15,7 +15,7 @@ import os
 
 def test_shorten_component_name():
     """Tests for shorten_component_name()."""
-    from reana.cli import shorten_component_name
+    from reana.reana_dev.utils import shorten_component_name
 
     for (name_long, name_short) in (
         ("", ""),
@@ -27,7 +27,7 @@ def test_shorten_component_name():
 
 def test_get_expected_output_filenames_for_example():
     """Tests for get_expected_output_filenames_for_example()."""
-    from reana.cli import get_expected_output_filenames_for_example
+    from reana.reana_dev.run import get_expected_output_filenames_for_example
 
     for (example, output) in (
         ("", ("plot.png",)),
@@ -40,7 +40,7 @@ def test_get_expected_output_filenames_for_example():
 
 def test_get_expected_log_message_for_example():
     """Tests for get_expected_log_messages_for_example()."""
-    from reana.cli import get_expected_log_messages_for_example
+    from reana.reana_dev.run import get_expected_log_messages_for_example
 
     for (example, output) in (
         ("", ("job:",)),
@@ -51,28 +51,28 @@ def test_get_expected_log_message_for_example():
 
 def test_is_component_python_package():
     """Tests for is_component_python_package()."""
-    from reana.cli import is_component_python_package
+    from reana.reana_dev.python import is_component_python_package
 
     assert is_component_python_package("reana") is True
 
 
 def test_is_component_dockerised():
     """Tests for is_component_dockerised()."""
-    from reana.cli import is_component_dockerised
+    from reana.reana_dev.utils import is_component_dockerised
 
     assert is_component_dockerised("reana") is False
 
 
 def test_is_component_runnable_example():
     """Tests for is_component_runnable_example()."""
-    from reana.cli import is_component_runnable_example
+    from reana.reana_dev.utils import is_component_runnable_example
 
     assert is_component_runnable_example("reana") is False
 
 
 def test_does_component_need_db():
     """Tests for does_component_need_db()."""
-    from reana.cli import does_component_need_db
+    from reana.reana_dev.python import does_component_need_db
 
     assert does_component_need_db("reana-server")
     assert not does_component_need_db("reana")
@@ -80,8 +80,8 @@ def test_does_component_need_db():
 
 def test_select_components():
     """Tests for select_components()."""
-    from reana.cli import (
-        select_components,
+    from reana.reana_dev.utils import select_components
+    from reana.config import (
         REPO_LIST_ALL,
         REPO_LIST_CLIENT,
         REPO_LIST_CLUSTER,
@@ -119,7 +119,7 @@ def test_select_components():
 
 def test_select_workflow_engines():
     """Tests for select_workflow_engines()."""
-    from reana.cli import select_workflow_engines
+    from reana.reana_dev.run import select_workflow_engines
 
     for (input_value, output_expected) in (
         # regular workflow engines:
@@ -138,7 +138,7 @@ def test_select_workflow_engines():
 
 def test_find_standard_component_name():
     """Tests for find_standard_component_name()."""
-    from reana.cli import find_standard_component_name
+    from reana.reana_dev.utils import find_standard_component_name
 
     for (input_value, output_expected) in (
         ("reana", "reana"),
@@ -152,7 +152,8 @@ def test_find_standard_component_name():
 
 def test_uniqueness_of_short_names():
     """Test whether all shortened component names are unique."""
-    from reana.cli import shorten_component_name, REPO_LIST_ALL
+    from reana.reana_dev.utils import shorten_component_name
+    from reana.config import REPO_LIST_ALL
 
     short_names = []
     for repo in REPO_LIST_ALL:
@@ -164,7 +165,7 @@ def test_uniqueness_of_short_names():
 
 def test_construct_workflow_name():
     """Tests for construct_workflow_name()."""
-    from reana.cli import construct_workflow_name
+    from reana.reana_dev.run import construct_workflow_name
 
     for (input_value, output_expected) in (
         (("reana", "cwl"), "reana-cwl"),

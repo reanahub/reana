@@ -27,7 +27,7 @@ simplifies working with multiple repositories during local development and
 integration testing. You can use ``--help`` option to see the detailed usage
 instructions.
 
-.. click:: reana.cli:cli
+.. click:: reana.reana_dev.cli:reana_dev
    :prog: reana-dev
 
 Debugging
