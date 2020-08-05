@@ -8,11 +8,13 @@
 
 """`reana-dev`'s release commands."""
 
+import os
 import sys
+import tempfile
+from shutil import which
 from time import sleep
 
 import click
-import semver
 
 from reana.reana_dev.docker import docker_push
 from reana.reana_dev.git import (
@@ -25,6 +27,7 @@ from reana.reana_dev.utils import (
     fetch_latest_pypi_version,
     get_current_component_version_from_source_files,
     get_docker_tag,
+    get_srcdir,
     is_component_dockerised,
     run_command,
     select_components,
@@ -183,6 +186,57 @@ def release_pypi(ctx, component, timeout):  # noqa: D301
                 sys.exit(1)
 
         click.secho(f"{component} successfully released on PyPI", fg="green")
+
+
+@click.option("--user", "-u", default="reanahub", help="DockerHub user name [reanahub]")
+@release_commands.command(name="release-helm")
+@click.pass_context
+def release_helm(ctx, user):  # noqa: D301
+    """Release REANA as a Helm chart."""
+    component = "reana"
+    version = get_current_component_version_from_source_files(component)
+    is_chart_releaser_installed = which("cr")
+    github_pages_branch = "gh-pages"
+    package_path = ".cr-release-packages"
+    index_path = ".cr-index"
+    repository = f"https://{user}.github.io/{component}"
+
+    is_component_releasable(component, exit_code=True, display=True)
+    if not is_chart_releaser_installed:
+        click.secho(
+            "Please install chart-releaser to be able to do a Helm release", fg="red",
+        )
+        sys.exit(1)
+
+    if not os.getenv("CR_TOKEN"):
+        click.secho(
+            "Please provide your GitHub token as CR_TOKEN environment variable",
+            fg="red",
+        )
+        sys.exit(1)
+
+    for cmd in [
+        f"rm -rf {package_path}",
+        f"mkdir {package_path}",
+        f"rm -rf {index_path}",
+        f"mkdir {index_path}",
+        f"helm package helm/reana --destination {package_path} --dependency-update",
+        f"cr upload -o {user} -r {component} --release-name-template '{{{{ .Version }}}}'",
+        f"cr index -o {user} -r {component} -c {repository}",
+    ]:
+        run_command(cmd, component)
+
+    with tempfile.TemporaryDirectory() as gh_pages_worktree:
+        run_command(
+            f"git worktree add '{gh_pages_worktree}' gh-pages && "
+            f"cd {gh_pages_worktree} && "
+            f"cp -f {get_srcdir(component) + os.sep + index_path}/index.yaml {gh_pages_worktree}/index.yaml && "
+            f"git add index.yaml && "
+            f"git commit -m 'index.yaml: {version}' && "
+            f"git push origin {github_pages_branch} && "
+            f"cd - && "
+            f"git worktree remove '{gh_pages_worktree}'",
+        )
 
 
 release_commands_list = list(release_commands.commands.values())

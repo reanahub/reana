@@ -74,4 +74,5 @@ target/
 helm/reana/Chart.lock
 
 # Helm releases
-.deploy
+.cr-release-packages
+.cr-index

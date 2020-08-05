@@ -212,6 +212,15 @@ def is_last_commit_release_commit(package):
     return current_commit.split()[1] == "release:"
 
 
+def git_push_to_origin(components):
+    """Push current branch to origin."""
+    for component in components:
+        branch = run_command("git branch --show-current", component, return_output=True)
+        run_command(
+            f"git push --force origin {branch}", component,
+        )
+
+
 @click.group()
 def git_commands():
     """Git commands group."""
@@ -875,15 +884,6 @@ def git_upgrade_shared_modules(
                 f"git add {' '.join(files_to_commit)} && {commit_cmd}", component,
             )
 
-    def _push_to_origin(components):
-        for component in components:
-            branch = run_command(
-                "git branch --show-current", component, return_output=True
-            )
-            run_command(
-                f"git push --force origin {branch}", component,
-            )
-
     components = select_components(component)
 
     for module in REPO_LIST_SHARED:
@@ -897,9 +897,9 @@ def git_upgrade_shared_modules(
         )
 
     _create_commit_or_amend(components)
-    ctx.invoke(git_diff, component=component)
+    ctx.invoke(git_diff, component=[component])
     if push:
-        _push_to_origin(components)
+        git_push_to_origin(components)
 
 
 @click.option(

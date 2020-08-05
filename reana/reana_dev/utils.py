@@ -671,7 +671,9 @@ def translate_pep440_to_semver2(pep440_version):
         number = parsed_pep440_version.pre[1]
         dev_post_pre_semver2 = f"{prefix}.{number}"
 
-    semver2_version_string = f"{parsed_pep440_version.major}.{parsed_pep440_version.minor}.{parsed_pep440_version.micro}-{dev_post_pre_semver2}"
+    semver2_version_string = f"{parsed_pep440_version.major}.{parsed_pep440_version.minor}.{parsed_pep440_version.micro}"
+    if dev_post_pre_semver2:
+        semver2_version_string += f"-{dev_post_pre_semver2}"
     if semver.VersionInfo.isvalid(semver2_version_string):
         return semver2_version_string
     else:
@@ -721,7 +723,7 @@ def get_git_tag(component):
     :param component: standard component name
     :type component: str
     """
-    cmd = "git describe --tags"
+    cmd = "git describe --tags --abbrev=0"
     return run_command(cmd, component, return_output=True, display=True)
 
 
