@@ -448,7 +448,7 @@ def git_branch(component):  # noqa: D301
 
 
 @click.option(
-    "--branch", "-b", nargs=2, multiple=True, help="Which PR? [number component]"
+    "--branch", "-b", nargs=2, multiple=True, help="Which PR? [component PR#]"
 )
 @click.option("--fetch", is_flag=True, default=False)
 @git_commands.command(name="git-checkout")
@@ -465,7 +465,7 @@ def git_checkout(branch, fetch):  # noqa: D301
                    72`` will create a local branch called ``pr-72`` in the
                    reana-workflow-controller source code directory.
     :param fetch: Should we fetch latest upstream first? [default=False]
-    :type component: str
+    :type branch: list
     :type fetch: bool
     """
     for cpr in branch:
@@ -477,6 +477,54 @@ def git_checkout(branch, fetch):  # noqa: D301
                 run_command(cmd, component)
             cmd = "git checkout -b pr-{0} upstream/pr/{0}".format(pull_request)
             run_command(cmd, component)
+        else:
+            msg = "Ignoring unknown component."
+            display_message(msg, component)
+
+
+@click.option(
+    "--branch", "-b", nargs=2, multiple=True, help="Which PR? [component PR#]"
+)
+@click.option(
+    "--push", is_flag=True, default=False, help="Should we push to origin and upstream?"
+)
+@git_commands.command(name="git-merge")
+def git_merge(branch, push):  # noqa: D301
+    """Merge a component pull request to local master.
+
+    The ``-b`` option can be repetitive to merge several pull requests in
+    several repositories at the same time.
+
+    \b
+    :param branch: The option ``branch`` can be repeated. The value consist of
+                   two strings specifying the component name and the pull
+                   request number. For example, ``-b reana-workflow-controler
+                   72`` will merge a local branch called ``pr-72`` from the
+                   reana-workflow-controller to master branch.
+    :param push: Should we push to origin and upstream? [default=False]
+    :type branch: list
+    :type push: bool
+    """
+    for cpr in branch:
+        component, pull_request = cpr
+        component = select_components([component,])[0]
+        if component in REPO_LIST_ALL:
+            for cmd in [
+                "git fetch upstream",
+                "git diff pr-{0}..upstream/pr/{0} --exit-code".format(pull_request),
+                "git checkout master",
+                "git merge --ff-only upstream/master",
+                "git merge --ff-only upstream/pr/{0}".format(pull_request),
+                "git branch -d pr-{0}".format(pull_request),
+            ]:
+                run_command(cmd, component)
+
+            if push:
+                for cmd in [
+                    "git push origin master",
+                    "git push upstream master",
+                ]:
+                    run_command(cmd, component)
         else:
             msg = "Ignoring unknown component."
             display_message(msg, component)
