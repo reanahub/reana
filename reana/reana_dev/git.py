@@ -23,9 +23,11 @@ from reana.config import (
 )
 from reana.reana_dev.utils import (
     display_message,
+    fetch_latest_pypi_version,
     get_srcdir,
     run_command,
     select_components,
+    update_module_in_cluster_components,
 )
 
 
@@ -724,7 +726,7 @@ def git_push(component):  # noqa: D301
             run_command(cmd, component)
 
 
-@git_commands.command(name="git-shared-modules-upgrade")
+@git_commands.command(name="git-upgrade-all-shared-modules")
 @click.option(
     "--commit-and-publish",
     is_flag=True,
@@ -734,33 +736,11 @@ def git_push(component):  # noqa: D301
     ' "installation: shared packages version bump" message will'
     " be created for all affected CLUSTER components.",
 )
-def git_shared_modules_upgrade(commit_and_publish):
-    """Upgrade all cluster components to latest REANA-Commons version."""
+def git_upgrade_all_shared_modules(commit_and_publish):
+    """Upgrade all cluster components to latest REANA-Commons/DB version.
 
-    def _fetch_latest_pypi_version(package):
-        """Fetch latest released version of a package."""
-        import requests
-
-        pypi_rc_info = requests.get(
-            "https://pypi.python.org/pypi/{}/json".format(package)
-        )
-        return sorted(pypi_rc_info.json()["releases"].keys())[-1]
-
-    def _update_module_in_cluster_components(module, new_version):
-        """Update the specified module version in all affected components."""
-        components_to_update = {
-            "reana-commons": COMPONENTS_USING_SHARED_MODULE_COMMONS,
-            "reana-db": COMPONENTS_USING_SHARED_MODULE_DB,
-        }
-        for component in components_to_update[module]:
-            update_setup_py_dep_cmd = (
-                'LN=`cat setup.py | grep -n -e "{module}.*>=" | cut -f1 -d: `'
-                '&& sed -i.bk "`echo $LN`s/>=.*,</>={new_version},</" '
-                "setup.py && rm setup.py.bk".format(
-                    module=module, new_version=new_version
-                )
-            )
-            run_command(update_setup_py_dep_cmd, component)
+    Optionally create commits and PRs in all components bumping version.
+    """
 
     def _commit_and_publish_version_bumps(components):
         """Create commit and version bump PRs for all specified components."""
@@ -791,15 +771,8 @@ def git_shared_modules_upgrade(commit_and_publish):
     ).union(set(COMPONENTS_USING_SHARED_MODULE_COMMONS))
 
     for module in REPO_LIST_SHARED:
-        last_version = _fetch_latest_pypi_version(module)
-        _update_module_in_cluster_components(module, last_version)
-        click.secho(
-            "✅ {module} updated to: {last_version}".format(
-                module=module, last_version=last_version
-            ),
-            bold=True,
-            fg="green",
-        )
+        last_version = fetch_latest_pypi_version(module)
+        update_module_in_cluster_components(module, last_version)
 
     if commit_and_publish:
         click.secho("Creating version bump commits and pull requests...")
@@ -813,6 +786,100 @@ def git_shared_modules_upgrade(commit_and_publish):
             "unscoped_q=is%3Apr+is%3Aopen",
             fg="green",
         )
+
+
+@git_commands.command(name="git-upgrade-shared-modules")
+@click.option(
+    "--component",
+    "-c",
+    multiple=True,
+    default=["CLUSTER", "CLIENT"],
+    help="Which components? [shortname|name|.|CLUSTER|ALL]",
+)
+@click.option(
+    "--use-latest-known-tag",
+    is_flag=True,
+    default=False,
+    help="Should the upgrade use the latest known tag of the shared modules?"
+    " If so, the latest known tag of the shared modules will be used to upgrade the"
+    " provided components. Else, the upgrade will only occur if the latest commit of the"
+    " shared modules points at a tag, in other case, the command will be aborted.",
+)
+@click.option(
+    "--amend",
+    is_flag=True,
+    default=False,
+    help="Should the changes be integrated as part of the latest commit of each component?.",
+)
+@click.option(
+    "--push",
+    is_flag=True,
+    default=False,
+    help="Should the feature branches with the upgrades be pushed?.",
+)
+@click.pass_context
+def git_upgrade_shared_modules(
+    ctx, component, use_latest_known_tag, amend, push
+):  # noqa: D301
+    """Upgrade selected components to latest REANA-Commons/DB version.
+
+    \b
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :type component: str
+    """
+
+    def _create_commit_or_amend(components):
+        for component in components:
+            commit_cmd = 'git commit -m "installation: bump shared modules"'
+            if amend:
+                commit_cmd = "git commit --amend --no-edit"
+
+            files_to_commit = ["setup.py"]
+            if os.path.exists(get_srcdir(component) + os.sep + "requirements.txt"):
+                files_to_commit.append("requirements.txt")
+            run_command(
+                f"git add {' '.join(files_to_commit)} && {commit_cmd}", component,
+            )
+
+    def _push_to_origin(components):
+        for component in components:
+            branch = run_command(
+                "git branch --show-current", component, return_output=True
+            )
+            run_command(
+                f"git push --force origin {branch}", component,
+            )
+
+    components = select_components(component)
+
+    for module in REPO_LIST_SHARED:
+        last_version = fetch_latest_pypi_version(module)
+        update_module_in_cluster_components(
+            module,
+            last_version,
+            components_to_update=components,
+            use_latest_known_tag=use_latest_known_tag,
+            force_feature_branch=True,
+        )
+
+    _create_commit_or_amend(components)
+    ctx.invoke(git_diff, component=component)
+    if push:
+        _push_to_origin(components)
 
 
 git_commands_list = list(git_commands.commands.values())

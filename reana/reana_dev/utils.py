@@ -16,6 +16,8 @@ import sys
 import click
 
 from reana.config import (
+    COMPONENTS_USING_SHARED_MODULE_COMMONS,
+    COMPONENTS_USING_SHARED_MODULE_DB,
     REPO_LIST_ALL,
     REPO_LIST_CLIENT,
     REPO_LIST_CLUSTER,
@@ -335,3 +337,124 @@ def get_prefixed_component_name(component):
     :return: Prefixed name.
     """
     return "-".join([INSTANCE_NAME, component])
+
+
+def fetch_latest_pypi_version(package):
+    """Fetch latest released version of a package."""
+    import requests
+
+    pypi_rc_info = requests.get("https://pypi.python.org/pypi/{}/json".format(package))
+    return sorted(pypi_rc_info.json()["releases"].keys())[-1]
+
+
+def is_last_commit_tagged(package):
+    """Check whether the last commit of the module points at a tag."""
+    tag = run_command("git tag --points-at", package, return_output=True)
+    return bool(tag)
+
+
+def is_feature_branch(component):
+    """Check whether component current branch is different from master."""
+    return get_current_branch(get_srcdir(component)) != "master"
+
+
+def replace_string(
+    file_=None, find=None, replace=None, line_selector_regex=None, component=None
+):
+    """Replace the old string with the new one in the specified file.
+
+    :param file_: filename where the replacement takes place
+                  (e.g. 'setup.py', 'requirements.txt')
+    :param find: current string regex
+    :param replace: new string regex
+    :param line_selector_regex: grep expression to identify file line of the replacement
+    :param component: standard component name where to run the command
+    :type file_: str
+    :type find: str
+    :type replace: str
+    :type line_selector_regex: str
+    :type component: str
+    """
+    line = ""
+    if line_selector_regex:
+        line = run_command(
+            f'cat {file_} | grep -n -e "{line_selector_regex}" | cut -f1 -d: ',
+            return_output=True,
+        )
+
+    cmd = (
+        f"sed -i.bk '{line}s/{find}/{replace}/' {file_} && [ -e {file_}.bk ]"
+        f" && rm {file_}.bk"  # Compatibility with BSD sed
+    )
+
+    run_command(cmd, component)
+
+
+def update_module_in_cluster_components(
+    module,
+    new_version,
+    components_to_update=None,
+    use_latest_known_tag=True,
+    force_feature_branch=False,
+):
+    """Update the specified module version in all affected components."""
+    updatable_components = {
+        "reana-commons": COMPONENTS_USING_SHARED_MODULE_COMMONS + ["reana-client"],
+        "reana-db": COMPONENTS_USING_SHARED_MODULE_DB,
+    }[module]
+
+    if components_to_update:
+        components_to_update = set(components_to_update).intersection(
+            set(updatable_components)
+        )
+    else:
+        components_to_update = updatable_components
+
+    if (
+        components_to_update
+        and not use_latest_known_tag
+        and not is_last_commit_tagged(module)
+    ):
+        click.secho(
+            f"[ERROR] Last commit of {module} does not point to a tag."
+            " Use `--use-latest-known-tag` if you want to proceed using the latest"
+            " known tag.",
+            err=True,
+            fg="red",
+        ),
+        sys.exit(1)
+
+    for component in components_to_update:
+        if force_feature_branch and not is_feature_branch(component):
+            click.secho(
+                f"[ERROR] Component {component} current branch is master."
+                " Must be a feature branch.",
+                err=True,
+                fg="red",
+            ),
+            sys.exit(1)
+
+        replace_string(
+            file_="setup.py",
+            find=">=.*,<",
+            replace=f">={new_version},<",
+            line_selector_regex=f"{module}.*>=",
+            component=component,
+        )
+        if os.path.exists(get_srcdir(component) + os.sep + "requirements.txt"):
+            replace_string(
+                file_="requirements.txt",
+                find="==.*#",
+                replace=f"=={new_version}\t#",
+                line_selector_regex=f"{module}.*==",
+                component=component,
+            )
+
+    if components_to_update:
+        click.secho(
+            "✅ {module} updated to: {last_version}".format(
+                module=module, last_version=new_version
+            ),
+            bold=True,
+            fg="green",
+        )
