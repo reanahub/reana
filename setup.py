@@ -38,6 +38,7 @@ install_requires = [
     "click>=7",
     "colorama>=0.3.9",
     "PyYAML>=5.1",
+    "semver>=2.10.2",
 ]
 
 

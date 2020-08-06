@@ -165,3 +165,15 @@ TIMECHECK = 5
 
 TIMEOUT = 300
 """Maximum timeout to wait for results when running demo analyses in CI."""
+
+HELM_VERSION_FILE = "Chart.yaml"
+"""Helm package version file."""
+
+OPENAPI_VERSION_FILE = "openapi.json"
+"""OpenAPI version file."""
+
+JAVASCRIPT_VERSION_FILE = "package.json"
+"""JavaScript package version file."""
+
+PYTHON_VERSION_FILE = "version.py"
+"""Python package version file."""
