@@ -28,6 +28,7 @@ from reana.reana_dev.utils import (
     fetch_latest_pypi_version,
     get_current_component_version_from_source_files,
     get_srcdir,
+    is_feature_branch,
     run_command,
     select_components,
     update_module_in_cluster_components,
@@ -136,6 +137,68 @@ def git_create_release_commit(component, next_version=None):
     run_command(f"git add {' '.join(modified_files)}", component)
     run_command(f"git commit -m 'release: {next_version}'", component)
     return True
+
+
+def compare_branches(branch_to_compare, current_branch):
+    """Compare two branches with ``git rev-list``."""
+    cmd = "git rev-list --left-right --count {0}...{1}".format(
+        branch_to_compare, current_branch
+    )
+    behind, ahead = [
+        int(x) for x in run_command(cmd, display=False, return_output=True).split()
+    ]
+    return behind, ahead
+
+
+def is_component_behind_branch(
+    component, branch_to_compare, current_branch=None,
+):
+    """Report to stdout the differences between two branches."""
+    current_branch = current_branch or get_current_branch(get_srcdir(component))
+    behind, _ = compare_branches(branch_to_compare, current_branch)
+    return bool(behind)
+
+
+def print_branch_difference_report(
+    component, branch_to_compare, current_branch=None, commit=None, short=False,
+):
+    """Report to stdout the differences between two branches."""
+    # detect how far it is ahead/behind from pr/origin/upstream
+    current_branch = current_branch or get_current_branch(get_srcdir(component))
+    commit = commit or get_current_commit(get_srcdir(component))
+    report = ""
+    behind, ahead = compare_branches(branch_to_compare, current_branch)
+    if ahead or behind:
+        report += "("
+        if ahead:
+            report += "{0} AHEAD ".format(ahead)
+        if behind:
+            report += "{0} BEHIND ".format(behind)
+        report += branch_to_compare + ")"
+    # detect rebase needs for local branches and PRs
+    if branch_to_compare != "upstream/master":
+        branch_to_compare = "upstream/master"
+        behind, ahead = compare_branches(branch_to_compare, current_branch)
+        if behind:
+            report += "(STEMS FROM "
+            if behind:
+                report += "{0} BEHIND ".format(behind)
+            report += branch_to_compare + ")"
+
+    click.secho("{0}".format(component), nl=False, bold=True)
+    click.secho(" @ ", nl=False, dim=True)
+    if current_branch == "master":
+        click.secho("{0}".format(current_branch), nl=False)
+    else:
+        click.secho("{0}".format(current_branch), nl=False, fg="green")
+    if report:
+        click.secho(" {0}".format(report), nl=False, fg="red")
+    click.secho(" @ ", nl=False, dim=True)
+    click.secho("{0}".format(commit))
+    # optionally, display also short status
+    if short:
+        cmd = "git status --short"
+        run_command(cmd, component, display=False)
 
 
 @click.group()
@@ -302,65 +365,19 @@ def git_status(component, short):  # noqa: D301
     """
     components = select_components(component)
     for component in components:
-        # detect current branch and commit
-        branch = get_current_branch(get_srcdir(component))
-        commit = get_current_commit(get_srcdir(component))
+        current_branch = get_current_branch(get_srcdir(component))
         # detect all local and remote branches
         all_branches = get_all_branches(get_srcdir(component))
         # detect branch to compare against
-        if branch == "master":  # master
+        if current_branch == "master":  # master
             branch_to_compare = "upstream/master"
-        elif branch.startswith("pr-"):  # other people's PR
-            branch_to_compare = "upstream/" + branch.replace("pr-", "pr/")
+        elif current_branch.startswith("pr-"):  # other people's PR
+            branch_to_compare = "upstream/" + current_branch.replace("pr-", "pr/")
         else:
-            branch_to_compare = "origin/" + branch  # my PR
+            branch_to_compare = "origin/" + current_branch  # my PR
             if "remotes/" + branch_to_compare not in all_branches:
                 branch_to_compare = "origin/master"  # local unpushed branch
-        # detect how far it is ahead/behind from pr/origin/upstream
-        report = ""
-        cmd = "git rev-list --left-right --count {0}...{1}".format(
-            branch_to_compare, branch
-        )
-        behind, ahead = [
-            int(x) for x in run_command(cmd, display=False, return_output=True).split()
-        ]
-        if ahead or behind:
-            report += "("
-            if ahead:
-                report += "{0} AHEAD ".format(ahead)
-            if behind:
-                report += "{0} BEHIND ".format(behind)
-            report += branch_to_compare + ")"
-        # detect rebase needs for local branches and PRs
-        if branch_to_compare != "upstream/master":
-            branch_to_compare = "upstream/master"
-            cmd = "git rev-list --left-right --count {0}...{1}".format(
-                branch_to_compare, branch
-            )
-            behind, ahead = [
-                int(x)
-                for x in run_command(cmd, display=False, return_output=True).split()
-            ]
-            if behind:
-                report += "(STEMS FROM "
-                if behind:
-                    report += "{0} BEHIND ".format(behind)
-                report += branch_to_compare + ")"
-        # print branch information
-        click.secho("{0}".format(component), nl=False, bold=True)
-        click.secho(" @ ", nl=False, dim=True)
-        if branch == "master":
-            click.secho("{0}".format(branch), nl=False)
-        else:
-            click.secho("{0}".format(branch), nl=False, fg="green")
-        if report:
-            click.secho(" {0}".format(report), nl=False, fg="red")
-        click.secho(" @ ", nl=False, dim=True)
-        click.secho("{0}".format(commit))
-        # optionally, display also short status
-        if short:
-            cmd = "git status --short"
-            run_command(cmd, component, display=False)
+        print_branch_difference_report(component, branch_to_compare, short=short)
 
 
 @click.option(
@@ -913,6 +930,65 @@ def git_create_release_commit_command(component, version):  # noqa: D301
     for component in components:
         if git_create_release_commit(component, next_version=version):
             display_message("Release commit created.", component)
+
+
+@click.option(
+    "--component",
+    "-c",
+    required=True,
+    multiple=True,
+    help="Which components? [shortname|name|.|CLUSTER|ALL]",
+)
+@git_commands.command(name="git-create-pr")
+def git_create_pr_command(component):  # noqa: D301
+    """Create a GitHub pull request for each selected component.
+
+    \b
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :type component: str
+    """
+
+    def _git_create_pr(comp):
+        """Create a pull request for the provided component."""
+        for cmd in [
+            "git push origin HEAD",
+            "hub pull-request -p --no-edit",
+            "hub pr list -L 1",
+        ]:
+            run_command(cmd, component)
+
+    for component in select_components(component):
+        if not is_feature_branch(component):  # replace with is_feature_branch from #371
+            display_message(
+                "You are trying to create PR but the current branch is master, please "
+                "switch to the wanted feature branch.",
+                component,
+            )
+            sys.exit(1)
+        else:
+            if is_component_behind_branch(component, "upstream/master"):
+                print_branch_difference_report(component, "upstream/master")
+                display_message(
+                    "Error: please rebase your feature branch against latest master.",
+                    component,
+                )
+                sys.exit(1)
+
+            _git_create_pr(component)
 
 
 git_commands_list = list(git_commands.commands.values())
