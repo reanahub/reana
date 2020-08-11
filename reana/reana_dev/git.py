@@ -726,68 +726,6 @@ def git_push(component):  # noqa: D301
             run_command(cmd, component)
 
 
-@git_commands.command(name="git-upgrade-all-shared-modules")
-@click.option(
-    "--commit-and-publish",
-    is_flag=True,
-    default=False,
-    help="Should the changes be committed and pull requests created?"
-    " If so, a commit and a PR with"
-    ' "installation: shared packages version bump" message will'
-    " be created for all affected CLUSTER components.",
-)
-def git_upgrade_all_shared_modules(commit_and_publish):
-    """Upgrade all cluster components to latest REANA-Commons/DB version.
-
-    Optionally create commits and PRs in all components bumping version.
-    """
-
-    def _commit_and_publish_version_bumps(components):
-        """Create commit and version bump PRs for all specified components."""
-        for component in components:
-            has_changes = run_command(
-                "git status --porcelain --untracked-files=no | "
-                "grep setup.py || echo",
-                component=component,
-                return_output=True,
-            )
-            if has_changes:
-                branch_name = datetime.datetime.now().strftime("version-bump-%Y%m%d")
-                create_branch = "git checkout -b {}".format(branch_name)
-                run_command(create_branch, component)
-                create_commit = (
-                    "git add setup.py && "
-                    "git commit "
-                    '-m "installation: shared packages version bump"'
-                )
-                run_command(create_commit, component)
-                create_pr = "hub pull-request -p --no-edit && hub pr list -L 1"
-                run_command(create_pr, component)
-            else:
-                click.echo("{} has no changes, skipping.".format(component))
-
-    cluster_components_with_shared_modules = set(
-        COMPONENTS_USING_SHARED_MODULE_DB
-    ).union(set(COMPONENTS_USING_SHARED_MODULE_COMMONS))
-
-    for module in REPO_LIST_SHARED:
-        last_version = fetch_latest_pypi_version(module)
-        update_module_in_cluster_components(module, last_version)
-
-    if commit_and_publish:
-        click.secho("Creating version bump commits and pull requests...")
-        _commit_and_publish_version_bumps(cluster_components_with_shared_modules)
-        click.secho(
-            "\nVersion bump commits and pull requests created ✨", bold=True, fg="green"
-        )
-        click.secho(
-            "PR list 👉  https://github.com/search?q="
-            "org%3Areanahub+is%3Apr+is%3Aopen&"
-            "unscoped_q=is%3Apr+is%3Aopen",
-            fg="green",
-        )
-
-
 @git_commands.command(name="git-upgrade-shared-modules")
 @click.option(
     "--component",
@@ -809,13 +747,13 @@ def git_upgrade_all_shared_modules(commit_and_publish):
     "--amend",
     is_flag=True,
     default=False,
-    help="Should the changes be integrated as part of the latest commit of each component?.",
+    help="Should the changes be integrated as part of the latest commit of each component?",
 )
 @click.option(
     "--push",
     is_flag=True,
     default=False,
-    help="Should the feature branches with the upgrades be pushed?.",
+    help="Should the feature branches with the upgrades be pushed to origin?",
 )
 @click.pass_context
 def git_upgrade_shared_modules(
