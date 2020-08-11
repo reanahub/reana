@@ -65,7 +65,7 @@ def cluster_commands():
 @click.option("--worker-nodes", default=0, help="How many worker nodes? [default=0]")
 @cluster_commands.command(name="cluster-create")
 def cluster_create(mounts, mode, worker_nodes):  # noqa: D301
-    """Create cluster.
+    """Create new REANA cluster.
 
     \b
     Example:
@@ -306,23 +306,37 @@ def cluster_undeploy():  # noqa: D301
         display_message(msg, "reana")
 
 
+@cluster_commands.command(name="cluster-stop")
+def cluster_stop():
+    """Stop currently running REANA cluster."""
+    cmd = "docker stop kind-control-plane"
+    run_command(cmd, "reana")
+
+
+@cluster_commands.command(name="cluster-start")
+def cluster_start():
+    """Start previously stopped REANA cluster."""
+    cmd = "docker start kind-control-plane"
+    run_command(cmd, "reana")
+
+
 @cluster_commands.command(name="cluster-pause")
 def cluster_pause():
-    """Pause cluster."""
+    """Pause all processes within REANA cluster."""
     cmd = "docker pause kind-control-plane"
     run_command(cmd, "reana")
 
 
 @cluster_commands.command(name="cluster-unpause")
 def cluster_unpause():
-    """Unpause cluster."""
+    """Unpause all processes within REANA cluster."""
     cmd = "docker unpause kind-control-plane"
     run_command(cmd, "reana")
 
 
 @cluster_commands.command(name="cluster-delete")
 def cluster_delete():
-    """Delete cluster."""
+    """Delete REANA cluster."""
     cmd = "kind delete cluster"
     run_command(cmd, "reana")
 
