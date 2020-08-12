@@ -17,6 +17,7 @@ from reana.reana_dev.git import git_commands_list
 from reana.reana_dev.kind import kind_commands_list
 from reana.reana_dev.kubectl import kubectl_commands_list
 from reana.reana_dev.python import python_commands_list
+from reana.reana_dev.release import release_commands_list
 from reana.reana_dev.run import run_commands_list
 
 
@@ -175,5 +176,6 @@ for cmd in (
     + git_commands_list
     + python_commands_list
     + run_commands_list
+    + release_commands_list
 ):
     reana_dev.add_command(cmd)

@@ -201,6 +201,12 @@ def print_branch_difference_report(
         run_command(cmd, component, display=False)
 
 
+def is_last_commit_release_commit(package):
+    """Check whether the last commit is a release commit."""
+    current_commit = get_current_commit(get_srcdir(package))
+    return current_commit.split()[1] == "release:"
+
+
 @click.group()
 def git_commands():
     """Git commands group."""
