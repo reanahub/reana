@@ -997,4 +997,46 @@ def git_create_pr_command(component):  # noqa: D301
             _git_create_pr(component)
 
 
+@click.option(
+    "--component",
+    "-c",
+    required=True,
+    multiple=True,
+    help="Which components? [name|CLUSTER]",
+)
+@git_commands.command(name="git-tag")
+def git_tag(component):  # noqa: D301
+    """Create the corresponding git tag for components with release commits.
+
+    \b
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components;
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :type component: str
+    """
+    components = select_components(component)
+    for component in components:
+        if not is_last_commit_release_commit(component):
+            click.secho(
+                "The last commit is not a release commit. Please use `reana-dev git-create-release-commit`.",
+                fg="red",
+            )
+            sys.exit(1)
+
+        current_version = get_current_component_version_from_source_files(component)
+        run_command(f"git tag {current_version}")
+
+
 git_commands_list = list(git_commands.commands.values())
