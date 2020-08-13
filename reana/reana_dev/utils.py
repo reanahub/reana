@@ -548,6 +548,18 @@ def bump_semver2_version(current_version, part=None, pre_version_prefix=None):
     return str(next_version)
 
 
+def parse_pep440_version(version):
+    """Determine whether the provided version is PEP440 compliant.
+
+    :param version: String representation of a version.
+    :type version: str
+    """
+    try:
+        return Version(version)
+    except InvalidVersion:
+        return None
+
+
 def bump_pep440_version(
     current_version,
     part=None,
@@ -589,49 +601,76 @@ def bump_pep440_version(
         except ValueError:
             return dev_post_pre_number + 1
 
-    try:
-        version = Version(current_version)
-        dev_post_pre_default_version_prefixes = {
-            "dev": dev_version_prefix or "dev",
-            "post": post_version_prefix or "post",
-            "pre": pre_version_prefix or "a",
-        }
-        next_version = ""
-        has_dev_post_pre = (
-            ("dev" if version.dev else False)
-            or ("post" if version.post else False)
-            or version.pre[0]
-        )
-        if (part and part in dev_post_pre_default_version_prefixes.keys()) or (
-            has_dev_post_pre and not part
-        ):
-            prefix_part = (
-                has_dev_post_pre or dev_post_pre_default_version_prefixes[part]
-            )
-            version_part = version.dev or version.post or version.pre[1]
-            version_part = _bump_dev_post_pre(version_part) if version_part else 1
-            prerelease_part = f"{prefix_part}{version_part}"
-            next_version = Version(
-                f"{version.major}.{version.minor}.{version.micro}.{prerelease_part}"
-            )
-        elif (part and part == "micro") or (
-            isinstance(version.micro, int) and not part
-        ):
-            next_version = Version(f"{version.major}.{version.minor}.{version.micro+1}")
-        elif (part and part == "minor") or (
-            isinstance(version.minor, int) and not part
-        ):
-            next_version = Version(f"{version.major}.{version.minor+1}.0")
-        elif (part and part == "major") or (
-            isinstance(version.major, int) and not part
-        ):
-            next_version = Version(f"{version.major+1}.0.0")
-
-        return str(next_version)
-    except InvalidVersion as e:
+    version = parse_pep440_version(current_version)
+    if not version:
         click.echo(
             f"Current {current_version} is not a valid PEP440 version. Please amend it"
         )
+        sys.exit(1)
+
+    dev_post_pre_default_version_prefixes = {
+        "dev": dev_version_prefix or "dev",
+        "post": post_version_prefix or "post",
+        "pre": pre_version_prefix or "a",
+    }
+    next_version = ""
+    has_dev_post_pre = (
+        ("dev" if version.dev else False)
+        or ("post" if version.post else False)
+        or version.pre[0]
+    )
+    if (part and part in dev_post_pre_default_version_prefixes.keys()) or (
+        has_dev_post_pre and not part
+    ):
+        prefix_part = has_dev_post_pre or dev_post_pre_default_version_prefixes[part]
+        version_part = version.dev or version.post or version.pre[1]
+        version_part = _bump_dev_post_pre(version_part) if version_part else 1
+        dev_post_pre_part = f"{prefix_part}{version_part}"
+        next_version = Version(
+            f"{version.major}.{version.minor}.{version.micro}{dev_post_pre_part}"
+        )
+    elif (part and part == "micro") or (isinstance(version.micro, int) and not part):
+        next_version = Version(f"{version.major}.{version.minor}.{version.micro+1}")
+    elif (part and part == "minor") or (isinstance(version.minor, int) and not part):
+        next_version = Version(f"{version.major}.{version.minor+1}.0")
+    elif (part and part == "major") or (isinstance(version.major, int) and not part):
+        next_version = Version(f"{version.major+1}.0.0")
+
+    return str(next_version)
+
+
+def translate_pep440_to_semver2(pep440_version):
+    """Translate a PEP440 compliant version to semver2."""
+    prerelease_translation_dict = {
+        "a": "alpha",
+        "b": "beta",
+        "dev": "dev",
+        "post": "post",
+        "rc": "rc",
+    }
+    parsed_pep440_version = parse_pep440_version(pep440_version)
+    if not parsed_pep440_version:
+        click.secho(f"Version {pep440_version} is not a correct PEP440 version.")
+        sys.exit(1)
+    dev_post_pre_semver2 = ""
+    if parsed_pep440_version.is_devrelease:
+        dev_post_pre_semver2 = f"dev.{parsed_pep440_version.dev}"
+    elif parsed_pep440_version.is_postrelease:
+        dev_post_pre_semver2 = f"post.{parsed_pep440_version.post}"
+    elif parsed_pep440_version.is_prerelease:
+        prefix = prerelease_translation_dict[parsed_pep440_version.pre[0]]
+        number = parsed_pep440_version.pre[1]
+        dev_post_pre_semver2 = f"{prefix}.{number}"
+
+    semver2_version_string = f"{parsed_pep440_version.major}.{parsed_pep440_version.minor}.{parsed_pep440_version.micro}-{dev_post_pre_semver2}"
+    if semver.VersionInfo.isvalid(semver2_version_string):
+        return semver2_version_string
+    else:
+        click.secho(
+            f"Something went wrong while translating {pep440_version} to semver2.",
+            fg="red",
+        )
+        sys.exit(1)
 
 
 def bump_component_version(component, current_version, next_version=None):
@@ -665,3 +704,13 @@ def bump_component_version(component, current_version, next_version=None):
         display_message(
             f"Something went wront while bumping the version: {e}", component
         )
+
+
+def get_current_tag(component):
+    """Return the current version of a component.
+
+    :param component: standard component name
+    :type component: str
+    """
+    cmd = "git describe --tags"
+    return run_command(cmd, component, return_output=True, display=True)

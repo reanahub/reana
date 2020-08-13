@@ -13,27 +13,11 @@ import click
 from reana.config import DOCKER_PREFETCH_IMAGES
 from reana.reana_dev.utils import (
     display_message,
+    get_current_tag,
     is_component_dockerised,
     run_command,
     select_components,
 )
-
-
-def get_current_version(component, dirty=False):
-    """Return the current version of a component.
-
-    :param component: standard component name
-    :param dirty: wheter the ``dirty`` flag is used when calling
-        ``git describe``
-    :type component: str
-    :type dirty: bool
-    """
-    cmd = "git describe"
-    if dirty:
-        cmd += " --dirty --always"
-    tag = run_command(cmd, component, return_output=True)
-    # Remove starting `v` we use for Python/Git versioning
-    return tag[1:]
 
 
 @click.group()
@@ -140,7 +124,7 @@ def docker_build(
         if is_component_dockerised(component):
             cmd = "docker build"
             if tag == "auto":
-                component_tag = get_current_version(component, dirty=True)
+                component_tag = get_current_tag(component)
             for arg in build_arg:
                 cmd += " --build-arg {0}".format(arg)
             if no_cache:
@@ -267,7 +251,7 @@ def docker_push(user, tag, component):  # noqa: D301
         component_tag = tag
         if is_component_dockerised(component):
             if tag == "auto":
-                component_tag = get_current_version(component, dirty=True)
+                component_tag = get_current_tag(component)
             cmd = "docker push {0}/{1}:{2}".format(user, component, component_tag)
             run_command(cmd, component)
         else:
