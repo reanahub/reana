@@ -109,7 +109,7 @@ def git_create_release_commit(component, next_version=None):
         return False
 
     current_version = get_current_component_version_from_source_files(component)
-    if not current_version:
+    if not current_version and not next_version:
         display_message(
             f"Version cannot be autodiscovered from source files.", component
         )
@@ -134,8 +134,13 @@ def git_create_release_commit(component, next_version=None):
     ):
         run_command(f"git checkout -b release-{next_version}", component)
 
-    run_command(f"git add {' '.join(modified_files)}", component)
-    run_command(f"git commit -m 'release: {next_version}'", component)
+    if modified_files:
+        run_command(f"git add {' '.join(modified_files)}", component)
+
+    run_command(
+        f"git commit -m 'release: {next_version}' {'--allow-empty' if not modified_files else ''}",
+        component,
+    )
     return True
 
 
