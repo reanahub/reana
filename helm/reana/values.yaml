@@ -50,12 +50,12 @@ components:
   reana_ui:
     enabled: false
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-ui:0.6.0-59-g9dacae5
+    image: reanahub/reana-ui:0.7.0-alpha.1
   reana_db:
     enabled: true
   reana_server:
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-server:0.6.0-58-g1ed94f1
+    image: reanahub/reana-server:0.7.0-alpha.1
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
     uwsgi:
@@ -63,20 +63,20 @@ components:
       threads: 4
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-workflow-controller:0.6.0-36-gb702986
+    image: reanahub/reana-workflow-controller:0.7.0-alpha.1
     environment:
       SHARED_VOLUME_PATH: /var/reana
   reana_workflow_engine_cwl:
-    image: reanahub/reana-workflow-engine-cwl:0.6.0-9-gcda4d46
+    image: reanahub/reana-workflow-engine-cwl:0.7.0-alpha.1
   reana_workflow_engine_yadage:
-    image: reanahub/reana-workflow-engine-yadage:0.6.0-14-g7f9773c
+    image: reanahub/reana-workflow-engine-yadage:0.7.0-alpha.1
   reana_workflow_engine_serial:
-    image: reanahub/reana-workflow-engine-serial:0.6.0-13-gef2eb4c
+    image: reanahub/reana-workflow-engine-serial:0.7.0-alpha.1
   reana_job_controller:
-    image: reanahub/reana-job-controller:0.6.0-31-g35c4fc8
+    image: reanahub/reana-job-controller:0.7.0-alpha.1
   reana_message_broker:
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-message-broker:0.6.0-1-gac35315
+    image: reanahub/reana-message-broker:0.7.0-alpha.1
 
 notifications:
   enabled: false
