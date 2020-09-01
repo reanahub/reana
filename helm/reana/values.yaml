@@ -48,7 +48,8 @@ db_env_config:
 # REANA components configuration
 components:
   reana_ui:
-    enabled: false
+    enabled: true
+    docs_url: http://docs.reana.io
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-ui:0.7.0-alpha.1
   reana_db:

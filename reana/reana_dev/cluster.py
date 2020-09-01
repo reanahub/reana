@@ -18,6 +18,7 @@ import yaml
 from reana.reana_dev.utils import (
     display_message,
     find_reana_srcdir,
+    find_standard_component_name,
     get_srcdir,
     run_command,
 )
@@ -235,8 +236,21 @@ def cluster_build(
     default="helm/configurations/values-dev.yaml",
     help="Which Helm configuration values file to use? [default=helm/configurations/values-dev.yaml]",
 )
-def cluster_deploy(namespace, job_mounts, mode, values):  # noqa: D301
-    """Deploy REANA cluster."""
+@click.option(
+    "--exclude-components",
+    default="",
+    help="Which components to exclude from build? [c1,c2,c3]",
+)
+def cluster_deploy(
+    namespace, job_mounts, mode, values, exclude_components
+):  # noqa: D301
+    """Deploy REANA cluster.
+
+    \b
+    Example:
+       $ reana-dev cluster-deploy --mode debug
+                                  --exclude-components=r-ui
+    """
 
     def job_mounts_to_config(job_mounts):
         job_mount_list = []
@@ -272,6 +286,13 @@ def cluster_deploy(namespace, job_mounts, mode, values):  # noqa: D301
 
     if mode in ("debug"):
         values_dict.setdefault("debug", {})["enabled"] = True
+
+    if exclude_components:
+        standard_named_exclude_components = [
+            find_standard_component_name(c) for c in exclude_components.split(",")
+        ]
+        if "reana-ui" in standard_named_exclude_components:
+            values_dict["components"]["reana_ui"]["enabled"] = False
 
     helm_install = "cat <<EOF | helm install reana helm/reana -n {namespace} --create-namespace --wait -f -\n{values}\nEOF".format(
         namespace=namespace, values=values_dict and yaml.dump(values_dict) or "",
