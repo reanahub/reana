@@ -12,4 +12,8 @@ data:
     forum_url: {{ .Values.components.reana_ui.forum_url | quote | default "null" }}
     chat_url: {{ .Values.components.reana_ui.chat_url | quote | default "null" }}
     cern_sso: {{ .Values.components.reana_ui.cern_sso | default false }}
-    local_users: {{ .Values.components.reana_ui.local_users | default true }}
+    {{- if or (.Values.components.reana_ui.local_users) (eq (.Values.components.reana_ui.local_users | toString) "<nil>") }}
+    local_users: true
+    {{- else }}
+    local_users: false
+    {{- end }}
