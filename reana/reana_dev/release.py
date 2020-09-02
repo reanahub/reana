@@ -222,7 +222,7 @@ def release_helm(ctx, user):  # noqa: D301
         f"mkdir {index_path}",
         f"helm package helm/reana --destination {package_path} --dependency-update",
         f"cr upload -o {user} -r {component} --release-name-template '{{{{ .Version }}}}'",
-        f"cr index -o {user} -r {component} -c {repository}",
+        f"cr index -o {user} -r {component} -c {repository} --release-name-template '{{{{ .Version }}}}'",
     ]:
         run_command(cmd, component)
 
