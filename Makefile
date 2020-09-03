@@ -231,13 +231,4 @@ teardown: # Destroy local host virtual environment and Minikube. All traces go.
 	rm -rf ${HOME}/.virtualenvs/${INSTANCE_NAME}
 	@echo "You may also consider to run rm -rf ~/.minikube"
 
-test: # Run unit tests on the REANA package.
-	pydocstyle reana
-	black --check .
-	check-manifest
-	sphinx-build -qnNW docs docs/_build/html
-	python setup.py test
-	sphinx-build -qnNW -b doctest docs docs/_build/doctest
-	helm lint helm/reana
-
 # end of file
