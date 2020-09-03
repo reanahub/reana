@@ -241,8 +241,24 @@ def cluster_build(
     default="",
     help="Which components to exclude from build? [c1,c2,c3]",
 )
+@click.option(
+    "--admin-email", required=True, help="Admin user email address",
+)
+@click.option(
+    "--admin-password", required=True, help="Admin user password",
+)
+@click.option(
+    "--instance-name", default="reana", help="REANA instance name",
+)
 def cluster_deploy(
-    namespace, job_mounts, mode, values, exclude_components
+    namespace,
+    job_mounts,
+    mode,
+    values,
+    exclude_components,
+    admin_email,
+    admin_password,
+    instance_name,
 ):  # noqa: D301
     """Deploy REANA cluster.
 
@@ -250,6 +266,8 @@ def cluster_deploy(
     Example:
        $ reana-dev cluster-deploy --mode debug
                                   --exclude-components=r-ui
+                                  --admin-email john.doe@example.org
+                                  --admin-password mysecretpassword
     """
 
     def job_mounts_to_config(job_mounts):
@@ -301,7 +319,10 @@ def cluster_deploy(
         "helm dep update helm/reana",
         helm_install,
         "kubectl config set-context --current --namespace={}".format(namespace),
-        os.path.join(get_srcdir("reana"), "scripts/create-admin-user.sh"),
+        os.path.join(
+            get_srcdir("reana"),
+            f"scripts/create-admin-user.sh {instance_name} {admin_email} {admin_password}",
+        ),
     ]
     if mode in ("latest", "debug"):
         cmds.append("reana-dev git-submodule --update")

@@ -202,7 +202,10 @@ def run_ci(
             cmd += " --no-cache"
         run_command(cmd, "reana")
     # deploy cluster
-    cmd = "reana-dev cluster-deploy --mode {}".format(mode)
+    cmd = (
+        f"reana-dev cluster-deploy --mode {mode}"
+        " --admin-email john.doe@example.org --admin-password 123456"
+    )
     for job_mount in job_mounts:
         cmd += " -j {}".format(job_mount)
     run_command(cmd, "reana")
@@ -252,7 +255,8 @@ def run_ci(
     "--option",
     "options",
     multiple=True,
-    help="Additional operatioal options for the workflow execution. " "E.g. CACHE=off.",
+    help="Additional operational options for the workflow execution. "
+    "E.g. CACHE=off.",
 )
 @run_commands.command(name="run-example")
 def run_example(
@@ -281,7 +285,7 @@ def run_example(
     :param parameters: Additional input parameters to override original ones
                        from reana.yaml.
                        E.g. -p myparam1=myval1 -p myparam2=myval2.
-    :param options: Additional operatioal options for the workflow execution.
+    :param options: Additional operational options for the workflow execution.
                     E.g. CACHE=off.
 
     :type component: str
