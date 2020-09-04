@@ -223,6 +223,8 @@ def run_ci(
         f"reana-dev cluster-deploy --mode {mode}"
         f" --admin-email {admin_email} --admin-password {admin_password}"
     )
+    if exclude_components:
+        cmd += " --exclude-components {}".format(exclude_components)
     for job_mount in job_mounts:
         cmd += " -j {}".format(job_mount)
     run_command(cmd, "reana")
