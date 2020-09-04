@@ -141,9 +141,23 @@ def run_commands():
     default=["DEMO"],
     help="Which examples to run? [default=DEMO]",
 )
+@click.option(
+    "--admin-email", required=True, help="Admin user email address",
+)
+@click.option(
+    "--admin-password", required=True, help="Admin user password",
+)
 @run_commands.command(name="run-ci")
 def run_ci(
-    build_arg, mode, exclude_components, mounts, job_mounts, no_cache, component,
+    build_arg,
+    mode,
+    exclude_components,
+    mounts,
+    job_mounts,
+    no_cache,
+    component,
+    admin_email,
+    admin_password,
 ):  # noqa: D301
     """Run CI build.
 
@@ -162,12 +176,15 @@ def run_ci(
 
     \b
     Example:
-       $ reana-dev run-cli -m /var/reana:/var/reana
+       $ reana-dev run-ci -m /var/reana:/var/reana
                            -m /usr/share/local/mydata:/mydata
                            -j /mydata:/mydata
                            -c r-d-helloworld
                            --exclude-components=r-ui,r-a-vomsproxy
                            --mode debug
+                           --admin-email john.doe@example.org
+                           --admin-password mysecretpassword
+
     """
     # parse arguments
     components = select_components(component)
@@ -204,7 +221,7 @@ def run_ci(
     # deploy cluster
     cmd = (
         f"reana-dev cluster-deploy --mode {mode}"
-        " --admin-email john.doe@example.org --admin-password 123456"
+        f" --admin-email {admin_email} --admin-password {admin_password}"
     )
     for job_mount in job_mounts:
         cmd += " -j {}".format(job_mount)

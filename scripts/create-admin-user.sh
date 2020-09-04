@@ -22,7 +22,7 @@ REANA_SERVER=$(kubectl get pod -l "app=$instance_name-server" | grep Running | a
 
 # Wait for DB to be ready
 REANA_DB=$(kubectl get pod -l "app=$instance_name-db" | grep Running | awk '{print $1}')
-echo $REANA_DB
+echo "$REANA_DB"
 while [ "0" -ne "$(kubectl exec "$REANA_DB" -- pg_isready -U reana -h 127.0.0.1 -p 5432 &> /dev/null && echo $? || echo 1)" ]
 do
     echo "Waiting for REANA-DB to be ready."
@@ -34,11 +34,11 @@ echo "REANA-DB ready"
 kubectl exec "$REANA_SERVER" -- ./scripts/setup
 
 # Create admin user
-admin_access_token=$(kubectl exec "$REANA_SERVER" -- \
-                     flask reana-admin create-admin-user --email $email_address --password $password)
-if [ $? -ne 0 ]; then
+if ! admin_access_token=$(kubectl exec "$REANA_SERVER" -- \
+                        flask reana-admin create-admin-user --email "$email_address" --password "$password")
+then
     # Failure output
-    echo $admin_access_token
+    echo "$admin_access_token"
     exit 1
 fi
 

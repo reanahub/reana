@@ -59,9 +59,10 @@ def reana_dev():  # noqa: D301
         $ # example (a): fast, CLI mode only, fast example
         $ reana-dev cluster-delete
         $ reana-dev run-ci -m /var/reana:/var/reana -c r-d-helloworld --exclude-components=r-ui,r-a-vomsproxy
+                           --admin-email john.doe@example.org --admin-password mysecretpassword
         $ # example (b): slow, CLI and Web modes, all examples
         $ reana-dev cluster-delete
-        $ reana-dev run-ci
+        $ reana-dev run-ci --admin-email john.doe@example.org --admin-password mysecretpassword
 
     How to create REANA cluster:
 
