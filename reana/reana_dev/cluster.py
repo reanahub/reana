@@ -376,11 +376,37 @@ def cluster_unpause():
     run_command(cmd, "reana")
 
 
+@click.option(
+    "-m",
+    "--mount",
+    "mounts",
+    multiple=True,
+    help="Which local path directories are to be deleted? [local_path:cluster_node_path]",
+)
 @cluster_commands.command(name="cluster-delete")
-def cluster_delete():
-    """Delete REANA cluster."""
-    cmd = "kind delete cluster"
-    run_command(cmd, "reana")
+def cluster_delete(mounts):  # noqa: D301
+    """Delete REANA cluster.
+
+    \b
+    Example:
+       $ reana-dev cluster-delete -m /var/reana:/var/reana
+    """
+    cmds = []
+    # delete cluster
+    cmds.append("kind delete cluster")
+    # remove only local paths where cluster path starts with /var/reana for safety
+    for mount in mounts:
+        local_path, cluster_node_path = mount.split(":")
+        if cluster_node_path.startswith("/var/reana"):
+            cmds.append("sudo rm -rf {}/*".format(local_path))
+        else:
+            msg = "Directory {} will not be deleted for safety reasons.".format(
+                local_path
+            )
+            display_message(msg, "reana")
+    # execute commands
+    for cmd in cmds:
+        run_command(cmd, "reana")
 
 
 cluster_commands_list = list(cluster_commands.commands.values())

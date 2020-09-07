@@ -4,6 +4,7 @@ Authors
 The list of contributors in alphabetical order:
 
 - `Anton Khodak <https://orcid.org/0000-0003-3263-4553>`_
+- `Audrius Mecionis <https://orcid.org/0000-0002-3759-1663>`_
 - `Dan Leehr <https://orcid.org/0000-0003-3221-9579>`_
 - `Daniel Prelipcean <https://orcid.org/0000-0002-4855-194X>`_
 - `Diego Rodriguez <https://orcid.org/0000-0003-0649-2002>`_
