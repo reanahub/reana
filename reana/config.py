@@ -160,6 +160,10 @@ DOCKER_PREFETCH_IMAGES = {
         "reanahub/reana-demo-atlas-recast-eventselection:1.0",
         "reanahub/reana-demo-atlas-recast-statanalysis:1.0",
     ],
+    "reana-demo-bsm-search": [
+        "reanahub/reana-demo-bsm-search:1.0.0",
+        "reanahub/reana-env-root6:6.18.04",
+    ],
 }
 """Images to be prefetched depending on the REANA demo to be executed."""
 
