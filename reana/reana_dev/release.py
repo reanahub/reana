@@ -8,6 +8,7 @@
 
 """`reana-dev`'s release commands."""
 
+import os
 import sys
 from time import sleep
 
@@ -181,6 +182,12 @@ def release_pypi(ctx, component, timeout):  # noqa: D301
     :type component: str
     """
     components = select_components(component)
+    username, password = os.getenv("TWINE_USERNAME"), os.getenv("TWINE_PASSWORD")
+    if not (username and password):
+        click.secho(
+            "Please set TWINE_USERNAME and TWINE_PASSWORD to release on PyPI.", fg="red"
+        )
+        sys.exit(1)
     for component in components:
         is_component_releasable(component, exit_code=True, display=True)
         ctx.invoke(git_clean, component=[component])
