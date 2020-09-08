@@ -89,6 +89,9 @@ REPO_LIST_SHARED = [
 WORKFLOW_ENGINE_LIST_ALL = ["cwl", "serial", "yadage"]
 """List of supported workflow engines."""
 
+CLUSTER_DEPLOYMENT_MODES = ["releasehelm", "releasepypi", "latest", "debug"]
+"""List of supported modes to run a REANA cluster."""
+
 COMPONENT_PODS = {
     "reana-db": "reana-db",
     "reana-message-broker": "reana-message-broker",

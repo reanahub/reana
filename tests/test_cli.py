@@ -11,6 +11,8 @@
 from __future__ import absolute_import, print_function
 
 import os
+import pytest
+import click
 
 
 def test_shorten_component_name():
@@ -173,3 +175,20 @@ def test_construct_workflow_name():
     ):
         output_obtained = construct_workflow_name(input_value[0], input_value[1])
         assert output_obtained == output_expected
+
+
+def test_mode_option_validation():
+    """Tests for validate_mode_option()."""
+    from reana.reana_dev.utils import validate_mode_option
+    from reana.config import CLUSTER_DEPLOYMENT_MODES
+
+    for mode in CLUSTER_DEPLOYMENT_MODES:
+        assert mode == validate_mode_option(None, None, mode)
+
+    for mode in ["releasehelmtypo", "releasepipi", "devel"]:
+        with pytest.raises(click.BadParameter) as e:
+            validate_mode_option(None, None, mode)
+        assert (
+            "Supported values are 'releasehelm', 'releasepypi', 'latest', 'debug'."
+            == e.value.args[0]
+        )

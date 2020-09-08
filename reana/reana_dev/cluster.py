@@ -21,6 +21,7 @@ from reana.reana_dev.utils import (
     find_standard_component_name,
     get_srcdir,
     run_command,
+    validate_mode_option,
 )
 
 
@@ -61,6 +62,7 @@ def cluster_commands():
 @click.option(
     "--mode",
     default="latest",
+    callback=validate_mode_option,
     help="In which mode to run REANA cluster? (releasehelm,releasepypi,latest,debug) [default=latest]",
 )
 @click.option("--worker-nodes", default=0, help="How many worker nodes? [default=0]")
@@ -164,6 +166,7 @@ def cluster_create(mounts, mode, worker_nodes):  # noqa: D301
 @click.option(
     "--mode",
     default="latest",
+    callback=validate_mode_option,
     help="In which mode to run REANA cluster? (releasehelm,releasepypi,latest,debug) [default=latest]",
 )
 @click.option(
@@ -228,6 +231,7 @@ def cluster_build(
 @click.option(
     "--mode",
     default="latest",
+    callback=validate_mode_option,
     help="In which mode to run REANA cluster? (releasehelm,releasepypi,latest,debug) [default=latest]",
 )
 @click.option(

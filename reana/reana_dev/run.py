@@ -26,6 +26,7 @@ from reana.reana_dev.utils import (
     get_srcdir,
     run_command,
     select_components,
+    validate_mode_option,
 )
 
 
@@ -112,6 +113,7 @@ def run_commands():
 @click.option(
     "--mode",
     default="latest",
+    callback=validate_mode_option,
     help="In which mode to run REANA cluster? (releasehelm,releasepypi,latest,debug) [default=latest]",
 )
 @click.option(

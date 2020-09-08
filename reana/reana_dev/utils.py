@@ -31,6 +31,7 @@ from reana.config import (
     REPO_LIST_CLIENT,
     REPO_LIST_CLUSTER,
     REPO_LIST_DEMO,
+    CLUSTER_DEPLOYMENT_MODES,
 )
 
 INSTANCE_NAME = os.path.basename(os.environ["VIRTUAL_ENV"])
@@ -714,3 +715,12 @@ def get_current_tag(component):
     """
     cmd = "git describe --tags"
     return run_command(cmd, component, return_output=True, display=True)
+
+
+def validate_mode_option(ctx, param, value):
+    """Validate mode option value."""
+    if value not in CLUSTER_DEPLOYMENT_MODES:
+        raise click.BadParameter(
+            "Supported values are '{}'.".format("', '".join(CLUSTER_DEPLOYMENT_MODES))
+        )
+    return value
