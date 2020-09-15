@@ -1,43 +1,43 @@
 #!/bin/bash
+#
+# This file is part of REANA.
+# Copyright (C) 2020 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
 
-# Two parameters: instance name and email address of the admin
+# Read inputs: instance name, admin user email, admin user password
 instance_name=$1
 if [ -z "$instance_name" ]; then
     echo 'Instance name missing.'
     exit 1
 fi
-email_address=$2
-if [ -z "$email_address" ]; then
-    echo 'Email address missing.'
+admin_email=$2
+if [ -z "$admin_email" ]; then
+    echo 'Admin user email address missing.'
     exit 1
 fi
-password=$3
-if [ -z "$password" ]; then
-    echo 'Password missing.'
+admin_password=$3
+if [ -z "$admin_password" ]; then
+    echo 'Admin user password missing.'
     exit 1
 fi
 
-# Get REANA Server pod name
-REANA_SERVER=$(kubectl get pod -l "app=$instance_name-server" | grep Running | awk '{print $1}')
-
-# Wait for DB to be ready
-REANA_DB=$(kubectl get pod -l "app=$instance_name-db" | grep Running | awk '{print $1}')
-echo "$REANA_DB"
-while [ "0" -ne "$(kubectl exec "$REANA_DB" -- pg_isready -U reana -h 127.0.0.1 -p 5432 &> /dev/null && echo $? || echo 1)" ]
+# Wait for database to be ready
+while [ "0" -ne "$(kubectl exec deployment/reana-db -- pg_isready -U reana -h 127.0.0.1 -p 5432 &> /dev/null && echo $? || echo 1)" ]
 do
-    echo "Waiting for REANA-DB to be ready."
-    sleep 5;
+    echo "Waiting for deployment/reana-db to be ready..."
+    sleep 5
 done
-echo "REANA-DB ready"
 
-# Initialise DB
-kubectl exec "$REANA_SERVER" -- ./scripts/setup
+# Initialise database
+kubectl exec deployment/reana-server -c rest-api -- ./scripts/create-database.sh
 
 # Create admin user
-if ! admin_access_token=$(kubectl exec "$REANA_SERVER" -- \
-                        flask reana-admin create-admin-user --email "$email_address" --password "$password")
+if ! admin_access_token=$(kubectl exec deployment/reana-server -c rest-api -- \
+    flask reana-admin create-admin-user --email "$admin_email" --password "$admin_password")
 then
-    # Failure output
+    # Output failures
     echo "$admin_access_token"
     exit 1
 fi

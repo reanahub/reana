@@ -1,22 +1,40 @@
+The REANA system has been installed!
 
-The REANA system has been installed:
+If you are deploying REANA for the first time, there are a few steps left to
+finalise its configuration.
 
-If you are installing REANA for the first time, there are a few steps left to finalise its configuration.
+1. Initialise the database:
 
-1. Get the REANA-Server pod name:
+    $ kubectl exec deployment/reana-server -c rest-api -- \
+        ./scripts/create-database.sh
 
-    $ REANA_SERVER=$(kubectl get pod -l "app={{ .Release.Name }}-server" -o name -o jsonpath='{.items[0].metadata.name}')
+2. Create administrator user and corresponding access token:
 
-2. Initialise the database:
+    $ mytoken=$(kubectl exec deployment/reana-server -c rest-api -- \
+          flask reana-admin create-admin-user --email john.doe@example.org \
+                                              --password mypass1234)
 
-    $ kubectl exec $REANA_SERVER -- ./scripts/setup
+3. Store administrator access token as Kubernetes secret:
 
-3. Create your administrator user and store the token:
-
-    $ kubectl exec $REANA_SERVER -- flask reana-admin create-admin-user --email john.doe@example.org --password mysecretpassword
-    <reana-admin-access-token-value>
-    $ read -s REANA_ADMIN_ACCESS_TOKEN  # paste the secret here
     $ kubectl create secret generic {{ .Release.Name }}-admin-access-token \
-      --from-literal=ADMIN_ACCESS_TOKEN="$REANA_ADMIN_ACCESS_TOKEN"
+        --from-literal=ADMIN_ACCESS_TOKEN="$mytoken"
+
+4. Try to run your first REANA example:
+
+    $ firefox https://{{ default "localhost:30443" .Values.reana_url }}
+
+   Or, using command line:
+
+    $ # install REANA client
+    $ pip install --user reana-client
+    $ # set environment variables for REANA client
+    $ export REANA_SERVER_URL=https://{{ default "localhost:30443" .Values.reana_url }}
+    $ export REANA_ACCESS_TOKEN="$mytoken"
+    $ # test connection to the REANA cluster
+    $ reana-client ping
+    $ # clone and run a simple analysis example
+    $ git clone https://github.com/reanahub/reana-demo-root6-roofit
+    $ cd reana-demo-root6-roofit
+    $ reana-client run -w demo
 
 Thanks for flying REANA 🚀
