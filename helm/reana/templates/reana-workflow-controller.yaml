@@ -87,9 +87,9 @@ spec:
             value: {{ .Values.components.reana_workflow_engine_yadage.image }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_SERIAL
             value: {{ .Values.components.reana_workflow_engine_serial.image }}
-          {{- if .Values.reana_url }}
-          - name: REANA_URL
-            value: {{ .Values.reana_url }}
+          {{- if .Values.reana_hostname }}
+          - name: REANA_HOSTNAME
+            value: {{ .Values.reana_hostname }}
           {{- end }}
           {{- if .Values.eos.enabled }}
           - name: K8S_CERN_EOS_AVAILABLE
@@ -159,9 +159,9 @@ spec:
         - name: {{ $key }}
           value: {{ $value | quote }}
         {{- end }}
-        {{- if .Values.reana_url }}
-        - name: REANA_URL
-          value: {{ .Values.reana_url }}
+        {{- if .Values.reana_hostname }}
+        - name: REANA_HOSTNAME
+          value: {{ .Values.reana_hostname }}
         {{- end }}
         {{- if .Values.debug.enabled }}
         - name: WDB_SOCKET_SERVER

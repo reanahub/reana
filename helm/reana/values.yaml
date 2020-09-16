@@ -2,8 +2,8 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# reana_url: reana.cern.ch
-# `reana_url` should be set for third party integrations to work and for
+# reana_hostname: reana.cern.ch
+# `reana_hostname` should be set for third party integrations to work and for
 # production deployments to be secure.
 
 debug:

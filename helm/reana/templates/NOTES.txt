@@ -21,14 +21,14 @@ finalise its configuration.
 
 4. Try to run your first REANA example:
 
-    $ firefox https://{{ default "localhost:30443" .Values.reana_url }}
+    $ firefox https://{{ default "localhost:30443" .Values.reana_hostname }}
 
    Or, using command line:
 
     $ # install REANA client
     $ pip install --user reana-client
     $ # set environment variables for REANA client
-    $ export REANA_SERVER_URL=https://{{ default "localhost:30443" .Values.reana_url }}
+    $ export REANA_SERVER_URL=https://{{ default "localhost:30443" .Values.reana_hostname }}
     $ export REANA_ACCESS_TOKEN="$mytoken"
     $ # test connection to the REANA cluster
     $ reana-client ping

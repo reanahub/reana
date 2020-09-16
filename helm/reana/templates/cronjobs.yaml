@@ -26,9 +26,9 @@ spec:
             stdin: true
             {{- end }}
             env:
-            {{- if .Values.reana_url }}
-            - name: REANA_URL
-              value: {{ .Values.reana_url }}
+            {{- if .Values.reana_hostname }}
+            - name: REANA_HOSTNAME
+              value: {{ .Values.reana_hostname }}
             {{- end }}
             {{- range $key, $value := .Values.db_env_config }}
             - name: {{ $key }}

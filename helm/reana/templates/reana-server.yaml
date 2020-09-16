@@ -72,9 +72,9 @@ spec:
           - name: {{ $key }}
             value: {{ $value | quote }}
           {{- end }}
-          {{- if .Values.reana_url }}
-          - name: REANA_URL
-            value: {{ .Values.reana_url }}
+          {{- if .Values.reana_hostname }}
+          - name: REANA_HOSTNAME
+            value: {{ .Values.reana_hostname }}
           {{- end }}
           - name: CERN_CONSUMER_KEY
             valueFrom:

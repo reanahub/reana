@@ -30,7 +30,7 @@ spec:
             serviceName: {{ include "reana.prefix" . }}-ui
             servicePort: 80
         {{- end }}
-      {{- if .Values.reana_url }}
-      host: {{ .Values.reana_url }}
+      {{- if .Values.reana_hostname }}
+      host: {{ .Values.reana_hostname }}
       {{- end }}
 {{- end }}
