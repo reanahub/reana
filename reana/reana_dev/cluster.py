@@ -328,10 +328,6 @@ def cluster_deploy(
             f"scripts/create-admin-user.sh {instance_name} {admin_email} {admin_password}",
         ),
     ]
-    if mode in ("latest", "debug"):
-        cmds.append("reana-dev git-submodule --update")
-    if mode in ("debug"):
-        cmds.append("reana-dev python-install-eggs")
     for cmd in cmds:
         run_command(cmd, "reana")
 
