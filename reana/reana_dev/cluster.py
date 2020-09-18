@@ -192,8 +192,6 @@ def cluster_build(
     # initalise common submodules
     if mode in ("latest", "debug"):
         cmds.append("reana-dev git-submodule --update")
-    if mode in ("debug"):
-        cmds.append("reana-dev python-install-eggs")
     # build Docker images
     cmd = "reana-dev docker-build"
     if exclude_components:
@@ -319,15 +317,21 @@ def cluster_deploy(
     helm_install = "cat <<EOF | helm install reana helm/reana -n {namespace} --create-namespace --wait -f -\n{values}\nEOF".format(
         namespace=namespace, values=values_dict and yaml.dump(values_dict) or "",
     )
-    cmds = [
-        "helm dep update helm/reana",
-        helm_install,
-        "kubectl config set-context --current --namespace={}".format(namespace),
-        os.path.join(
-            get_srcdir("reana"),
-            f"scripts/create-admin-user.sh {instance_name} {admin_email} {admin_password}",
-        ),
-    ]
+    cmds = []
+    if mode in ("debug"):
+        cmds.append("reana-dev python-install-eggs")
+        cmds.append("reana-dev git-submodule --update")
+    cmds.extend(
+        [
+            "helm dep update helm/reana",
+            helm_install,
+            "kubectl config set-context --current --namespace={}".format(namespace),
+            os.path.join(
+                get_srcdir("reana"),
+                f"scripts/create-admin-user.sh {instance_name} {admin_email} {admin_password}",
+            ),
+        ]
+    )
     for cmd in cmds:
         run_command(cmd, "reana")
 
