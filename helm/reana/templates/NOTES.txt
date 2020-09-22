@@ -12,7 +12,7 @@ finalise its configuration.
 
     $ mytoken=$(kubectl exec deployment/reana-server -c rest-api -- \
           flask reana-admin create-admin-user --email john.doe@example.org \
-                                              --password mypass1234)
+                                              --password mysecretpassword)
 
 3. Store administrator access token as Kubernetes secret:
 
