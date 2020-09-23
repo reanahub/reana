@@ -13,7 +13,7 @@ Usage:
   $ pip install locust
 
 .. code-block:: console
-  $ locust -f benchmark/locustfile.py --host=$REANA_SERVER_URL
+  $ locust -f tests/benchmark/locustfile.py --host=$REANA_SERVER_URL
   [2020-04-14 16:31:54,321] x.home/INFO/locust.main: Starting web monitor
   at http://*:8089
   [2020-04-14 16:31:54,321] x.home/INFO/locust.main: Starting Locust 0.14.5

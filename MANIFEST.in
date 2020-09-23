@@ -21,8 +21,8 @@ recursive-include helm *.yaml
 recursive-include helm *.txt
 recursive-include helm *.helmignore
 recursive-include helm *.lock
-recursive-include benchmark *.py
 recursive-include scripts *.sh
+recursive-include etc *.yaml
 
 # Helm
 recursive-include helm *.md
