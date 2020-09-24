@@ -39,6 +39,6 @@ entries:
     - https://github.com/reanahub/www.reana.io
     type: application
     urls:
-    - https://github.com/reanahub/reana/releases/download/reana-0.7.0-alpha.1/reana-0.7.0-alpha.1.tgz
+    - https://github.com/reanahub/reana/releases/download/0.7.0-alpha.1/0.7.0-alpha.1.tgz
     version: 0.7.0-alpha.1
 generated: "2020-04-16T13:43:48.101308579Z"
