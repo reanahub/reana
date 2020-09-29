@@ -328,7 +328,7 @@ def cluster_deploy(
             "kubectl config set-context --current --namespace={}".format(namespace),
             os.path.join(
                 get_srcdir("reana"),
-                f"scripts/create-admin-user.sh {instance_name} {admin_email} {admin_password}",
+                f"scripts/create-admin-user.sh {namespace} {instance_name} {admin_email} {admin_password}",
             ),
         ]
     )

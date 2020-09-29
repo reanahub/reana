@@ -5,18 +5,18 @@ finalise its configuration.
 
 1. Initialise the database:
 
-    $ kubectl exec deployment/reana-server -c rest-api -- \
+    $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
         ./scripts/create-database.sh
 
 2. Create administrator user and corresponding access token:
 
-    $ mytoken=$(kubectl exec deployment/reana-server -c rest-api -- \
+    $ mytoken=$(kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
           flask reana-admin create-admin-user --email john.doe@example.org \
                                               --password mysecretpassword)
 
 3. Store administrator access token as Kubernetes secret:
 
-    $ kubectl create secret generic {{ .Release.Name }}-admin-access-token \
+    $ kubectl -n {{ .Release.Namespace }} create secret generic {{ .Release.Name }}-admin-access-token \
         --from-literal=ADMIN_ACCESS_TOKEN="$mytoken"
 
 4. Try to run your first REANA example:
