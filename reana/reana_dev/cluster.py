@@ -330,6 +330,10 @@ def cluster_deploy(
                 get_srcdir("reana"),
                 f"scripts/create-admin-user.sh {instance_name} {admin_email} {admin_password}",
             ),
+            os.path.join(
+                get_srcdir("reana"),
+                f"scripts/create-quotas.sh {instance_name} {admin_email} {admin_password}",
+            ),
         ]
     )
     for cmd in cmds:
