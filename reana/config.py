@@ -184,3 +184,6 @@ JAVASCRIPT_VERSION_FILE = "package.json"
 
 PYTHON_VERSION_FILE = "version.py"
 """Python package version file."""
+
+GIT_DEFAULT_BASE_BRANCH = "master"
+"""Default git base branch we shall be working against."""

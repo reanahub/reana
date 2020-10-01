@@ -8,21 +8,24 @@
 
 """`reana-dev` related utils."""
 
+import click
 import datetime
+import functools
 import importlib.util
 import json
 import os
+import semver
 import subprocess
 import sys
-
-import click
-import semver
 import yaml
+
 from packaging.version import InvalidVersion, Version
 
 from reana.config import (
+    CLUSTER_DEPLOYMENT_MODES,
     COMPONENTS_USING_SHARED_MODULE_COMMONS,
     COMPONENTS_USING_SHARED_MODULE_DB,
+    GIT_DEFAULT_BASE_BRANCH,
     HELM_VERSION_FILE,
     JAVASCRIPT_VERSION_FILE,
     OPENAPI_VERSION_FILE,
@@ -31,7 +34,6 @@ from reana.config import (
     REPO_LIST_CLIENT,
     REPO_LIST_CLUSTER,
     REPO_LIST_DEMO,
-    CLUSTER_DEPLOYMENT_MODES,
 )
 
 INSTANCE_NAME = os.path.basename(os.environ["VIRTUAL_ENV"])
@@ -363,9 +365,9 @@ def is_last_commit_tagged(package):
     return bool(tag)
 
 
-def is_feature_branch(component):
-    """Check whether component current branch is different from master."""
-    return get_current_branch(get_srcdir(component)) != "master"
+def is_feature_branch(component, base=GIT_DEFAULT_BASE_BRANCH):
+    """Check whether component current branch is different from base branch."""
+    return get_current_branch(get_srcdir(component)) != base
 
 
 def replace_string(
@@ -763,3 +765,20 @@ def get_docker_tag(component):
             component,
         )
         sys.exit(1)
+
+
+def click_add_git_base_branch_option(func):
+    """Add `--base` git base branch option to click commands."""
+
+    @click.option(
+        "--base",
+        default=GIT_DEFAULT_BASE_BRANCH,
+        help="Against which git base branch are we working? [{}]".format(
+            GIT_DEFAULT_BASE_BRANCH
+        ),
+    )
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper

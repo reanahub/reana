@@ -108,7 +108,7 @@ def reana_dev():  # noqa: D301
 
         \b
         $ cd reana-workflow-controller
-        $ reana-dev git-checkout -b . 72 --fetch
+        $ reana-dev git-checkout-pr -b . 72 --fetch
         $ reana-dev docker-build -c .
         $ reana-dev kind-load-docker-image -c .
         $ reana-dev kubectl-delete-pod -c .
@@ -118,8 +118,8 @@ def reana_dev():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ reana-dev git-checkout -b reana-server 72
-        $ reana-dev git-checkout -b reana-workflow-controller 98
+        $ reana-dev git-checkout-pr -b reana-server 72
+        $ reana-dev git-checkout-pr -b reana-workflow-controller 98
         $ reana-dev git-status
         $ reana-dev docker-build
         $ reana-dev kind-load-docker-image -c reana-server
@@ -132,11 +132,19 @@ def reana_dev():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ reana-dev git-checkout -b reana-commons 72
-        $ reana-dev git-checkout -b reana-db 73
-        $ reana-dev git-checkout -b reana-workflow-controller 98
-        $ reana-dev git-checkout -b reana-server 112
+        $ reana-dev git-checkout-pr -b reana-commons 72
+        $ reana-dev git-checkout-pr -b reana-db 73
+        $ reana-dev git-checkout-pr -b reana-workflow-controller 98
+        $ reana-dev git-checkout-pr -b reana-server 112
         $ reana-dev run-ci [using same old options]
+
+    How to work on maintenance branches:
+
+    .. code-block:: console
+
+        \b
+        $ reana-dev git-checkout -c CLIENT -c CLUSTER maint-0.7
+        $ reana-dev git-status --base maint-0.7 -s
 
     How to release and push cluster component images:
 
@@ -166,7 +174,7 @@ def version():
 @click.command()
 def help():
     """Display usage help tips and tricks."""
-    click.echo(cli.__doc__)
+    click.echo(__doc__)
 
 
 for cmd in (

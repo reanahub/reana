@@ -18,12 +18,14 @@ import click
 from reana.config import (
     COMPONENTS_USING_SHARED_MODULE_COMMONS,
     COMPONENTS_USING_SHARED_MODULE_DB,
+    GIT_DEFAULT_BASE_BRANCH,
     REPO_LIST_ALL,
     REPO_LIST_SHARED,
 )
 
 from reana.reana_dev.utils import (
     bump_component_version,
+    click_add_git_base_branch_option,
     display_message,
     fetch_latest_pypi_version,
     get_current_component_version_from_source_files,
@@ -102,7 +104,9 @@ def git_is_current_version_tagged(component):
     return bool(is_version_tagged)
 
 
-def git_create_release_commit(component, next_version=None):
+def git_create_release_commit(
+    component, base=GIT_DEFAULT_BASE_BRANCH, next_version=None
+):
     """Create a release commit for the given component."""
     if "release:" in get_current_commit(get_srcdir(component)):
         display_message("Nothing to do, last commit is a release commit.", component)
@@ -111,7 +115,7 @@ def git_create_release_commit(component, next_version=None):
     current_version = get_current_component_version_from_source_files(component)
     if not current_version and not next_version:
         display_message(
-            f"Version cannot be autodiscovered from source files.", component
+            "Version cannot be autodiscovered from source files.", component
         )
         sys.exit(1)
     elif not git_is_current_version_tagged(component) and not next_version:
@@ -130,7 +134,7 @@ def git_create_release_commit(component, next_version=None):
         run_command(
             "git branch --show-current", component, display=False, return_output=True,
         )
-        == "master"
+        == base
     ):
         run_command(f"git checkout -b release-{next_version}", component)
 
@@ -146,6 +150,17 @@ def git_create_release_commit(component, next_version=None):
 
 def compare_branches(branch_to_compare, current_branch):
     """Compare two branches with ``git rev-list``."""
+    cmd = "git branch -a | grep -c remotes/{}".format(branch_to_compare)
+    try:
+        check = subprocess.check_output(cmd, shell=True)
+    except subprocess.CalledProcessError:
+        check = 0
+    if check == 0:
+        click.secho(
+            "ERROR: Branch {} does not exist.".format(branch_to_compare), fg="red"
+        )
+        return 0, 0
+
     cmd = "git rev-list --left-right --count {0}...{1}".format(
         branch_to_compare, current_branch
     )
@@ -165,7 +180,12 @@ def is_component_behind_branch(
 
 
 def print_branch_difference_report(
-    component, branch_to_compare, current_branch=None, commit=None, short=False,
+    component,
+    branch_to_compare,
+    current_branch=None,
+    base=GIT_DEFAULT_BASE_BRANCH,
+    commit=None,
+    short=False,
 ):
     """Report to stdout the differences between two branches."""
     # detect how far it is ahead/behind from pr/origin/upstream
@@ -181,8 +201,8 @@ def print_branch_difference_report(
             report += "{0} BEHIND ".format(behind)
         report += branch_to_compare + ")"
     # detect rebase needs for local branches and PRs
-    if branch_to_compare != "upstream/master":
-        branch_to_compare = "upstream/master"
+    if branch_to_compare != "upstream/{}".format(base):
+        branch_to_compare = "upstream/{}".format(base)
         behind, ahead = compare_branches(branch_to_compare, current_branch)
         if behind:
             report += "(STEMS FROM "
@@ -192,7 +212,7 @@ def print_branch_difference_report(
 
     click.secho("{0}".format(component), nl=False, bold=True)
     click.secho(" @ ", nl=False, dim=True)
-    if current_branch == "master":
+    if current_branch == base:
         click.secho("{0}".format(current_branch), nl=False)
     else:
         click.secho("{0}".format(current_branch), nl=False, fg="green")
@@ -361,7 +381,8 @@ def git_clone(user, component):  # noqa: D301
     help="Show git status short format details?",
 )
 @git_commands.command(name="git-status")
-def git_status(component, short):  # noqa: D301
+@click_add_git_base_branch_option
+def git_status(component, short, base):  # noqa: D301
     """Report status of REANA source repositories.
 
     \b
@@ -380,8 +401,10 @@ def git_status(component, short):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param base: Against which git base branch are we working? [default=master]
     :param verbose: Show git status details? [default=False]
     :type component: str
+    :type base: str
     """
     components = select_components(component)
     for component in components:
@@ -389,15 +412,17 @@ def git_status(component, short):  # noqa: D301
         # detect all local and remote branches
         all_branches = get_all_branches(get_srcdir(component))
         # detect branch to compare against
-        if current_branch == "master":  # master
-            branch_to_compare = "upstream/master"
+        if current_branch == base:  # base branch
+            branch_to_compare = "upstream/" + base
         elif current_branch.startswith("pr-"):  # other people's PR
             branch_to_compare = "upstream/" + current_branch.replace("pr-", "pr/")
         else:
             branch_to_compare = "origin/" + current_branch  # my PR
             if "remotes/" + branch_to_compare not in all_branches:
-                branch_to_compare = "origin/master"  # local unpushed branch
-        print_branch_difference_report(component, branch_to_compare, short=short)
+                branch_to_compare = "origin/" + base  # local unpushed branch
+        print_branch_difference_report(
+            component, branch_to_compare, base=base, short=short
+        )
 
 
 @click.option(
@@ -540,12 +565,62 @@ def git_branch(component):  # noqa: D301
         run_command(cmd, component)
 
 
+@click.argument("branch",)
+@click.option(
+    "--component",
+    "-c",
+    multiple=True,
+    default=["CLUSTER"],
+    help="Which components? [shortname|name|.|CLUSTER|ALL]",
+)
+@click.option("--fetch", is_flag=True, default=False)
+@git_commands.command(name="git-checkout")
+def git_checkout(branch, component, fetch):  # noqa: D301
+    """Check out given local branch in desired components.
+
+    \b
+    :param branch: Do you want to checkout some existing branch? [e.g. maint-0.7]
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :type component: str
+    :param fetch: Should we fetch latest upstream first? [default=False]
+    :type branch: str
+    :type component: list
+    :type fetch: bool
+    """
+    for component in select_components(component):
+        if fetch:
+            run_command("git fetch upstream", component)
+        if branch in get_all_branches(get_srcdir(component)):
+            run_command("git checkout {}".format(branch), component)
+        else:
+            click.secho(
+                "No branch {} in component {}, staying on current one.".format(
+                    branch, component
+                ),
+                fg="red",
+            )
+
+
 @click.option(
     "--branch", "-b", nargs=2, multiple=True, help="Which PR? [component PR#]"
 )
 @click.option("--fetch", is_flag=True, default=False)
-@git_commands.command(name="git-checkout")
-def git_checkout(branch, fetch):  # noqa: D301
+@git_commands.command(name="git-checkout-pr")
+def git_checkout_pr(branch, fetch):  # noqa: D301
     """Check out local branch corresponding to a component pull request.
 
     The ``-b`` option can be repetitive to check out several pull requests in
@@ -582,8 +657,9 @@ def git_checkout(branch, fetch):  # noqa: D301
     "--push", is_flag=True, default=False, help="Should we push to origin and upstream?"
 )
 @git_commands.command(name="git-merge")
-def git_merge(branch, push):  # noqa: D301
-    """Merge a component pull request to local master.
+@click_add_git_base_branch_option
+def git_merge(branch, base, push):  # noqa: D301
+    """Merge a component pull request to local base branch.
 
     The ``-b`` option can be repetitive to merge several pull requests in
     several repositories at the same time.
@@ -593,8 +669,10 @@ def git_merge(branch, push):  # noqa: D301
                    two strings specifying the component name and the pull
                    request number. For example, ``-b reana-workflow-controler
                    72`` will merge a local branch called ``pr-72`` from the
-                   reana-workflow-controller to master branch.
+                   reana-workflow-controller to the base branch.
+    :param base: Against which git base branch are we working on? [default=master]
     :param push: Should we push to origin and upstream? [default=False]
+    :type base: str
     :type branch: list
     :type push: bool
     """
@@ -605,8 +683,8 @@ def git_merge(branch, push):  # noqa: D301
             for cmd in [
                 "git fetch upstream",
                 "git diff pr-{0}..upstream/pr/{0} --exit-code".format(pull_request),
-                "git checkout master",
-                "git merge --ff-only upstream/master",
+                "git checkout {0}".format(base),
+                "git merge --ff-only upstream/{0}".format(base),
                 "git merge --ff-only upstream/pr/{0}".format(pull_request),
                 "git branch -d pr-{0}".format(pull_request),
             ]:
@@ -614,8 +692,8 @@ def git_merge(branch, push):  # noqa: D301
 
             if push:
                 for cmd in [
-                    "git push origin master",
-                    "git push upstream master",
+                    "git push origin {0}".format(base),
+                    "git push upstream {0}".format(base),
                 ]:
                     run_command(cmd, component)
         else:
@@ -665,7 +743,8 @@ def git_fetch(component):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @git_commands.command(name="git-upgrade")
-def git_upgrade(component):  # noqa: D301
+@click_add_git_base_branch_option
+def git_upgrade(component, base):  # noqa: D301
     """Upgrade REANA local source code repositories and push to GitHub origin.
 
     \b
@@ -684,14 +763,16 @@ def git_upgrade(component):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param base: Against which git base branch are we working on? [default=master]
     :type component: str
+    :type base: str
     """
     for component in select_components(component):
         for cmd in [
             "git fetch upstream",
-            "git checkout master",
-            "git merge --ff-only upstream/master",
-            "git push origin master",
+            "git checkout {0}".format(base),
+            "git merge --ff-only upstream/{0}".format(base),
+            "git push origin {0}".format(base),
             "git checkout -",
         ]:
             run_command(cmd, component)
@@ -754,7 +835,8 @@ def git_log(component, number, all):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @git_commands.command(name="git-diff")
-def git_diff(component):  # noqa: D301
+@click_add_git_base_branch_option
+def git_diff(component, base):  # noqa: D301
     """Diff checked-out REANA local source code repositories.
 
     \b
@@ -773,11 +855,13 @@ def git_diff(component):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param base: Against which git base branch are we working on? [default=master]
     :type component: str
+    :type base: str
     """
     for component in select_components(component):
         for cmd in [
-            "git diff master",
+            "git diff {}".format(base),
         ]:
             run_command(cmd, component)
 
@@ -790,7 +874,8 @@ def git_diff(component):  # noqa: D301
     help="Which components? [name|CLUSTER]",
 )
 @git_commands.command(name="git-push")
-def git_push(component):  # noqa: D301
+@click_add_git_base_branch_option
+def git_push(component, base):  # noqa: D301
     """Push REANA local repositories to GitHub origin.
 
     \b
@@ -809,11 +894,13 @@ def git_push(component):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param base: Against which git base branch are we working on? [default=master]
     :type component: str
+    :type base: str
     """
     components = select_components(component)
     for component in components:
-        for cmd in ["git push origin master"]:
+        for cmd in ["git push origin {}".format(base)]:
             run_command(cmd, component)
 
 
@@ -951,7 +1038,8 @@ def git_create_release_commit_command(component, version):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @git_commands.command(name="git-create-pr")
-def git_create_pr_command(component):  # noqa: D301
+@click_add_git_base_branch_option
+def git_create_pr_command(component, base):  # noqa: D301
     """Create a GitHub pull request for each selected component.
 
     \b
@@ -970,7 +1058,9 @@ def git_create_pr_command(component):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param base: Against which git base branch are we working on? [default=master]
     :type component: str
+    :type base: str
     """
 
     def _git_create_pr(comp):
@@ -985,16 +1075,18 @@ def git_create_pr_command(component):  # noqa: D301
     for component in select_components(component):
         if not is_feature_branch(component):  # replace with is_feature_branch from #371
             display_message(
-                "You are trying to create PR but the current branch is master, please "
-                "switch to the wanted feature branch.",
+                "You are trying to create PR but the current branch is base branch {}, please "
+                "switch to the wanted feature branch.".format(base),
                 component,
             )
             sys.exit(1)
         else:
-            if is_component_behind_branch(component, "upstream/master"):
-                print_branch_difference_report(component, "upstream/master")
+            if is_component_behind_branch(component, "upstream/{}".format(base)):
+                print_branch_difference_report(component, "upstream/{}".format(base))
                 display_message(
-                    "Error: please rebase your feature branch against latest master.",
+                    "Error: please rebase your feature branch against latest base branch {}.".format(
+                        base
+                    ),
                     component,
                 )
                 sys.exit(1)
