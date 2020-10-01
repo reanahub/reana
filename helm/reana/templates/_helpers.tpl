@@ -11,12 +11,7 @@ naming spec: `my-reana-batch-yadage-3c640169-d3b7-41ad-9c09-392c903fc1d8`
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 13 | trimSuffix "-" -}}
 {{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
-{{- if contains $name .Release.Name -}}
 {{- .Release.Name | trunc 13 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s" .Release.Name $name | trunc 13 | trimSuffix "-" -}}
-{{- end -}}
 {{- end -}}
 {{- end -}}
 
