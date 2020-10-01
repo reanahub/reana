@@ -707,7 +707,7 @@ def bump_component_version(component, current_version, next_version=None):
         )
 
 
-def get_current_tag(component):
+def get_git_tag(component):
     """Return the current version of a component.
 
     :param component: standard component name
@@ -724,3 +724,24 @@ def validate_mode_option(ctx, param, value):
             "Supported values are '{}'.".format("', '".join(CLUSTER_DEPLOYMENT_MODES))
         )
     return value
+
+
+def get_docker_tag(component):
+    """Return the current semver version of a component.
+
+    :param component: standard component name
+    :type component: str
+    """
+    tag = get_git_tag(component)
+
+    if parse_pep440_version(tag):
+        return translate_pep440_to_semver2(tag)
+    elif semver.VersionInfo.isvalid(tag):
+        return tag
+    else:
+        display_message(
+            f"The component's latest tag ({tag}) is not a "
+            "valid version (nor PEP440 nor semver2 compliant).",
+            component,
+        )
+        sys.exit(1)

@@ -13,7 +13,7 @@ import click
 from reana.config import DOCKER_PREFETCH_IMAGES
 from reana.reana_dev.utils import (
     display_message,
-    get_current_tag,
+    get_docker_tag,
     is_component_dockerised,
     run_command,
     select_components,
@@ -32,7 +32,7 @@ def docker_commands():
     default="latest",
     help="Image tag to generate. Default 'latest'. "
     "Use 'auto' to generate git-tag-based value such as "
-    "'0.5.1-3-g75ae5ce'",
+    "'0.7.0-alpha.3'",
 )
 @click.option(
     "--component",
@@ -100,7 +100,7 @@ def docker_build(
     :param exclude_components: List of components to exclude from the build.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker image tag to generate. Default 'latest'.  Use 'auto' to
-        generate git-tag-based value such as '0.5.1-3-g75ae5ce'.
+        generate git-tag-based value such as '0.7.0-alpha.3'.
     :param build_arg: Optional docker build argument. (e.g. DEBUG=1)
     :param no_cache: Flag instructing to avoid using cache. [default=False]
     :param output_component_versions: File where to write the built images
@@ -124,7 +124,7 @@ def docker_build(
         if is_component_dockerised(component):
             cmd = "docker build"
             if tag == "auto":
-                component_tag = get_current_tag(component)
+                component_tag = get_docker_tag(component)
             for arg in build_arg:
                 cmd += " --build-arg {0}".format(arg)
             if no_cache:
@@ -209,7 +209,7 @@ def docker_rmi(user, tag, component):  # noqa: D301
     default="latest",
     help="Image tag to push. Default 'latest'. "
     "Use 'auto' to push git-tag-based value such as "
-    "'0.5.1-3-g75ae5ce'",
+    "'0.7.0-alpha.3'",
 )
 @click.option(
     "--component",
@@ -240,7 +240,7 @@ def docker_push(user, tag, component):  # noqa: D301
                                all REANA repositories.
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker image tag to push. Default 'latest'.  Use 'auto' to
-        push git-tag-based value such as '0.5.1-3-g75ae5ce'.
+        push git-tag-based value such as '0.7.0-alpha.3'.
     :param tag: Docker tag to use. [default=latest]
     :type component: str
     :type user: str
@@ -251,7 +251,7 @@ def docker_push(user, tag, component):  # noqa: D301
         component_tag = tag
         if is_component_dockerised(component):
             if tag == "auto":
-                component_tag = get_current_tag(component)
+                component_tag = get_docker_tag(component)
             cmd = "docker push {0}/{1}:{2}".format(user, component, component_tag)
             run_command(cmd, component)
         else:

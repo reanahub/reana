@@ -24,12 +24,10 @@ from reana.reana_dev.utils import (
     display_message,
     fetch_latest_pypi_version,
     get_current_component_version_from_source_files,
-    get_current_tag,
+    get_docker_tag,
     is_component_dockerised,
-    parse_pep440_version,
     run_command,
     select_components,
-    translate_pep440_to_semver2,
 )
 
 
@@ -111,23 +109,8 @@ def release_docker(ctx, component, user, image_name):  # noqa: D301
         if not is_component_dockerised(component_):
             cannot_release_on_dockerhub.append(component_)
         is_component_releasable(component_, exit_code=True, display=True)
-
-        current_tag = get_current_tag(component_)
         full_image_name = f"{user}/{image_name or component_}"
-        docker_tag = ""
-
-        if parse_pep440_version(current_tag):
-            docker_tag = translate_pep440_to_semver2(current_tag)
-        elif semver.VersionInfo.isvalid(current_tag):
-            docker_tag = current_tag
-        else:
-            display_message(
-                f"The component's latest tag ({current_tag}) is not a "
-                "valid version (nor PEP440 nor semver2 compliant).",
-                component_,
-            )
-            sys.exit(1)
-
+        docker_tag = get_docker_tag(component_)
         run_command(
             f"docker tag {full_image_name}:latest {full_image_name}:{docker_tag}",
             component_,
