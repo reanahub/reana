@@ -391,6 +391,14 @@ def replace_string(
             f'cat {file_} | grep -n -e "{line_selector_regex}" | cut -f1 -d: ',
             return_output=True,
         )
+        if not line:
+            click.secho(
+                f"[ERROR] Could not find `{line_selector_regex}` in {component}'s"
+                f" `{file_}`. Please check `{file_}`.",
+                err=True,
+                fg="red",
+            ),
+            sys.exit(1)
 
     cmd = (
         f"sed -i.bk '{line}s/{find}/{replace}/' {file_} && [ -e {file_}.bk ]"
