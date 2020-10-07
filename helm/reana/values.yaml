@@ -113,3 +113,7 @@ traefik:
   ssl:
     enabled: true
     generateTLS: true
+
+# Quota
+quota:
+  disk_update: "0 3 * * *" # everyday at 3am

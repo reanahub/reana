@@ -104,3 +104,73 @@ spec:
               path: /code/reana-server
 {{- end }}
 {{- end }}
+---
+{{- if .Values.quota.disk_update }}
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ include "reana.prefix" . }}-disk-quota-update
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: "{{ .Values.quota.disk_update }}"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: {{ include "reana.prefix" . }}-disk-quota-update
+            image: {{ .Values.components.reana_server.image }}
+            command:
+            - '/bin/sh'
+            - '-c'
+            args:
+            - 'reana-db quota disk-usage-update'
+            {{- if .Values.debug.enabled }}
+            tty: true
+            stdin: true
+            {{- end }}
+            env:
+            {{- range $key, $value := .Values.db_env_config }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- if .Values.debug.enabled }}
+            - name: FLASK_ENV
+              value:  "development"
+            {{- else }}
+            - name: REANA_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-db-secrets
+                  key: user
+            - name: REANA_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-db-secrets
+                  key: password
+            {{- end }}
+            volumeMounts:
+              {{- if .Values.debug.enabled }}
+              - mountPath: /code/
+                name: reana-code
+              {{- end }}
+              - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
+                name: reana-shared-volume
+            imagePullPolicy: IfNotPresent
+          restartPolicy: Never
+          volumes:
+          - name: reana-shared-volume
+            {{- if not (eq .Values.shared_storage.backend "hostpath") }}
+            persistentVolumeClaim:
+              claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
+              readOnly: false
+            {{- else }}
+            hostPath:
+              path:  {{ .Values.shared_storage.hostpath.root_path }}
+            {{- end }}
+          - name: reana-code
+            hostPath:
+              path: /code/reana-server
+{{- end }}

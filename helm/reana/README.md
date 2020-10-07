@@ -54,7 +54,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `notifications.email_config.smtp_server`                 | SMTP email server host                                                               | None                                            |
 | `notifications.email_config.smtp_port`                   | SMTP email server port                                                               | None                                            |
 | `notifications.enabled`                                  | Enable REANA system events notifications                                             | false                                           |
-| `notifications.system_status`                            | Cronjob pattern representing how often the system status notification should be sent. Leave it empty to deactivate it |  "0 0 * * *"   |
+| `notifications.system_status`                            | Cronjob pattern representing how often the system status notification should be sent. Leave it empty to deactivate it | "0 0 * * *"    |
 | `reana_hostname`                                         | REANA hostname (e.g. reana.example.org)                                              | None                                            |
 | `namespace_runtime`                                      | Namespace in which the REANA runtime pods (workflow engines, jobs etc...) will run   | `.Release.Namespace`                            |
 | `naming_scheme`                                          | REANA component naming scheme                                                        | None                                            |
@@ -82,3 +82,6 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `shared_storage.hostpath.root_path`                      | Path to the REANA directory inside the underlying storage volume                     | /var/reana                                      |
 | `traefik.*`                                              | Pass any value from [Traefik Helm chart values](https://github.com/helm/charts/tree/master/stable/traefik#configuration) here, e.g. `traefik.rbac.enabled=true` | - |
 | `traefik.enabled`                                        | Install Traefik in the cluster when installing REANA                                 | true                                            |
+| `volume_paths.root_path`                                 | Path to the REANA directory inside the underlying storage volume                     | /var/reana                                      |
+| `volume_paths.shared_volume_path`                        | Path inside the REANA components where the shared volume will be mounted             | /var/reana                                      |
+| `quota.disk_update`                                      | Cronjob pattern representing how often the users disk quota usage should be updated. Leave it empty to deactivate it | "0 3 * * *"     |
