@@ -452,10 +452,18 @@ def update_module_in_cluster_components(
             ),
             sys.exit(1)
 
+        new_version_obj = Version(new_version)
+        next_minor_version = ".".join(
+            [
+                str(new_version_obj.major),
+                str(new_version_obj.minor + 1),
+                str(new_version_obj.micro),
+            ]
+        )
         replace_string(
             file_="setup.py",
-            find=">=.*,<",
-            replace=f">={new_version},<",
+            find='>=.*,<.*[^",]',
+            replace=f">={new_version},<{next_minor_version}",
             line_selector_regex=f"{module}.*>=",
             component=component,
         )

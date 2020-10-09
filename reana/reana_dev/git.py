@@ -872,16 +872,16 @@ def git_upgrade_shared_modules(
     """
 
     def _create_commit_or_amend(components):
-        for component in components:
+        for c in components:
             commit_cmd = 'git commit -m "installation: bump shared modules"'
             if amend:
                 commit_cmd = "git commit --amend --no-edit"
 
             files_to_commit = ["setup.py"]
-            if os.path.exists(get_srcdir(component) + os.sep + "requirements.txt"):
+            if os.path.exists(get_srcdir(c) + os.sep + "requirements.txt"):
                 files_to_commit.append("requirements.txt")
             run_command(
-                f"git add {' '.join(files_to_commit)} && {commit_cmd}", component,
+                f"git add {' '.join(files_to_commit)} && {commit_cmd}", c,
             )
 
     components = select_components(component)
@@ -897,7 +897,7 @@ def git_upgrade_shared_modules(
         )
 
     _create_commit_or_amend(components)
-    ctx.invoke(git_diff, component=[component])
+    ctx.invoke(git_diff, component=component)
     if push:
         git_push_to_origin(components)
 
