@@ -22,8 +22,8 @@ shared_storage:
     provisioner: manila-provisioner
     type: "Geneva CephFS Testing"
     availability_zone: nova
-    os_necret_name: os-trustee
-    os_necret_namespace: kube-system
+    os_secret_name: os-trustee
+    os_secret_namespace: kube-system
     cephfs_os_share_id: <cephfs-share-id>
     cephfs_os_share_access_id: <cephfs-share-access-id>
 

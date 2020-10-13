@@ -24,8 +24,8 @@ provisioner: {{ .Values.shared_storage.cephfs.provisioner }}
 parameters:
   type: {{ .Values.shared_storage.cephfs.type }}
   zones: {{ .Values.shared_storage.cephfs.availability_zone }}
-  osSecretName: {{ .Values.shared_storage.cephfs.os_necret_name }}
-  osSecretNamespace: {{ .Values.shared_storage.cephfs.os_necret_namespace }}
+  osSecretName: {{ .Values.shared_storage.cephfs.os_secret_name }}
+  osSecretNamespace: {{ .Values.shared_storage.cephfs.os_secret_namespace }}
   protocol: CEPHFS
   backend: csi-cephfs
   csi-driver: cephfs.csi.ceph.com

@@ -7,7 +7,7 @@ metadata:
 data:
   ui-config.yaml: |
     announcement: {{ .Values.components.reana_ui.announcement | quote | default "null"  }}
-    pooling_secs: {{ .Values.components.reana_ui.pooling_secs | default 15 }}
+    polling_secs: {{ .Values.components.reana_ui.polling_secs | default 15 }}
     docs_url: {{ .Values.components.reana_ui.docs_url | quote | default "null" }}
     client_pyvenv: {{ .Values.components.reana_ui.client_pyvenv | quote | default "null" }}
     forum_url: {{ .Values.components.reana_ui.forum_url | quote | default "null" }}
