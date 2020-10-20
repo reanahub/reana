@@ -62,8 +62,10 @@ spec:
             value: {{ include "reana.prefix" . }}
           - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
             value: {{ .Release.Namespace }}
-          - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-            value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+          - name: REANA_DEFAULT_QUOTA_CPU_LIMIT
+            value: {{ .Values.quota.default_cpu_limit | quote }}
+          - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
+            value: {{ .Values.quota.default_disk_limit | quote }}
           {{- range $key, $value := .Values.db_env_config }}
           - name: {{ $key }}
             value: {{ $value | quote }}

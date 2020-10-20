@@ -85,3 +85,5 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `volume_paths.root_path`                                 | Path to the REANA directory inside the underlying storage volume                     | /var/reana                                      |
 | `volume_paths.shared_volume_path`                        | Path inside the REANA components where the shared volume will be mounted             | /var/reana                                      |
 | `quota.disk_update`                                      | Cronjob pattern representing how often the users disk quota usage should be updated. Leave it empty to deactivate it | "0 3 * * *"     |
+| `quota.default_disk_limit`                               | Default users disk quota limit in bytes.                                             | None                                            |
+| `quota.default_cpu_limit`                                | Default users CPU quota limit in milliseconds.                                       | None                                            |
