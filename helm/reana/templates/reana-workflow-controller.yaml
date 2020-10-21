@@ -58,9 +58,9 @@ spec:
           - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
             value: {{ .Values.namespace_runtime | default .Release.Namespace }}
           - name: REANA_DEFAULT_QUOTA_CPU_LIMIT
-            value: {{ .Values.quota.default_cpu_limit | quote }}
+            value: {{ .Values.quota.default_cpu_limit | default 0 | quote }}
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
-            value: {{ .Values.quota.default_disk_limit | quote }}
+            value: {{ .Values.quota.default_disk_limit | default 0 | quote }}
           {{- if .Values.naming_scheme }}
           - name: REANA_COMPONENT_NAMING_SCHEME
             value: {{ .Values.naming_scheme }}
