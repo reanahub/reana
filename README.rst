@@ -6,14 +6,14 @@
  REANA - Reusable Analyses
 ===========================
 
-.. image:: https://img.shields.io/travis/reanahub/reana.svg
-   :target: https://travis-ci.org/reanahub/reana
+.. image:: https://github.com/reanahub/reana/workflows/CI/badge.svg
+   :target: https://github.com/reanahub/reana/actions
 
 .. image:: https://readthedocs.org/projects/reana/badge/?version=latest
    :target: https://reana.readthedocs.io/en/latest/?badge=latest
 
-.. image:: https://img.shields.io/coveralls/reanahub/reana.svg
-   :target: https://coveralls.io/r/reanahub/reana
+.. image:: https://codecov.io/gh/reanahub/reana/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/reanahub/reana
 
 .. image:: https://badges.gitter.im/Join%20Chat.svg
    :target: https://gitter.im/reanahub/reana?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge

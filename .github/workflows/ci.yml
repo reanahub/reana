@@ -1,0 +1,142 @@
+# This file is part of REANA.
+# Copyright (C) 2020 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
+
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  lint-shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Runs shell script static analysis
+        run: |
+          sudo apt-get install shellcheck
+          ./run-tests.sh --check-shellscript
+
+  lint-black:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Check Python code formatting
+        run: |
+          pip install black==19.10b0
+          ./run-tests.sh --check-black
+
+  lint-pydocstyle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Check compliance with Python docstring conventions
+        run: |
+          pip install pydocstyle
+          ./run-tests.sh --check-pydocstyle
+
+  lint-check-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Check Python manifest completeness
+        run: |
+          pip install check-manifest
+          ./run-tests.sh --check-manifest
+
+  docs-sphinx:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt install libcurl4-openssl-dev libssl-dev
+          sudo apt-get install libgnutls28-dev
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip setuptools py
+          pip install -e .[all]
+
+      - name: Run Sphinx documentation with doctests
+        run: ./run-tests.sh --check-sphinx
+
+  python-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+    env:
+      VIRTUAL_ENV: "test"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip setuptools py
+          pip install twine wheel
+          pip install -e .[all]
+
+      - name: Run pytest
+        run: ./run-tests.sh --check-pytest
+
+      - name: Codecov Coverage
+        if: matrix.python-version == 3.8
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+
+  lint-helm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Fetch history
+        run: git fetch --prune --unshallow
+
+      - name: Run chart-testing (lint)
+        id: lint
+        uses: helm/chart-testing-action@v1.1.0
+        with:
+          command: lint
+          config: .github/ct.yaml
