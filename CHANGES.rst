@@ -1,25 +1,54 @@
 Changes
 =======
 
-Version master (UNRELEASED)
----------------------------
+Version 0.7.0 (2020-10-21)
+--------------------------
 
-- Adds possibility to install REANA in different namespaces than default.
-- Moves to Helm deployment.
-- Adds command to bump common packages versions.
-- Supports prefixing by Helm release name.
-- Adds Helm Chart repo site.
-- Adds new ``python-unit-tests`` command.
-- Moves part of the documentation to docs.reana.io.
-- Adds Chart Release GitHub action.
-- Drops Python 2 support.
-- Adds email notificator service.
-- Moves database initialisation and admin creation after Helm installation.
-- Adds cronjob to send periodical status reports.
-- Adds announcement configmap configuration to display on the UI.
-- Adds Black formatter support.
-- Stops exposing unused Invenio-Accounts views.
-- Starts up Postgres DB container to run tests for componentes installing reana-db.
+- Users:
+    - Adds new ``restart`` command to restart previously run or failed workflows.
+    - Adds option to ``logs`` command to filter job logs according to compute backend, docker image, job status and step name.
+    - Adds option to specify operational options in the ``reana.yaml`` of the workflow.
+    - Adds option to specify unpacked Docker images as workflow step requirement.
+    - Adds option to specify Kubernetes UID for jobs.
+    - Adds support for VOMS proxy as a new authentication method.
+    - Adds support for pulling private Docker images.
+    - Adds pagination on the workflow list and workflow detailed web interface pages.
+    - Adds user profile page to the web interface.
+    - Adds page refresh button to workflow detailed page.
+    - Adds local user web forms for sign-in and sign-up functionalities for local deployments.
+    - Fixes user experience by preventing dots as part of the workflow name to avoid confusion with restart runs.
+    - Fixes workflow specification display to show runtime parameters.
+    - Fixes file preview functionality experience to allow/disallow certain file formats.
+    - Changes Yadage workflow engine to version 0.20.1.
+    - Changes CERN HTCondor compute backend to use the new ``myschedd`` connection library.
+    - Changes CERN Slurm compute backend to improve job status detection.
+    - Changes documentation to move large parts to `docs.reana.io <http://docs.reana.io>`_.
+    - Changes ``du`` command output format.
+    - Changes ``logs`` command to enhance formatting using marks and colours.
+    - Changes ``ping`` command to perform user access token validation.
+    - Changes ``diff`` command to improve output formatting.
+    - Changes defaults to accept both ``reana.yaml`` and ``reana.yml`` filenames.
+    - Changes from Bravado to requests to improve download performance.
+    - Changes file loading to optimise CLI performance.
+- Administrators:
+    - Adds Helm chart and switches to Helm-based deployment technique instead of using now-deprecated ``reana-cluster``.
+    - Adds email notification service to inform administrators about system health.
+    - Adds announcement configuration option to display any desired text on the web UI.
+    - Adds pinning of all Python dependencies allowing to easily rebuild component images at later times.
+    - Adds support for local user management and web forms for sign-in and sign-up functionalities.
+    - Adds support for database upgrades using Alembic.
+    - Changes installation procedures to move database initialisation and admin creation after Helm installation.
+    - Changes service exposure to stop exposing unused Invenio-Accounts views.
+    - Changes runtime job instantiation into the configured runtime namespace.
+    - Changes CVMFS to be read-only mount.
+- Developers:
+    - Adds several new ``reana-dev`` commands to help with merging, releasing, unit testing.
+    - Changes base image to use Python 3.8 for all REANA cluster components.
+    - Changes pre-requisites to node version 12 and latest npm dependencies.
+    - Changes back-end code formatting to respect ``black`` coding style.
+    - Changes front-end code formatting to respect updated ``prettier`` version coding style.
+    - Changes test strategy to start PostgreSQL DB container to run tests locally.
+    - Changes auto-generated component documentation to single-page layout.
 
 Version 0.6.1 (2020-06-09)
 --------------------------
