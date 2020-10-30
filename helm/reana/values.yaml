@@ -12,7 +12,7 @@ eos:
   enabled: false
 
 shared_storage:
-  backend: hostpath # hostpath | cephfs | nfs
+  backend: hostpath  # hostpath | cephfs | nfs
   volume_size: 200
   access_modes: ReadWriteMany
   shared_volume_mount_path: "/var/reana"

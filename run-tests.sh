@@ -12,16 +12,59 @@ set -o errexit
 # Quit on unbound symbols
 set -o nounset
 
-check_black() {
-    echo '==> [INFO] Checking Black compliance...'
+check_script () {
+    shellcheck run-tests.sh
+}
+
+check_black () {
     black --check .
 }
 
-pydocstyle reana
-check_black
-check-manifest
-sphinx-build -qnNW docs docs/_build/html
-python setup.py test
-sphinx-build -qnNW -b doctest docs docs/_build/doctest
-helm lint helm/reana
-echo '==> [INFO] All tests passed! ✅'
+check_pydocstyle () {
+    pydocstyle reana
+}
+
+check_manifest () {
+    check-manifest
+}
+
+check_sphinx () {
+    sphinx-build -qnNW docs docs/_build/html
+}
+
+check_pytest () {
+    python setup.py test
+}
+
+check_helm () {
+    helm lint helm/reana
+}
+
+check_all () {
+    check_script
+    check_black
+    check_pydocstyle
+    check_manifest
+    check_sphinx
+    check_pytest
+    check_helm
+}
+
+if [ $# -eq 0 ]; then
+    check_all
+    exit 0
+fi
+
+for arg in "$@"
+do
+    case $arg in
+        --check-shellscript) check_script;;
+        --check-black) check_black;;
+        --check-pydocstyle) check_pydocstyle;;
+        --check-manifest) check_manifest;;
+        --check-sphinx) check_sphinx;;
+        --check-pytest) check_pytest;;
+        --check-helm) check_helm;;
+        *)
+    esac
+done
