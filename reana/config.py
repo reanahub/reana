@@ -8,13 +8,29 @@
 
 """``reana-dev`` CLI configuration."""
 
-REPO_LIST_DEMO = [
+REPO_LIST_DEMO_RUNNABLE = [
     "reana-demo-helloworld",
     "reana-demo-root6-roofit",
     "reana-demo-worldpopulation",
     "reana-demo-atlas-recast",
 ]
+"""All git repositories containing REANA runnable demos."""
+
+REANA_LIST_DEMO_ALL = REPO_LIST_DEMO_RUNNABLE + [
+    "reana-demo-alice-lego-train-test-run",
+    "reana-demo-alice-pt-analysis",
+    "reana-demo-bsm-search",
+    "reana-demo-cdci-crab-pulsar-integral-verification",
+    "reana-demo-cdci-integral-data-reduction",
+    "reana-demo-cms-h4l",
+    "reana-demo-cms-reco",
+    "reana-demo-cms-dimuon-mass-spectrum",
+    "reana-demo-fcchh-fullsim",
+    "reana-demo-lhcb-d2pimumu",
+    "reana-demo-lhcb-mc-production",
+]
 """All git repositories containing REANA demos."""
+
 
 REPO_LIST_ALL = [
     "docs.reana.io",
@@ -47,7 +63,7 @@ REPO_LIST_ALL = [
     "reana-workflow-engine-yadage",
     "reana-workflow-monitor",
     "www.reana.io",
-] + REPO_LIST_DEMO
+] + REPO_LIST_DEMO_RUNNABLE
 """All REANA git repositories."""
 
 REPO_LIST_CLIENT = [
@@ -187,3 +203,12 @@ PYTHON_VERSION_FILE = "version.py"
 
 GIT_DEFAULT_BASE_BRANCH = "master"
 """Default git base branch we shall be working against."""
+
+GIT_SUPPORTED_MAINT_BRANCHES = ["maint-0.7"]
+"""Git supported maintenance branches."""
+
+GITHUB_REANAHUB_URL = "https://github.com/reanahub"
+"""REANA Hub organisation GitHub URL."""
+
+CODECOV_REANAHUB_URL = "https://codecov.io/gh/reanahub"
+"""REANA Hub organisation Codecov URL."""

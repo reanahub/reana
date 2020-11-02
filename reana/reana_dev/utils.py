@@ -33,7 +33,7 @@ from reana.config import (
     REPO_LIST_ALL,
     REPO_LIST_CLIENT,
     REPO_LIST_CLUSTER,
-    REPO_LIST_DEMO,
+    REPO_LIST_DEMO_RUNNABLE,
 )
 
 INSTANCE_NAME = os.path.basename(os.environ["VIRTUAL_ENV"])
@@ -197,7 +197,7 @@ def select_components(components, exclude_components=None):
             for repo in REPO_LIST_ALL:
                 output.add(repo)
         elif component == "DEMO":
-            for repo in REPO_LIST_DEMO:
+            for repo in REPO_LIST_DEMO_RUNNABLE:
                 output.add(repo)
         elif component == "CLIENT":
             for repo in REPO_LIST_CLIENT:
