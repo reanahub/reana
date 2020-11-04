@@ -65,12 +65,12 @@ class WorkflowsTaskSet(TaskSet):
     @task
     def ping(self):
         """Ping reana instance."""
-        self.client.get(f"/api/ping")
+        self.client.get("/api/ping")
 
     @task
     def get_worflows(self):
         """Get workflows."""
-        self.client.get(f"/api/workflows", params=(("access_token", TOKEN),))
+        self.client.get("/api/workflows", params=(("access_token", TOKEN),))
 
     @task
     def get_worflow_logs(self):

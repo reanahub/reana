@@ -778,6 +778,7 @@ def git_upgrade(component, base):  # noqa: D301
             run_command(cmd, component)
 
 
+@click.argument("range", default="")
 @click.option(
     "--component",
     "-c",
@@ -785,14 +786,36 @@ def git_upgrade(component, base):  # noqa: D301
     default=["CLUSTER"],
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
-@click.option("--number", "-n", default=6, help="Number of commits to output [6]")
+@click.option(
+    "--exclude-components",
+    default="",
+    help="Which components to exclude from build? [c1,c2,c3]",
+)
+@click.option("--number", "-n", default=10, help="Number of commits to output [10]")
+@click.option("--graph", is_flag=True, default=False, help="Show log graph?")
+@click.option("--oneline", is_flag=True, default=False, help="Show one-line format?")
+@click.option("--stat", is_flag=True, default=False, help="Show diff stat?")
+@click.option("--patch", "-p", is_flag=True, default=False, help="Show diff patch?")
 @click.option("--all", is_flag=True, default=False, help="Show all references?")
+@click.option("--paginate", is_flag=True, default=False, help="Paginate output?")
 @git_commands.command(name="git-log")
-def git_log(component, number, all):  # noqa: D301
+def git_log(
+    range,
+    component,
+    exclude_components,
+    number,
+    graph,
+    oneline,
+    stat,
+    patch,
+    all,
+    paginate,
+):  # noqa: D301
     """Show commit logs in given component repositories.
 
     \b
-    :param components: The option ``component`` can be repeated. The value may
+    :param range: The commit log range to operate on.
+    :param component: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
                                'reana-workflow-controller';
@@ -807,21 +830,51 @@ def git_log(component, number, all):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
-    :param number: The number of commits to output. [6]
-    :param all: Show all references? [6]
+    :param exclude_components: List of components to exclude from the build.
+    :param number: The number of commits to output. [10]
+    :param graph: Show log graph?
+    :param oneline: Show one-line format?
+    :param patch: Show diff patch?
+    :param all: Show all references?
+    :param paginate: Paginate output?
+    :type range: str
     :type component: str
+    :type exclude_components: str
     :type number: int
+    :type graph: bool
+    :type oneline: bool
+    :type stat: bool
+    :type patch: bool
     :type all: bool
+    :type paginate: bool
     """
-    for component in select_components(component):
-        cmd = (
-            "git log -n {0} --graph --decorate"
-            ' --pretty=format:"%C(blue)%d%Creset'
-            " %C(yellow)%h%Creset %s, %C(bold green)%an%Creset,"
-            ' %C(green)%cd%Creset" --date=relative'.format(number)
-        )
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    components = select_components(component, exclude_components)
+    for component in components:
+        if paginate:
+            cmd = "git --paginate log"
+        else:
+            cmd = "git --no-pager log"
+        if number:
+            cmd += " -n {}".format(number)
+        if graph:
+            cmd += (
+                " --graph --decorate"
+                ' --pretty=format:"%C(blue)%d%Creset'
+                " %C(yellow)%h%Creset %s, %C(bold green)%an%Creset,"
+                ' %C(green)%cd%Creset" --date=relative'
+            )
+        if oneline or graph or all:
+            cmd += " --oneline"
+        if stat:
+            cmd += " --stat"
+        if patch:
+            cmd += " --patch"
         if all:
             cmd += " --all"
+        if range:
+            cmd += " {}".format(range)
         msg = cmd[0 : cmd.find("--pretty")] + "..."
         display_message(msg, component)
         run_command(cmd, component, display=False)
