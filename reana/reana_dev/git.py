@@ -54,6 +54,17 @@ def get_all_branches(srcdir):
     )
 
 
+def branch_exists(component, branch):
+    """Check whether a branch exists on a given component.
+
+    :param component: Component in which check whether the branch exists.
+    :param branch: Name of the branch.
+    :return: Whether the branch exists in components git repo.
+    :rtype: bool
+    """
+    return branch in get_all_branches(get_srcdir(component))
+
+
 def get_current_branch(srcdir):
     """Return current Git branch name checked out in the given directory.
 
@@ -604,7 +615,7 @@ def git_checkout(branch, component, fetch):  # noqa: D301
     for component in select_components(component):
         if fetch:
             run_command("git fetch upstream", component)
-        if branch in get_all_branches(get_srcdir(component)):
+        if branch_exists(component, branch):
             run_command("git checkout {}".format(branch), component)
         else:
             click.secho(
@@ -768,6 +779,11 @@ def git_upgrade(component, base):  # noqa: D301
     :type base: str
     """
     for component in select_components(component):
+        if not branch_exists(component, base):
+            display_message(
+                "Missing branch {}, skipping.".format(base), component=component
+            )
+            continue
         for cmd in [
             "git fetch upstream",
             "git checkout {0}".format(base),
