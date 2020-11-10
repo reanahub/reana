@@ -1,6 +1,19 @@
 Changes
 =======
 
+Version 0.7.1 (2020-11-10)
+--------------------------
+
+- Users:
+    - Adds support for specifying ``htcondor_max_runtime`` and ``htcondor_accounting_group`` for HTCondor compute backend jobs.
+    - Fixes restarting of Yadage and CWL workflows.
+    - Fixes REANA <-> GitLab synchronisation for projects having additional external webhooks.
+    - Changes ``ping`` command output to include REANA client and server version information.
+- Developers:
+    - Fixes conflicting ``kombu`` installation requirements by requiring Celery version 4.
+    - Changes ``/api/you`` endpoint to include REANA server version information.
+    - Changes continuous integration platform from Travis CI to GitHub Actions.
+
 Version 0.7.0 (2020-10-21)
 --------------------------
 
