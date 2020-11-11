@@ -233,7 +233,7 @@ def release_helm(ctx, user):  # noqa: D301
             f"cp -f {get_srcdir(component) + os.sep + index_path}/index.yaml {gh_pages_worktree}/index.yaml && "
             f"git add index.yaml && "
             f"git commit -m 'index.yaml: {version}' && "
-            f"git push origin {github_pages_branch} && "
+            f"git push upstream {github_pages_branch} && "
             f"cd - && "
             f"git worktree remove '{gh_pages_worktree}'",
         )
