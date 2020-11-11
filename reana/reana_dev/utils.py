@@ -636,7 +636,7 @@ def bump_pep440_version(
     has_dev_post_pre = (
         ("dev" if version.dev else False)
         or ("post" if version.post else False)
-        or version.pre[0]
+        or (version.pre[0] if version.pre else False)
     )
     if (part and part in dev_post_pre_default_version_prefixes.keys()) or (
         has_dev_post_pre and not part
