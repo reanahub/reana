@@ -356,7 +356,7 @@ def fetch_latest_pypi_version(package):
     import requests
 
     pypi_rc_info = requests.get("https://pypi.python.org/pypi/{}/json".format(package))
-    return sorted(pypi_rc_info.json()["releases"].keys())[-1]
+    return sorted(pypi_rc_info.json()["releases"].keys(), key=Version)[-1]
 
 
 def is_last_commit_tagged(package):
