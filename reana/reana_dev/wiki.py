@@ -32,6 +32,7 @@ def create_build_status_page():
             "description": "Find out how you can use REANA to describe, run, preserve and reuse your analyses.",
             "packages": {
                 "reana-client": {},
+                "blog.reana.io": {"coverage": False, "docs": False},
                 "docs.reana.io": {"coverage": False, "docs": False},
                 "www.reana.io": {"coverage": False, "docs": False},
             },

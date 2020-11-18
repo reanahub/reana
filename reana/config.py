@@ -33,6 +33,7 @@ REANA_LIST_DEMO_ALL = REPO_LIST_DEMO_RUNNABLE + [
 
 
 REPO_LIST_ALL = [
+    "blog.reana.io",
     "docs.reana.io",
     "reana",
     "reana-auth-krb5",
