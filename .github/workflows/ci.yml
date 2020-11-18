@@ -36,6 +36,23 @@ jobs:
           pip install black==19.10b0
           ./run-tests.sh --check-black
 
+  lint-flake8:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Check compliance with pep8, pyflakes and circular complexity
+        run: |
+          pip install --upgrade pip
+          pip install flake8
+          ./run-tests.sh --check-flake8
+
   lint-pydocstyle:
     runs-on: ubuntu-20.04
     steps:

@@ -52,7 +52,7 @@ packages = find_packages()
 
 # Get the version string. Cannot be done with import!
 with open(os.path.join("reana", "version.py"), "rt") as f:
-    version = re.search('__version__\s*=\s*"(?P<version>.*)"\n', f.read()).group(
+    version = re.search(r'__version__\s*=\s*"(?P<version>.*)"\n', f.read()).group(
         "version"
     )
 
