@@ -24,7 +24,7 @@ Usage:
 
 import os
 
-from locust import HttpLocust, TaskSet, between, task
+from locust import HttpUser, TaskSet, between, task
 
 TOKEN = os.environ.get("REANA_ACCESS_TOKEN")
 
@@ -80,8 +80,8 @@ class WorkflowsTaskSet(TaskSet):
         )
 
 
-class WebsiteUser(HttpLocust):
+class WebsiteUser(HttpUser):
     """Locust instance. Represent the user that attacks the system."""
 
-    task_set = WorkflowsTaskSet
+    tasks = [WorkflowsTaskSet]
     wait_time = between(5, 10)
