@@ -11,6 +11,7 @@ include *.html
 include *.yaml
 include *.yml
 include *.sh
+include .flake8
 include pytest.ini
 prune docs/_build
 recursive-include reana *.py

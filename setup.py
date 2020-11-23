@@ -52,7 +52,7 @@ packages = find_packages()
 
 # Get the version string. Cannot be done with import!
 with open(os.path.join("reana", "version.py"), "rt") as f:
-    version = re.search('__version__\s*=\s*"(?P<version>.*)"\n', f.read()).group(
+    version = re.search(r'__version__\s*=\s*"(?P<version>.*)"\n', f.read()).group(
         "version"
     )
 
@@ -81,6 +81,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python",
         "Topic :: Internet :: WWW/HTTP :: Dynamic Content",

@@ -20,6 +20,10 @@ check_black () {
     black --check .
 }
 
+check_flake8 () {
+    flake8 .
+}
+
 check_pydocstyle () {
     pydocstyle reana
 }
@@ -43,6 +47,7 @@ check_helm () {
 check_all () {
     check_script
     check_black
+    check_flake8
     check_pydocstyle
     check_manifest
     check_sphinx
@@ -60,6 +65,7 @@ do
     case $arg in
         --check-shellscript) check_script;;
         --check-black) check_black;;
+        --check-flake8) check_flake8;;
         --check-pydocstyle) check_pydocstyle;;
         --check-manifest) check_manifest;;
         --check-sphinx) check_sphinx;;
