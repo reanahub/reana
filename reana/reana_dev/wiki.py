@@ -51,7 +51,6 @@ def create_build_status_page():
                 "reana-workflow-engine-cwl": {},
                 "reana-workflow-engine-serial": {},
                 "reana-workflow-engine-yadage": {},
-                "reana-workflow-monitor": {},
             },
         },
         "developers": {

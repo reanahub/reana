@@ -62,7 +62,6 @@ REPO_LIST_ALL = [
     "reana-workflow-engine-cwl",
     "reana-workflow-engine-serial",
     "reana-workflow-engine-yadage",
-    "reana-workflow-monitor",
     "www.reana.io",
 ] + REPO_LIST_DEMO_RUNNABLE
 """All REANA git repositories."""
