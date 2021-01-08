@@ -20,3 +20,8 @@ data:
     {{- else }}
     local_users: false
     {{- end }}
+    {{- if or (.Values.components.reana_server.environment.REANA_USER_CONFIRMATION) (eq (.Values.components.reana_server.environment.REANA_USER_CONFIRMATION | toString) "<nil>") }}
+    user_confirmation: true
+    {{- else }}
+    user_confirmation: false
+    {{- end }}

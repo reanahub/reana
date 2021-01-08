@@ -12,7 +12,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_job_controller.image`                  | [REANA-Job-Controller image](https://hub.docker.com/r/reanahub/reana-job-controller) to use  | `reanahub/reana-job-controller:<chart-release-version>` |
 | `components.reana_message_broker.image`                  | [REANA-Message-Broker image](https://hub.docker.com/r/reanahub/reana-message-broker) to use | `reanahub/reana-message-broker:<chart-release-version>` |
 | `components.reana_message_broker.imagePullPolicy`        | REANA-Message-Broker image pull policy                                               | IfNotPresent                                    |
-| `components.reana_server.environment`                    | REANA-Server environment variables                                                   | {REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30}      |
+| `components.reana_server.environment`                    | REANA-Server environment variables                                                   | {REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30, REANA_USER_CONFIRMATION: true}      |
 | `components.reana_server.image`                          | [REANA-Server image](https://hub.docker.com/r/reanahub/reana-server) to use          | `reanahub/reana-server:<chart-release-version>` |
 | `components.reana_server.imagePullPolicy`                | REANA-Server image pull policy                                                       | IfNotPresent                                    |
 | `components.reana_server.uwsgi.processes`                | Number of uWSGI processes                                                            | 6                                               |
