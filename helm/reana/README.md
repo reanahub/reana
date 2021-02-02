@@ -27,6 +27,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_ui.forum_url`                          | URL of forum site (footer icon)                                                      | None                                            |
 | `components.reana_ui.chat_url`                           | URL of chat channel (footer icon)                                                    | None                                            |
 | `components.reana_ui.cern_sso`                           | Enable CERN SSO sign in                                                              | false                                           |
+| `components.reana_ui.cern_ropo`                          | Display CERN RoPO privacy policy page                                                | false                                           |
 | `components.reana_ui.local_users`                        | Enable local users sign in/up                                                        | true                                            |
 | `components.reana_ui.hide_signup`                        | Hide users sign up form                                                              | false                                           |
 | `components.reana_workflow_controller.environment`       | REANA-Workflow-Controller environment variables                                      | `{SHARED_VOLUME_PATH: /var/reana}`              |
