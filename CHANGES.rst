@@ -1,11 +1,21 @@
 Changes
 =======
 
-Version 0.7.2 (UNRELEASED)
+Version 0.7.2 (2021-02-04)
 --------------------------
 
-- Adds support for Python 3.9.
-- Fixes minor code warnings.
+- Administrators:
+    - Adds support for deployments on Kubernetes 1.20 clusters.
+    - Adds deployment option to disable user email confirmation step after sign-up.
+      (``REANA_USER_EMAIL_CONFIRMATION`` in ``components.reana_server.environment``)
+    - Adds deployment option to disable user sign-up feature completely.
+      (``components.reana_ui.hide_signup``)
+    - Adds deployment option to display CERN Privacy Notice for CERN deployments.
+      (``components.reana_ui.cern_ropo``)
+- Developers:
+    - Adds support for Python 3.9.
+    - Fixes minor code warnings.
+    - Changes CI system to include Python flake8 and Dockerfile hadolint checkers.
 
 Version 0.7.1 (2020-11-10)
 --------------------------
