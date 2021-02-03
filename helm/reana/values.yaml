@@ -60,7 +60,7 @@ components:
     image: reanahub/reana-server:0.7.1
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
-      REANA_USER_CONFIRMATION: true
+      REANA_USER_EMAIL_CONFIRMATION: true
     uwsgi:
       processes: 6
       threads: 4
