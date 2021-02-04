@@ -14,7 +14,7 @@ data:
     chat_url: {{ .Values.components.reana_ui.chat_url | quote | default "null" }}
     cern_sso: {{ .Values.components.reana_ui.cern_sso | default false }}
     cern_ropo: {{ .Values.components.reana_ui.cern_ropo | default false }}
-    hide_signup: {{ .Values.components.reana_ui.hide_signup | quote | default false }}
+    hide_signup: {{ .Values.components.reana_ui.hide_signup | default false }}
     admin_email: {{ .Values.notifications.email_config.receiver | quote | default "null" }}
     {{- if or (.Values.components.reana_ui.local_users) (eq (.Values.components.reana_ui.local_users | toString) "<nil>") }}
     local_users: true
