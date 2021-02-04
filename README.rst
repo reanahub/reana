@@ -51,10 +51,10 @@ Features
 Getting started
 ---------------
 
-You can `install REANA locally <http://docs.reana.io/development/deploying-locally/>`_, `deploy it at scale on premises
-<http://docs.reana.io/development/deploying-at-scale/>`_ (in about 10 minutes) or use https://reana.cern.ch. Once the system
-is ready, you can follow the guide to run `your first example <http://docs.reana.io/getting-started/first-example/>`_.
-For more in depth information visit the `official REANA documentation <http://docs.reana.io/>`_.
+You can `install REANA locally <https://docs.reana.io/administration/deployment/deploying-locally/>`_, `deploy it at scale on premises
+<https://docs.reana.io/administration/deployment/deploying-at-scale/>`_ (in about 10 minutes) or use https://reana.cern.ch. Once the system
+is ready, you can follow the guide to run `your first example <https://docs.reana.io/getting-started/first-example/>`_.
+For more in depth information visit the `official REANA documentation <https://docs.reana.io/>`_.
 
 Community
 ---------
