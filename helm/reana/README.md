@@ -12,10 +12,10 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_job_controller.image`                  | [REANA-Job-Controller image](https://hub.docker.com/r/reanahub/reana-job-controller) to use  | `reanahub/reana-job-controller:<chart-release-version>` |
 | `components.reana_message_broker.image`                  | [REANA-Message-Broker image](https://hub.docker.com/r/reanahub/reana-message-broker) to use | `reanahub/reana-message-broker:<chart-release-version>` |
 | `components.reana_message_broker.imagePullPolicy`        | REANA-Message-Broker image pull policy                                               | IfNotPresent                                    |
-| `components.reana_server.environment`                    | REANA-Server environment variables                                                   | {REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30}      |
+| `components.reana_server.environment`                    | REANA-Server environment variables                                                   | {REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30, REANA_USER_EMAIL_CONFIRMATION: true}      |
 | `components.reana_server.image`                          | [REANA-Server image](https://hub.docker.com/r/reanahub/reana-server) to use          | `reanahub/reana-server:<chart-release-version>` |
 | `components.reana_server.imagePullPolicy`                | REANA-Server image pull policy                                                       | IfNotPresent                                    |
-| `components.reana_server.uwsgi.processes`                | Number of uWSGI processes                                                           | 6                                               |
+| `components.reana_server.uwsgi.processes`                | Number of uWSGI processes                                                            | 6                                               |
 | `components.reana_server.uwsgi.threads`                  | Number of uWSGI threads                                                              | 4                                               |
 | `components.reana_ui.announcement`                       | Announcement message displayed in site top banner                                    | None                                            |
 | `components.reana_ui.enabled`                            | Instantiate the [REANA-UI](https://github.com/reanahub/reana-ui)                     | true                                            |
@@ -27,7 +27,9 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_ui.forum_url`                          | URL of forum site (footer icon)                                                      | None                                            |
 | `components.reana_ui.chat_url`                           | URL of chat channel (footer icon)                                                    | None                                            |
 | `components.reana_ui.cern_sso`                           | Enable CERN SSO sign in                                                              | false                                           |
+| `components.reana_ui.cern_ropo`                          | Display CERN RoPO privacy policy page                                                | false                                           |
 | `components.reana_ui.local_users`                        | Enable local users sign in/up                                                        | true                                            |
+| `components.reana_ui.hide_signup`                        | Hide users sign up form                                                              | false                                           |
 | `components.reana_workflow_controller.environment`       | REANA-Workflow-Controller environment variables                                      | `{SHARED_VOLUME_PATH: /var/reana}`              |
 | `components.reana_workflow_controller.image`             | [REANA-Workflow-Controller image](https://hub.docker.com/r/reanahub/reana-workflow-controller) to use | `reanahub/reana-workflow-controller:<chart-release-version>` |
 | `components.reana_workflow_controller.imagePullPolicy`   | REANA-Workflow-Controller image pull policy                                          | IfNotPresent                                    |

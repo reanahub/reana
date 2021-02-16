@@ -60,6 +60,7 @@ components:
     image: reanahub/reana-server:0.8.0-alpha.1
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
+      REANA_USER_EMAIL_CONFIRMATION: true
     uwsgi:
       processes: 6
       threads: 4
@@ -78,7 +79,7 @@ components:
     image: reanahub/reana-job-controller:0.8.0-alpha.2
   reana_message_broker:
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-message-broker:0.7.0
+    image: reanahub/reana-message-broker:0.7.1
 
 notifications:
   enabled: false
