@@ -1,6 +1,14 @@
 Changes
 =======
 
+Version 0.7.3 (UNRELEASED)
+--------------------------
+
+- Administrators:
+    - Adds new configuration to toggle Kubernetes user jobs clean up.
+      (``REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES`` in ``components.reana_workflow_controller.environment``)
+    - Improves platform resilience.
+
 Version 0.7.2 (2021-02-04)
 --------------------------
 
