@@ -1,16 +1,21 @@
 Changes
 =======
 
-Version 0.7.3 (UNRELEASED)
+Version 0.7.3 (2021-03-24)
 --------------------------
 
+- Users:
+    - Adds ``reana-client validate`` options to detect possible issues with workflow input parameters and environment images.
+    - Fixes problem with failed jobs being reported as still running in case of network problems.
+    - Fixes job command encoding issues when dispatching jobs to HTCondor and Slurm backends.
 - Administrators:
     - Adds new configuration to toggle Kubernetes user jobs clean up.
       (``REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES`` in ``components.reana_workflow_controller.environment``)
     - Improves platform resilience.
 - Developers:
-    - Adds new flags to ``reana-dev run-example`` allowing full paralell test matrix execution
-      (``--compute-backend``, ``--submit-only`` and ``--check-only``).
+    - Adds new command-line options to ``reana-dev run-example`` command allowing full parallel asynchronous execution of demo examples.
+    - Adds default configuration for developer deployment mode to keep failed workflow and job pods for easier debugging.
+    - Changes job status consumer communications to improve overall platform resilience.
 
 Version 0.7.2 (2021-02-04)
 --------------------------

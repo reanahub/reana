@@ -26,7 +26,7 @@ keywords:
   - reusable-science
 type: application
 # Chart version.
-version: 0.7.2
+version: 0.7.3
 kubeVersion: ">= 1.13.0-0 < 1.21.0-0"
 dependencies:
   - name: traefik
