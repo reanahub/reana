@@ -5,6 +5,8 @@ components:
       image: reanahub/reana-server
     reana_workflow_controller:
       image: reanahub/reana-workflow-controller
+      environment:
+        REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES: failed
     reana_workflow_engine_cwl:
       image: reanahub/reana-workflow-engine-cwl
     reana_workflow_engine_yadage:
