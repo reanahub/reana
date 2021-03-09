@@ -8,6 +8,9 @@ Version 0.7.3 (UNRELEASED)
     - Adds new configuration to toggle Kubernetes user jobs clean up.
       (``REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES`` in ``components.reana_workflow_controller.environment``)
     - Improves platform resilience.
+- Developers:
+    - Adds new flags to ``reana-dev run-example`` allowing full paralell test matrix execution
+      (``--compute-backend``, ``--submit-only`` and ``--check-only``).
 
 Version 0.7.2 (2021-02-04)
 --------------------------
