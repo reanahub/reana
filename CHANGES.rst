@@ -1,6 +1,12 @@
 Changes
 =======
 
+Version 0.7.4 (UNRELEASED)
+--------------------------
+
+- Administrators:
+    - Adds configuration environment variable to set job memory limits for the Kubernetes compute backend (``REANA_KUBERNETES_JOBS_MEMORY_LIMIT``).
+
 Version 0.7.3 (2021-03-24)
 --------------------------
 

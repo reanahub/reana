@@ -66,7 +66,7 @@ components:
       threads: 4
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-workflow-controller:0.7.2
+    image: reanahub/reana-workflow-controller:0.7.3-alpha.1
     environment:
       SHARED_VOLUME_PATH: /var/reana
   reana_workflow_engine_cwl:
@@ -76,7 +76,7 @@ components:
   reana_workflow_engine_serial:
     image: reanahub/reana-workflow-engine-serial:0.7.3
   reana_job_controller:
-    image: reanahub/reana-job-controller:0.7.3
+    image: reanahub/reana-job-controller:0.7.4-alpha.1
   reana_message_broker:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-message-broker:0.7.1

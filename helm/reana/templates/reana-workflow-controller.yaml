@@ -79,6 +79,11 @@ spec:
           - name: REANA_RUNTIME_KUBERNETES_NODE_LABEL
             value: {{ .Values.node_label_runtime }}
           {{- end }}
+          {{- if .Values.kubernetes_jobs_memory_limit }}
+          {{- $_ := required "In order to use .Values.kubernetes_jobs_memory_limit safely you should set the label .Values.node_label_runtime and label a node with it." .Values.node_label_runtime }}
+          - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
+            value: {{ .Values.kubernetes_jobs_memory_limit }}
+          {{- end }}
           - name: REANA_JOB_CONTROLLER_IMAGE
             value: {{ .Values.components.reana_job_controller.image }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_CWL
