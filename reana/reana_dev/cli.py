@@ -80,6 +80,20 @@ def reana_dev():  # noqa: D301
         $ # example (d): debug mode with code sharing as well
         $ reana-dev cluster-create -m /var/reana:/var/reana --mode debug
 
+    How to setup a local multinode cluster:
+
+    .. code-block:: console
+
+        \b
+        $ reana-dev cluster-create -m /var/reana:/var/reana --worker-nodes 3
+        $ kubectl label node kind-worker reana.io/system=infrastructure
+        $ kubectl label node kind-worker2 reana.io/system=runtimebatch
+        $ kubectl label node kind-worker3 reana.io/system=runtimejobs
+        $ reana-dev cluster-build --skip-load
+        $ reana-dev kind-load-docker-image -c CLUSTER-INFRASTRUCTURE -n kind-worker
+        $ reana-dev kind-load-docker-image -c CLUSTER-RUNTIMEBATCH -n kind-worker2
+        $ reana-dev kind-load-docker-image -c reana-demo-worldpopulation -n kind-worker3
+
     How to set up your shell environment variables:
 
     .. code-block:: console

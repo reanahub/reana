@@ -34,6 +34,8 @@ from reana.config import (
     REPO_LIST_CLIENT,
     REPO_LIST_CLUSTER,
     REPO_LIST_DEMO_RUNNABLE,
+    REPO_LIST_CLUSTER_INFRASTRUCTURE,
+    REPO_LIST_CLUSTER_RUNTIME_BATCH,
 )
 
 INSTANCE_NAME = os.path.basename(os.environ["VIRTUAL_ENV"])
@@ -204,6 +206,12 @@ def select_components(components, exclude_components=None):
                 output.add(repo)
         elif component == "CLUSTER":
             for repo in REPO_LIST_CLUSTER:
+                output.add(repo)
+        elif component == "CLUSTER-INFRASTRUCTURE":
+            for repo in REPO_LIST_CLUSTER_INFRASTRUCTURE:
+                output.add(repo)
+        elif component == "CLUSTER-RUNTIMEBATCH":
+            for repo in REPO_LIST_CLUSTER_RUNTIME_BATCH:
                 output.add(repo)
         elif component == ".":
             cwd = os.path.basename(os.getcwd())

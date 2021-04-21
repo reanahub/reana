@@ -175,9 +175,10 @@ def cluster_create(mounts, mode, worker_nodes):  # noqa: D301
     help="Which components to exclude from build? [c1,c2,c3]",
 )
 @click.option("--no-cache", is_flag=True, help="Do not use Docker image layer cache.")
+@click.option("--skip-load", is_flag=True, help="Do not load images into kind node(s).")
 @cluster_commands.command(name="cluster-build")
 def cluster_build(
-    build_arg, mode, exclude_components, no_cache,
+    build_arg, mode, exclude_components, no_cache, skip_load
 ):  # noqa: D301
     """Build REANA cluster.
 
@@ -203,8 +204,8 @@ def cluster_build(
     if no_cache:
         cmd += " --no-cache"
     cmds.append(cmd)
-    # load built Docker images into cluster
-    if mode in ("releasepypi", "latest", "debug"):
+    if not skip_load and mode in ("releasepypi", "latest", "debug"):
+        # load built Docker images into cluster
         cmd = "reana-dev kind-load-docker-image -c CLUSTER"
         if exclude_components:
             cmd += " --exclude-components {}".format(exclude_components)

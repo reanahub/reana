@@ -69,10 +69,6 @@ spec:
             {{- end }}
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
-            - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-              value: {{ .Release.Namespace }}
-            - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-              value: {{ .Values.namespace_runtime | default .Release.Namespace }}
             - name: REANA_EMAIL_SENDER
               value: {{ .Values.notifications.email_config.sender }}
             - name: REANA_ADMIN_ACCESS_TOKEN

@@ -79,9 +79,17 @@ spec:
           - name: REANA_RUNTIME_KUBERNETES_SERVICEACCOUNT_NAME
             value: {{ include "reana.prefixed_runtime_svaccount_name" . }}
           {{- end }}
-          {{- if .Values.node_label_runtime }}
-          - name: REANA_RUNTIME_KUBERNETES_NODE_LABEL
-            value: {{ .Values.node_label_runtime }}
+          {{- if .Values.node_label_runtimebatch }}
+          - name: REANA_RUNTIME_BATCH_KUBERNETES_NODE_LABEL
+            value: {{ .Values.node_label_runtimebatch }}
+          {{- end }}
+          {{- if .Values.node_label_runtimejobs }}
+          - name: REANA_RUNTIME_JOBS_KUBERNETES_NODE_LABEL
+            value: {{ .Values.node_label_runtimejobs }}
+          {{- end }}
+          {{- if .Values.node_label_runtimesessions }}
+          - name: REANA_RUNTIME_SESSIONS_KUBERNETES_NODE_LABEL
+            value: {{ .Values.node_label_runtimesessions }}
           {{- end }}
           - name: REANA_JOB_CONTROLLER_IMAGE
             value: {{ .Values.components.reana_job_controller.image }}

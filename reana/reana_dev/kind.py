@@ -33,12 +33,18 @@ def kind_commands():
     help="Which components? [name|CLUSTER]",
 )
 @click.option(
+    "--node",
+    "-n",
+    multiple=True,
+    help="Which nodes to load the images to? [`kubectl get nodes` to see available ones]",
+)
+@click.option(
     "--exclude-components",
     default="",
     help="Which components to exclude from build? [c1,c2,c3]",
 )
 @kind_commands.command(name="kind-load-docker-image")
-def kind_load_docker_image(user, component, exclude_components):  # noqa: D301
+def kind_load_docker_image(user, component, node, exclude_components):  # noqa: D301
     """Load Docker images to the cluster.
 
     \b
@@ -69,9 +75,13 @@ def kind_load_docker_image(user, component, exclude_components):  # noqa: D301
         if component in DOCKER_PREFETCH_IMAGES:
             for image in DOCKER_PREFETCH_IMAGES[component]:
                 cmd = "kind load docker-image {0}".format(image)
+                if node:
+                    cmd = f"{cmd} --nodes {','.join(node)}"
                 run_command(cmd, component)
         elif is_component_dockerised(component):
             cmd = "kind load docker-image {0}/{1}".format(user, component)
+            if node:
+                cmd = f"{cmd} --nodes {','.join(node)}"
             run_command(cmd, component)
         else:
             msg = "Ignoring this component that does not contain" " a Dockerfile."

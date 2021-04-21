@@ -76,31 +76,42 @@ REPO_LIST_CLIENT = [
 ]
 """List of git repositories related to command line clients."""
 
-REPO_LIST_CLUSTER = [
-    # shared utils
-    "pytest-reana",
-    "reana-commons",
-    "reana-db",
-    # cluster helpers
-    "reana-auth-krb5",
-    "reana-auth-vomsproxy",
-    # cluster components
+REPO_LIST_CLUSTER_INFRASTRUCTURE = [
     "reana-ui",
-    "reana-job-controller",
     "reana-message-broker",
     "reana-server",
     "reana-workflow-controller",
+]
+"""List of git repositories related to infrastructure cluster components."""
+
+REPO_LIST_CLUSTER_RUNTIME_BATCH = [
+    "reana-job-controller",
     "reana-workflow-engine-cwl",
     "reana-workflow-engine-serial",
     "reana-workflow-engine-yadage",
 ]
-"""List of git repositories related to cluster components."""
+"""List of git repositories related to batch runtime cluster components."""
 
 REPO_LIST_SHARED = [
     "reana-db",
     "reana-commons",
 ]
 """List of shared modules among REANA components."""
+
+REPO_LIST_CLUSTER = (
+    [
+        # shared utils
+        "pytest-reana",
+        # cluster helpers
+        "reana-auth-krb5",
+        "reana-auth-vomsproxy",
+    ]
+    + REPO_LIST_SHARED
+    + REPO_LIST_CLUSTER_INFRASTRUCTURE
+    + REPO_LIST_CLUSTER_RUNTIME_BATCH
+)
+"""List of git repositories related to cluster components."""
+
 
 WORKFLOW_ENGINE_LIST_ALL = ["cwl", "serial", "yadage"]
 """List of supported workflow engines."""
