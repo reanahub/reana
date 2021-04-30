@@ -9,13 +9,16 @@
 """`reana-dev`'s run commands."""
 
 import os
+import subprocess
 import sys
 import time
 
 import click
 
 from reana.config import (
+    COMPUTE_BACKEND_LIST_ALL,
     EXAMPLE_LOG_MESSAGES,
+    EXAMPLE_NON_STANDARD_REANA_YAML_FILENAME,
     EXAMPLE_OUTPUT_FILENAMES,
     TIMECHECK,
     TIMEOUT,
@@ -39,15 +42,19 @@ def is_cluster_created():
     return False
 
 
-def construct_workflow_name(example, workflow_engine):
+def construct_workflow_name(example, workflow_engine, compute_backend):
     """Construct suitable workflow name for given REANA example.
 
     :param example: REANA example (e.g. reana-demo-root6-roofit)
     :param workflow_engine: workflow engine to use (cwl, serial, yadage)
+    :param compute_backend: compute backend to use (kubernetes, htcondorcern, slurmcern)
     :type example: str
     :type workflow_engine: str
+    :type compute_backend: str
     """
-    output = "{0}-{1}".format(example.replace("reana-demo-", ""), workflow_engine)
+    output = "{0}-{1}-{2}".format(
+        example.replace("reana-demo-", ""), workflow_engine, compute_backend
+    )
     return output
 
 
@@ -96,6 +103,98 @@ def select_workflow_engines(workflow_engines):
                 "Ignoring unknown workflow engine {0}.".format(workflow_engine)
             )
     return list(output)
+
+
+def select_compute_backends(compute_backends):
+    """Return known compute backends names that REANA supports.
+
+    :param workflow_engines: A list of compute backends names such as 'slurmcern'.
+    :type components: list
+
+    :return: Unique compute backend names.
+    :rtype: list
+
+    """
+
+    def _has_cern_secrets():
+        """Check whether the test user has the correct CERN secrets?."""
+        output = subprocess.check_output(["reana-client", "secrets-list"]).decode(
+            "UTF-8"
+        )
+        required_cern_secrets = [
+            "CERN_KEYTAB",
+            "CERN_USER",
+        ]
+        return all(sec in output for sec in required_cern_secrets)
+
+    output = set([])
+    has_selected_cern_compute_backend = False
+    for compute_backend in compute_backends:
+        if compute_backend in COMPUTE_BACKEND_LIST_ALL:
+            if "cern" in compute_backend:
+                has_selected_cern_compute_backend = True
+            output.add(compute_backend)
+        elif compute_backend.upper() == "ALL":
+            output = COMPUTE_BACKEND_LIST_ALL
+            has_selected_cern_compute_backend = True
+            break
+        else:
+            display_message(
+                "Ignoring unknown compute backend {0}.".format(compute_backend)
+            )
+
+    if has_selected_cern_compute_backend and not _has_cern_secrets():
+        click.secho(
+            "You are trying to use a CERN compute backend but you don't have "
+            "the correct secrets setup.\nPlease follow "
+            "http://docs.reana.io/advanced-usage/access-control/kerberos/#uploading-secrets."
+        )
+        sys.exit(1)
+    return list(output)
+
+
+def get_example_reana_yaml_file_path(example, workflow_engine, compute_backend):
+    """Get absolute path to ``reana.yaml`` file for the specified example, workflow engine and compute backend.
+
+    :param example: Example where find the ``reana.yaml`` file (one of ``reana.config.REPO_LIST_DEMO``).
+    :param workflow_engine: Workflow engine used by the example (one of ``reana.config.WORKFLOW_ENGINE_LIST_ALL``).
+    :param components: Compute backend used by the example (one of ``reana.config.COMPUTE_BACKEND_LIST_ALL``).
+    :return: Absolute path to ``reana.yaml`` that fulfills the specified characteristics. Empty string otherwise.
+    :type example: str
+    :type workflow_engine: str
+    :type compute_backend: str
+    :rtype: str
+
+    """
+    reana_yaml_filename = (
+        EXAMPLE_NON_STANDARD_REANA_YAML_FILENAME.get(example, {})
+        .get(workflow_engine, {})
+        .get(compute_backend, {})
+    )
+    if not reana_yaml_filename:
+        reana_yaml_filename = "reana{workflow_engine}{compute_backend}.yaml".format(
+            workflow_engine=""
+            if workflow_engine == "serial"
+            else "-{}".format(workflow_engine),
+            compute_backend=""
+            if compute_backend == "kubernetes"
+            else "-{}".format(compute_backend),
+        )
+    reana_yaml_filename_path = get_srcdir(example) + os.sep + reana_yaml_filename
+    try:
+        # check whether example contains recipe for given engine
+        subprocess.check_output(
+            [
+                "grep",
+                "-q",
+                "type: {}".format(workflow_engine),
+                reana_yaml_filename_path,
+            ],
+            stderr=subprocess.DEVNULL,
+        )
+        return reana_yaml_filename_path
+    except subprocess.CalledProcessError:
+        return ""
 
 
 @click.group()
@@ -245,11 +344,23 @@ def run_ci(
     help="Which examples to run? [default=DEMO]",
 )
 @click.option(
-    "--workflow_engine",
+    "--workflow-engine",
     "-w",
     multiple=True,
-    default=["cwl", "serial", "yadage"],
-    help="Which workflow engine to run? [cwl,serial,yadage]",
+    default=WORKFLOW_ENGINE_LIST_ALL,
+    help="Which workflow engine to run? [default={}]".format(
+        ",".join(WORKFLOW_ENGINE_LIST_ALL)
+    ),
+)
+@click.option(
+    "--compute-backend",
+    "-b",
+    multiple=True,
+    default=["kubernetes"],
+    help="Which compute backend to run? specify ALL if you want to select "
+    "all compute backends ({}) [default=kubernetes]".format(
+        ",".join(COMPUTE_BACKEND_LIST_ALL)
+    ),
 )
 @click.option("--file", "-f", multiple=True, help="Expected output file?")
 @click.option(
@@ -279,9 +390,24 @@ def run_ci(
     help="Additional operational options for the workflow execution. "
     "E.g. CACHE=off.",
 )
+@click.option(
+    "--submit-only", is_flag=True, help="Do not wait for workflows to finish."
+)
+@click.option(
+    "--check-only", is_flag=True, help="Wait for previously submitted workflows."
+)
 @run_commands.command(name="run-example")
 def run_example(
-    component, workflow_engine, file, timecheck, timeout, parameters, options
+    component,
+    workflow_engine,
+    compute_backend,
+    file,
+    timecheck,
+    timeout,
+    parameters,
+    options,
+    submit_only,
+    check_only,
 ):  # noqa: D301
     """Run given REANA example with given workflow engine.
 
@@ -297,6 +423,9 @@ def run_example(
     :param workflow_engine: The option ``workflow_engine`` can be repeated. The
                             value is the workflow engine to use to run the
                             example. [default=cwl,serial,yadage]
+    :param compute_backend: The option ``compute_backend`` can be repeated. The
+                            value is the compute backend to use to run the
+                            example. [default=kubernetes,htcondorcern,slurmcern]
     :param file: The option ``file`` can be repeated. The value is the expected
                  output file the workflow should produce. [default=plot.png]
     :param timecheck: Checking frequency in seconds for results.
@@ -308,80 +437,112 @@ def run_example(
                        E.g. -p myparam1=myval1 -p myparam2=myval2.
     :param options: Additional operational options for the workflow execution.
                     E.g. CACHE=off.
+    :param submit_only: Do not wait for workflows to finish.
+    :param check_only: Wait for previously submitted workflows.
 
     :type component: str
-    :type workflow_engine: str
-    :type sleep: int
+    :type workflow_engine: list
+    :type compute_backend: list
+    :type file: list
+    :type timecheck: int
+    :type timeout: int
+    :type parameters: list
+    :type options: list
+    :type submit_only: bool
+    :type check_only: bool
     """
+    if submit_only and check_only:
+        click.secho(
+            "[ERROR] Options --submit-only and --check-only are mutually exclusive. Choose only one."
+        )
+        sys.exit(1)
     components = select_components(component)
     workflow_engines = select_workflow_engines(workflow_engine)
-    reana_yaml = {
-        "cwl": "reana-cwl.yaml",
-        "serial": "reana.yaml",
-        "yadage": "reana-yadage.yaml",
-    }
+    compute_backends = select_compute_backends(compute_backend)
+
+    display_message(
+        "Running the following matrix:\n"
+        "Demos: {}\n"
+        "Workflow engines: {}\n"
+        "Compute backends: {}".format(
+            ",".join(components), ",".join(workflow_engines), ",".join(compute_backends)
+        )
+    )
     for component in components:
         for workflow_engine in workflow_engines:
-            workflow_name = construct_workflow_name(component, workflow_engine)
-            # check whether example contains recipe for given engine
-            if not os.path.exists(
-                get_srcdir(component) + os.sep + reana_yaml[workflow_engine]
-            ):
-                msg = "Skipping example with workflow engine {0}.".format(
-                    workflow_engine
+            for compute_backend in compute_backends:
+                reana_yaml_file_path = get_example_reana_yaml_file_path(
+                    component, workflow_engine, compute_backend
                 )
-                display_message(msg, component)
-                continue
-            # create workflow:
-            for cmd in [
-                "reana-client create -f {0} -n {1}".format(
-                    reana_yaml[workflow_engine], workflow_name
-                ),
-            ]:
-                run_command(cmd, component)
-            # upload inputs
-            for cmd in [
-                "reana-client upload -w {0}".format(workflow_name),
-            ]:
-                run_command(cmd, component)
-            # run workflow
-            input_parameters = " ".join(["-p " + parameter for parameter in parameters])
-            operational_options = " ".join(["-o " + option for option in options])
-            for cmd in [
-                "reana-client start -w {0} {1} {2}".format(
-                    workflow_name, input_parameters, operational_options
-                ),
-            ]:
-                run_command(cmd, component)
-            # verify whether job finished within time limits
-            time_start = time.time()
-            while time.time() - time_start <= timeout:
-                time.sleep(timecheck)
-                cmd = "reana-client status -w {0}".format(workflow_name)
-                status = run_command(cmd, component, return_output=True)
-                click.secho(status)
-                if "finished" in status or "failed" in status or "stopped" in status:
-                    break
-            # verify logs message presence
-            for log_message in get_expected_log_messages_for_example(component):
-                cmd = "reana-client logs -w {0} | grep -c '{1}'".format(
-                    workflow_name, log_message
-                )
-                run_command(cmd, component)
-            # verify output file presence
-            cmd = "reana-client ls -w {0}".format(workflow_name)
-            listing = run_command(cmd, component, return_output=True)
-            click.secho(listing)
-            expected_files = file or get_expected_output_filenames_for_example(
-                component
-            )
-            for expected_file in expected_files:
-                if expected_file not in listing:
-                    click.secho(
-                        "[ERROR] Expected output file {0} not found. "
-                        "Exiting.".format(expected_file)
+                if not reana_yaml_file_path:
+                    msg = "Skipping example {0} with workflow engine {1} and compute backend {2}.".format(
+                        component, workflow_engine, compute_backend
                     )
-                    sys.exit(1)
+                    display_message(msg, component)
+                    continue
+                workflow_name = construct_workflow_name(
+                    component, workflow_engine, compute_backend
+                )
+                if not check_only:
+                    # create workflow:
+                    for cmd in [
+                        "reana-client create -f {0} -n {1}".format(
+                            reana_yaml_file_path, workflow_name,
+                        ),
+                    ]:
+                        run_command(cmd, component)
+                    # upload inputs
+                    for cmd in [
+                        "reana-client upload -w {0}".format(workflow_name),
+                    ]:
+                        run_command(cmd, component)
+                    # run workflow
+                    input_parameters = " ".join(
+                        ["-p " + parameter for parameter in parameters]
+                    )
+                    operational_options = " ".join(
+                        ["-o " + option for option in options]
+                    )
+                    for cmd in [
+                        "reana-client start -w {0} {1} {2}".format(
+                            workflow_name, input_parameters, operational_options
+                        ),
+                    ]:
+                        run_command(cmd, component)
+                if not submit_only:
+                    # verify whether job finished within time limits
+                    time_start = time.time()
+                    while time.time() - time_start <= timeout:
+                        time.sleep(timecheck)
+                        cmd = "reana-client status -w {0}".format(workflow_name)
+                        status = run_command(cmd, component, return_output=True)
+                        click.secho(status)
+                        if (
+                            "finished" in status
+                            or "failed" in status
+                            or "stopped" in status
+                        ):
+                            break
+                    # verify logs message presence
+                    for log_message in get_expected_log_messages_for_example(component):
+                        cmd = "reana-client logs -w {0} | grep -c '{1}'".format(
+                            workflow_name, log_message
+                        )
+                        run_command(cmd, component)
+                    # verify output file presence
+                    cmd = "reana-client ls -w {0}".format(workflow_name)
+                    listing = run_command(cmd, component, return_output=True)
+                    click.secho(listing)
+                    expected_files = file or get_expected_output_filenames_for_example(
+                        component
+                    )
+                    for expected_file in expected_files:
+                        if expected_file not in listing:
+                            click.secho(
+                                "[ERROR] Expected output file {0} not found. "
+                                "Exiting.".format(expected_file)
+                            )
+                            sys.exit(1)
     # report that everything was OK
     run_command("echo OK", component)
 

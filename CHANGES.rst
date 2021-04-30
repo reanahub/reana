@@ -8,6 +8,36 @@ Version 0.8.0 (UNRELEASED)
     - Adds new configuration to set node labels splitting workflow nodes, job nodes and session nodes
       (``node_label_runtimebatch``, ``node_label_runtimejobs``, ``node_label_runtimesessions``).
 
+Version 0.7.4 (UNRELEASED)
+--------------------------
+
+- Users:
+    - Fixes environment image validation info message where UIDs were switched.
+    - Changes ``list`` command to include deleted workflows by default.
+    - Adds support for wildcard patterns to ``ls`` command.
+    - Adds support for directory download and wildcard patterns to ``download`` command.
+    - Adds support for specifying ``kubernetes_memory_limit`` for Kubernetes compute backend jobs.
+- Administrators:
+    - Adds configuration environment variable to set job memory limits for the Kubernetes compute backend (``REANA_KUBERNETES_JOBS_MEMORY_LIMIT``).
+    - Adds configuration environment variable to set maximum custom memory limits that users can assign to their job containers for the Kubernetes compute backend (``REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_LIMIT``).
+    - Fixes Kubernetes job log capture to include information about failures caused by external factors such as OOMKilled.
+
+Version 0.7.3 (2021-03-24)
+--------------------------
+
+- Users:
+    - Adds ``reana-client validate`` options to detect possible issues with workflow input parameters and environment images.
+    - Fixes problem with failed jobs being reported as still running in case of network problems.
+    - Fixes job command encoding issues when dispatching jobs to HTCondor and Slurm backends.
+- Administrators:
+    - Adds new configuration to toggle Kubernetes user jobs clean up.
+      (``REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES`` in ``components.reana_workflow_controller.environment``)
+    - Improves platform resilience.
+- Developers:
+    - Adds new command-line options to ``reana-dev run-example`` command allowing full parallel asynchronous execution of demo examples.
+    - Adds default configuration for developer deployment mode to keep failed workflow and job pods for easier debugging.
+    - Changes job status consumer communications to improve overall platform resilience.
+
 Version 0.7.2 (2021-02-04)
 --------------------------
 

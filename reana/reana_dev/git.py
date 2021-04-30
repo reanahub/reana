@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020, 2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -265,10 +265,13 @@ def git_commands():
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+)
+@click.option(
     "--browser", "-b", default="firefox", help="Which browser to use? [firefox]"
 )
 @git_commands.command(name="git-fork")
-def git_fork(component, browser):  # noqa: D301
+def git_fork(component, exclude_components, browser):  # noqa: D301
     """Display commands to fork REANA source code repositories on GitHub.
 
     \b
@@ -287,11 +290,15 @@ def git_fork(component, browser):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param exclude_components: List of components to exclude.
     :param browser: The web browser to use. [default=firefox]
     :type component: str
+    :type exclude_components: str
     :type browser: str
     """
-    components = select_components(component)
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    components = select_components(component, exclude_components)
     if components:
         click.echo("# Fork REANA repositories on GitHub using your browser.")
         click.echo(
@@ -321,9 +328,7 @@ def git_fork(component, browser):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components",
-    default="",
-    help="Which components to exclude from command? [c1,c2,c3]",
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-clone")
 def git_clone(user, component, exclude_components):  # noqa: D301
@@ -355,7 +360,10 @@ def git_clone(user, component, exclude_components):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
-    :param exclude_components: List of components to exclude from command.
+    :param exclude_components: List of components to exclude.
+    :param user: The GitHub user name. [default=anonymous]
+    :type component: str
+    :type exclude_components: str
     :type user: str
     :type component: str
     :type exclude_components: str
@@ -393,9 +401,7 @@ def git_clone(user, component, exclude_components):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components",
-    default="",
-    help="Which components to exclude from command? [c1,c2,c3]",
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
 )
 @click.option(
     "--short",
@@ -425,7 +431,7 @@ def git_status(component, exclude_components, short, base):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
-    :param exclude_components: List of components to exclude from command.
+    :param exclude_components: List of components to exclude.
     :param base: Against which git base branch are we working? [default=master]
     :param verbose: Show git status details? [default=False]
     :type component: str
@@ -460,8 +466,11 @@ def git_status(component, exclude_components, short, base):  # noqa: D301
     default=["CLUSTER"],
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
+@click.option(
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+)
 @git_commands.command(name="git-clean")
-def git_clean(component):  # noqa: D301
+def git_clean(component, exclude_components):  # noqa: D301
     """Clean REANA source repository code tree.
 
     Removes all non-source-controlled files in the component source code
@@ -483,9 +492,13 @@ def git_clean(component):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param exclude_components: List of components to exclude.
     :type component: str
+    :type exclude_components: str
     """
-    components = select_components(component)
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    components = select_components(component, exclude_components)
     for component in components:
         for cmd in [
             "git clean -d -ff -x",
@@ -566,8 +579,11 @@ def git_submodule(update=False, status=False, delete=False):  # noqa: D301
     default=["CLUSTER"],
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
+@click.option(
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+)
 @git_commands.command(name="git-branch")
-def git_branch(component):  # noqa: D301
+def git_branch(component, exclude_components):  # noqa: D301
     """Display information about locally checked-out branches.
 
     \b
@@ -586,9 +602,13 @@ def git_branch(component):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param exclude_components: List of components to exclude.
     :type component: str
+    :type exclude_components: str
     """
-    for component in select_components(component):
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    for component in select_components(component, exclude_components):
         cmd = "git branch -vv"
         run_command(cmd, component)
 
@@ -601,9 +621,12 @@ def git_branch(component):  # noqa: D301
     default=["CLUSTER"],
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
+@click.option(
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+)
 @click.option("--fetch", is_flag=True, default=False)
 @git_commands.command(name="git-checkout")
-def git_checkout(branch, component, fetch):  # noqa: D301
+def git_checkout(branch, component, exclude_components, fetch):  # noqa: D301
     """Check out given local branch in desired components.
 
     \b
@@ -623,13 +646,16 @@ def git_checkout(branch, component, fetch):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
-    :type component: str
+    :param exclude_components: List of components to exclude.
     :param fetch: Should we fetch latest upstream first? [default=False]
     :type branch: str
     :type component: list
+    :type exclude_components: str
     :type fetch: bool
     """
-    for component in select_components(component):
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    for component in select_components(component, exclude_components):
         if fetch:
             run_command("git fetch upstream", component)
         if branch_exists(component, branch):
@@ -736,8 +762,11 @@ def git_merge(branch, base, push):  # noqa: D301
     default=["CLUSTER"],
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
+@click.option(
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+)
 @git_commands.command(name="git-fetch")
-def git_fetch(component):  # noqa: D301
+def git_fetch(component, exclude_components):  # noqa: D301
     """Fetch REANA upstream source code repositories without upgrade.
 
     \b
@@ -756,9 +785,13 @@ def git_fetch(component):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param exclude_components: List of components to exclude.
     :type component: str
+    :type exclude_components: str
     """
-    for component in select_components(component):
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    for component in select_components(component, exclude_components):
         cmd = "git fetch upstream"
         run_command(cmd, component)
 
@@ -771,9 +804,7 @@ def git_fetch(component):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components",
-    default="",
-    help="Which components to exclude from command? [c1,c2,c3]",
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-upgrade")
 @click_add_git_base_branch_option
@@ -796,7 +827,7 @@ def git_upgrade(component, exclude_components, base):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
-    :param exclude_components: List of components to exclude from command.
+    :param exclude_components: List of components to exclude.
     :param base: Against which git base branch are we working on? [default=master]
     :type component: str
     :type exclude_components: str
@@ -931,9 +962,7 @@ def git_log(
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components",
-    default="",
-    help="Which components to exclude from command? [c1,c2,c3]",
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-diff")
 @click_add_git_base_branch_option
@@ -956,7 +985,7 @@ def git_diff(component, exclude_components, base):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
-    :param exclude_components: List of components to exclude from command.
+    :param exclude_components: List of components to exclude.
     :param base: Against which git base branch are we working on? [default=master]
     :type component: str
     :type exclude_components: str
@@ -980,9 +1009,7 @@ def git_diff(component, exclude_components, base):  # noqa: D301
     help="Which components? [name|CLUSTER]",
 )
 @click.option(
-    "--exclude-components",
-    default="",
-    help="Which components to exclude from command? [c1,c2,c3]",
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-push")
 @click_add_git_base_branch_option
@@ -1005,7 +1032,7 @@ def git_push(component, exclude_components, base):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
-    :param exclude_components: List of components to exclude from command.
+    :param exclude_components: List of components to exclude.
     :param base: Against which git base branch are we working on? [default=master]
     :type component: str
     :type exclude_components: str
@@ -1026,6 +1053,9 @@ def git_push(component, exclude_components, base):  # noqa: D301
     multiple=True,
     default=["CLUSTER", "CLIENT"],
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
+)
+@click.option(
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
 )
 @click.option(
     "--use-latest-known-tag",
@@ -1050,7 +1080,7 @@ def git_push(component, exclude_components, base):  # noqa: D301
 )
 @click.pass_context
 def git_upgrade_shared_modules(
-    ctx, component, use_latest_known_tag, amend, push
+    ctx, component, exclude_components, use_latest_known_tag, amend, push
 ):  # noqa: D301
     """Upgrade selected components to latest REANA-Commons/DB version.
 
@@ -1070,7 +1100,9 @@ def git_upgrade_shared_modules(
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param exclude_components: List of components to exclude.
     :type component: str
+    :type exclude_components: str
     """
 
     def _create_commit_or_amend(components):
@@ -1086,7 +1118,9 @@ def git_upgrade_shared_modules(
                 f"git add {' '.join(files_to_commit)} && {commit_cmd}", c,
             )
 
-    components = select_components(component)
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    components = select_components(component, exclude_components)
 
     for module in REPO_LIST_SHARED:
         last_version = fetch_latest_pypi_version(module)
@@ -1112,10 +1146,15 @@ def git_upgrade_shared_modules(
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+)
+@click.option(
     "--version", "-v", help="Shall we manually specify component's next version?",
 )
 @git_commands.command(name="git-create-release-commit")
-def git_create_release_commit_command(component, version):  # noqa: D301
+def git_create_release_commit_command(
+    component, exclude_components, version
+):  # noqa: D301
     """Create a release commit for the specified components.
 
     \b
@@ -1134,12 +1173,16 @@ def git_create_release_commit_command(component, version):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param exclude_components: List of components to exclude.
     :param version: Manually specifies the version for the component. If not provided,
         the last version will be auto-incremented..
     :type component: str
+    :type exclude_components: str
     :type version: str
     """
-    components = select_components(component)
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    components = select_components(component, exclude_components)
     for component in components:
         if git_create_release_commit(component, next_version=version):
             display_message("Release commit created.", component)
@@ -1153,9 +1196,7 @@ def git_create_release_commit_command(component, version):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components",
-    default="",
-    help="Which components to exclude from command? [c1,c2,c3]",
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-create-pr")
 @click_add_git_base_branch_option
@@ -1178,7 +1219,7 @@ def git_create_pr_command(component, exclude_components, base):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
-    :param exclude_components: List of components to exclude from command.
+    :param exclude_components: List of components to exclude.
     :param base: Against which git base branch are we working on? [default=master]
     :type component: str
     :type exclude_components: str
@@ -1226,8 +1267,11 @@ def git_create_pr_command(component, exclude_components, base):  # noqa: D301
     multiple=True,
     help="Which components? [name|CLUSTER]",
 )
+@click.option(
+    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+)
 @git_commands.command(name="git-tag")
-def git_tag(component):  # noqa: D301
+def git_tag(component, exclude_components):  # noqa: D301
     """Create the corresponding git tag for components with release commits.
 
     \b
@@ -1246,9 +1290,12 @@ def git_tag(component):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param exclude_components: List of components to exclude.
     :type component: str
     """
-    components = select_components(component)
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    components = select_components(component, exclude_components)
     for component in components:
         if not is_last_commit_release_commit(component):
             click.secho(

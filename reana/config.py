@@ -116,6 +116,9 @@ REPO_LIST_CLUSTER = (
 WORKFLOW_ENGINE_LIST_ALL = ["cwl", "serial", "yadage"]
 """List of supported workflow engines."""
 
+COMPUTE_BACKEND_LIST_ALL = ["kubernetes", "htcondorcern", "slurmcern"]
+"""List of supported compute backends."""
+
 CLUSTER_DEPLOYMENT_MODES = ["releasehelm", "releasepypi", "latest", "debug"]
 """List of supported modes to run a REANA cluster."""
 
@@ -127,6 +130,16 @@ COMPONENT_PODS = {
     "reana-ui": "reana-ui",
 }
 """Component pods by repository name."""
+
+EXAMPLE_NON_STANDARD_REANA_YAML_FILENAME = {
+    "reana-demo-atlas-recast": {
+        "yadage": {
+            "htcondorcern": "reana-htcondorcern.yaml",
+            "kubernetes": "reana.yaml",
+        },
+    }
+}
+"""List of non standard REANA demo's reana.yaml file names."""
 
 EXAMPLE_OUTPUT_FILENAMES = {
     "reana-demo-helloworld": ("greetings.txt",),
