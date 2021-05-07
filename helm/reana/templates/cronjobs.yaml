@@ -76,6 +76,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "reana.prefix" . }}-admin-access-token
                   key: ADMIN_ACCESS_TOKEN
+            - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
+              value: {{ .Values.namespace_runtime | default .Release.Namespace }}
             volumeMounts:
               {{- if .Values.debug.enabled }}
               - mountPath: /code/
