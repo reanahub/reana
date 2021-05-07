@@ -18,6 +18,10 @@ rules:
 - apiGroups: ["", "extensions", "apps", "networking.k8s.io"]
   resources: ["deployments", "services", "ingresses"]
   verbs: ["get", "create", "delete"]
+# Metrics (`kubectl top node/pod`)
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
