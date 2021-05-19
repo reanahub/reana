@@ -205,7 +205,6 @@ def run_commands():
 @click.option(
     "--build-arg",
     "-b",
-    default="",
     multiple=True,
     help="Any build arguments? (e.g. `-b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern`)",
 )

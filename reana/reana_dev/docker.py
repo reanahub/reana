@@ -47,11 +47,7 @@ def docker_commands():
     help="Which components to exclude from build? [c1,c2,c3]",
 )
 @click.option(
-    "--build-arg",
-    "-b",
-    default="",
-    multiple=True,
-    help="Any build arguments? (e.g. `-b DEBUG=1`)",
+    "--build-arg", "-b", multiple=True, help="Any build arguments? (e.g. `-b DEBUG=1`)",
 )
 @click.option("--no-cache", is_flag=True)
 @click.option(

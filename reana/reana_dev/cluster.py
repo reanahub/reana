@@ -159,7 +159,6 @@ def cluster_create(mounts, mode, worker_nodes):  # noqa: D301
 @click.option(
     "--build-arg",
     "-b",
-    default="",
     multiple=True,
     help="Any build arguments? (e.g. `-b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern`)",
 )
