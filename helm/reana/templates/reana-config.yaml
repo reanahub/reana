@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: ui-config
+  name: reana-config
   namespace: {{ .Release.Namespace }}
 data:
   ui-config.yaml: |

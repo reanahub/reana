@@ -55,7 +55,7 @@ spec:
             name: reana-shared-volume
           - name: uwsgi-config
             mountPath: '/var/reana/uwsgi'
-          - name: ui-config
+          - name: reana-config
             mountPath: '/var/reana/config'
         env:
           - name: REANA_COMPONENT_PREFIX
@@ -235,10 +235,10 @@ spec:
         configMap:
           defaultMode: 420
           name: uwsgi-config
-      - name: ui-config
+      - name: reana-config
         configMap:
           defaultMode: 420
-          name: ui-config
+          name: reana-config
       {{- if .Values.node_label_infrastructure }}
       {{- $full_label := split "=" .Values.node_label_infrastructure }}
       nodeSelector:
