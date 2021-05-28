@@ -41,8 +41,15 @@ spec:
           name: tcp
         - containerPort: 15672
           name: management
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/rabbitmq/mnesia
       {{- if .Values.node_label_infrastructure }}
       {{- $full_label := split "=" .Values.node_label_infrastructure }}
       nodeSelector:
         {{ $full_label._0 }}: {{ $full_label._1 }}
       {{- end }}
+      volumes:
+      - name: data
+        hostPath:
+          path: /var/reana/rabbitmq/mnesia
