@@ -5,15 +5,24 @@ metadata:
   name: {{ include "reana.prefix" . }}-message-broker
   namespace: {{ .Release.Namespace }}
 spec:
+  type: "NodePort"
   ports:
    - port: 5672
      targetPort: 5672
      name: "tcp"
      protocol: TCP
+  {{- if .Values.debug.enabled }}
+   - port: 31672
+     targetPort: 15672
+     nodePort: 31672
+     name: "management"
+     protocol: TCP
+  {{- else }}
    - port: 15672
      targetPort: 15672
      name: "management"
      protocol: TCP
+  {{- end }}
   selector:
     app: {{ include "reana.prefix" . }}-message-broker
 ---

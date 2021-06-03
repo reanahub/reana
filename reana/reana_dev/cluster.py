@@ -114,6 +114,11 @@ def cluster_create(mounts, mode, worker_nodes):  # noqa: D301
                     "hostPort": 32580,
                     "protocol": "TCP",
                 },  # maildev
+                {
+                    "containerPort": 31672,
+                    "hostPort": 31672,
+                    "protocol": "TCP",
+                },  # rabbitmq
             ]
         )
 
