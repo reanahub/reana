@@ -7,6 +7,7 @@ Version 0.8.0 (UNRELEASED)
 - Administrators
     - Adds new configuration to set node labels splitting workflow nodes, job nodes and session nodes
       (``node_label_runtimebatch``, ``node_label_runtimejobs``, ``node_label_runtimesessions``).
+    - Adds a default ``kubernetes_memory_limit`` value (4Gi).
 
 Version 0.7.4 (UNRELEASED)
 --------------------------
