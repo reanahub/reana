@@ -60,6 +60,8 @@ components:
     image: reanahub/reana-server:0.8.0-alpha.1
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
+      REANA_SCHEDULER_SECONDS_TO_WAIT_FOR_REANA_READY: 600
+      REANA_SCHEDULER_SECONDS_RETRY_DELAY: 60
       REANA_USER_EMAIL_CONFIRMATION: true
     uwsgi:
       processes: 6

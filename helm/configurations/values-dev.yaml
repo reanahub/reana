@@ -3,6 +3,9 @@
 components:
     reana_server:
       image: reanahub/reana-server
+      environment:
+        REANA_SCHEDULER_SECONDS_TO_WAIT_FOR_REANA_READY: 60
+        REANA_SCHEDULER_SECONDS_RETRY_DELAY: 6
     reana_workflow_controller:
       image: reanahub/reana-workflow-controller
       environment:
