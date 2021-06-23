@@ -27,7 +27,7 @@ keywords:
 type: application
 # Chart version.
 version: 0.8.0-alpha.1
-kubeVersion: ">= 1.13.0-0 < 1.21.0-0"
+kubeVersion: ">= 1.13.0-0 < 1.22.0-0"
 dependencies:
   - name: traefik
     version: 1.85.x
