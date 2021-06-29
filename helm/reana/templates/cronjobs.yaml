@@ -13,6 +13,7 @@ spec:
     spec:
       template:
         spec:
+          serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
           containers:
           - name: {{ include "reana.prefix" . }}-system-status
             image: {{ .Values.components.reana_server.image }}
