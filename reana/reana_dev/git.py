@@ -34,6 +34,7 @@ from reana.reana_dev.utils import (
     run_command,
     select_components,
     update_module_in_cluster_components,
+    validate_directory,
 )
 
 
@@ -330,8 +331,13 @@ def git_fork(component, exclude_components, browser):  # noqa: D301
 @click.option(
     "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
 )
+@click.option(
+    "--target-directory",
+    callback=validate_directory,
+    help="In which directory to clone?",
+)
 @git_commands.command(name="git-clone")
-def git_clone(user, component, exclude_components):  # noqa: D301
+def git_clone(user, component, exclude_components, target_directory):  # noqa: D301
     """Clone REANA source repositories from GitHub.
 
     If the ``user`` argument is provided, the ``origin`` will be cloned from
@@ -371,8 +377,13 @@ def git_clone(user, component, exclude_components):  # noqa: D301
     if exclude_components:
         exclude_components = exclude_components.split(",")
     components = select_components(component, exclude_components)
+
     for component in components:
-        os.chdir(get_srcdir())
+        if target_directory:
+            os.chdir(target_directory)
+        else:
+            os.chdir(get_srcdir())
+
         if os.path.exists("{0}/.git/config".format(component)):
             msg = "Component seems already cloned. Skipping."
             display_message(msg, component)
@@ -390,7 +401,7 @@ def git_clone(user, component, exclude_components):  # noqa: D301
                 "git config --add remote.upstream.fetch"
                 ' "+refs/pull/*/head:refs/remotes/upstream/pr/*"',
             ]:
-                run_command(cmd, component)
+                run_command(cmd, component, directory=target_directory)
 
 
 @click.option(

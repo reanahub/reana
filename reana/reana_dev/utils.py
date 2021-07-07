@@ -300,7 +300,7 @@ def is_component_runnable_example(component):
     return False
 
 
-def run_command(cmd, component="", display=True, return_output=False):
+def run_command(cmd, component="", display=True, return_output=False, directory=None):
     """Run given command in the given component source directory.
 
     Exit in case of troubles.
@@ -319,7 +319,9 @@ def run_command(cmd, component="", display=True, return_output=False):
         click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
         click.secho("{0}: ".format(component), bold=True, nl=False, fg="yellow")
         click.secho("{0}".format(cmd), bold=True)
-    if component:
+    if component and directory:
+        os.chdir(os.path.join(directory, component))
+    elif component:
         os.chdir(get_srcdir(component))
     try:
         if return_output:
@@ -790,3 +792,24 @@ def click_add_git_base_branch_option(func):
         return func(*args, **kwargs)
 
     return wrapper
+
+
+def validate_directory(ctx, param, target_directory):
+    """Validate if directory is valid for first time cloning."""
+    if target_directory:
+        target_directory = os.path.realpath(target_directory)
+
+        if not os.path.isdir(target_directory):
+            message = "[ERROR] Directory {0} does not exist. Exiting.".format(
+                target_directory
+            )
+            click.echo(click.style(message, fg="red"), err=True)
+            ctx.exit(1)
+
+        if len(os.listdir(target_directory)) != 0:
+            message = "[ERROR] Directory {0} is not empty. Cloning aborted.".format(
+                target_directory
+            )
+            click.echo(click.style(message, fg="red"), err=True)
+            ctx.exit(1)
+    return target_directory
