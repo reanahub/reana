@@ -10,19 +10,31 @@ Version 0.8.0 (UNRELEASED)
     - Adds a default ``kubernetes_memory_limit`` value (4Gi).
     - Adds configuration environment variable to set workflow scheduling policy (``REANA_WORKFLOW_SCHEDULING_POLICY``).
 
-Version 0.7.4 (UNRELEASED)
+Version 0.7.4 (2021-07-07)
 --------------------------
 
 - Users:
-    - Fixes environment image validation info message where UIDs were switched.
+    - Adds support for file listing wildcard matching patterns to ``ls`` command.
+    - Adds support for directory download and wildcard matching patterns to ``download`` command.
+    - Adds support for specifying ``kubernetes_memory_limit`` for Kubernetes compute backend jobs for CWL, Serial and Yadage workflows.
     - Changes ``list`` command to include deleted workflows by default.
-    - Adds support for wildcard patterns to ``ls`` command.
-    - Adds support for directory download and wildcard patterns to ``download`` command.
-    - Adds support for specifying ``kubernetes_memory_limit`` for Kubernetes compute backend jobs.
+    - Changes ``validate`` command to warn about incorrectly used workflow parameters for each step.
+    - Changes ``validate`` command to display more granular workflow validation output.
+    - Fixes workflow step job command formatting bug for CWL workflows on HTCondor compute backend.
+    - Fixes ``validate`` command output for verifying environment image UID values.
+    - Fixes ``upload_to_server()`` Python API function to silently skip uploading in case of none-like inputs.
+    - Fixes ``validate`` command for environment image validation to not test repetitively the same image found in different steps.
 - Administrators:
-    - Adds configuration environment variable to set job memory limits for the Kubernetes compute backend (``REANA_KUBERNETES_JOBS_MEMORY_LIMIT``).
-    - Adds configuration environment variable to set maximum custom memory limits that users can assign to their job containers for the Kubernetes compute backend (``REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_LIMIT``).
-    - Fixes Kubernetes job log capture to include information about failures caused by external factors such as OOMKilled.
+    - Adds support for Kubernetes 1.21.
+    - Adds configuration environment variable to set default job memory limits for the Kubernetes compute backend (``REANA_KUBERNETES_JOBS_MEMORY_LIMIT``).
+    - Adds configuration environment variable to set maximum custom memory limits that users can assign to their jobs for the Kubernetes compute backend (``REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_LIMIT``).
+    - Changes HTCondor compute backend to 8.9.11 and `myschedd` package and configuration to latest versions.
+    - Fixes Kubernetes job log capture to include information about failures caused by external factors such as out-of-memory situations (`OOMKilled`).
+- Developers:
+    - Adds new functions to serialise/deserialise job commands between REANA components.
+    - Changes client dependencies to unpin six so that client may be installed in more contexts.
+    - Changes cluster dependencies to remove click and pins several dependencies.
+    - Changes ``reana_ready()`` function location to REANA-Server.
 
 Version 0.7.3 (2021-03-24)
 --------------------------
