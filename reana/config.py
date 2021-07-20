@@ -62,6 +62,7 @@ REPO_LIST_ALL = [
     "reana-workflow-engine-cwl",
     "reana-workflow-engine-serial",
     "reana-workflow-engine-yadage",
+    "reana-workflow-engine-snakemake",
     "www.reana.io",
 ] + REPO_LIST_DEMO_RUNNABLE
 """All REANA git repositories."""
@@ -89,6 +90,7 @@ REPO_LIST_CLUSTER_RUNTIME_BATCH = [
     "reana-workflow-engine-cwl",
     "reana-workflow-engine-serial",
     "reana-workflow-engine-yadage",
+    "reana-workflow-engine-snakemake",
 ]
 """List of git repositories related to batch runtime cluster components."""
 
@@ -113,7 +115,7 @@ REPO_LIST_CLUSTER = (
 """List of git repositories related to cluster components."""
 
 
-WORKFLOW_ENGINE_LIST_ALL = ["cwl", "serial", "yadage"]
+WORKFLOW_ENGINE_LIST_ALL = ["cwl", "serial", "yadage", "snakemake"]
 """List of supported workflow engines."""
 
 COMPUTE_BACKEND_LIST_ALL = ["kubernetes", "htcondorcern", "slurmcern"]
@@ -176,6 +178,7 @@ COMPONENTS_USING_SHARED_MODULE_COMMONS = [
     "reana-workflow-engine-cwl",
     "reana-workflow-engine-serial",
     "reana-workflow-engine-yadage",
+    "reana-workflow-engine-snakemake",
 ]
 """List of components which use the module REANA-Commons."""
 

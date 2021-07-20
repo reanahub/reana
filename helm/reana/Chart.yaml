@@ -11,6 +11,7 @@ sources:
   - https://github.com/reanahub/reana-workflow-engine-cwl
   - https://github.com/reanahub/reana-workflow-engine-serial
   - https://github.com/reanahub/reana-workflow-engine-yadage
+  - https://github.com/reanahub/reana-workflow-engine-snakemake
   - https://github.com/reanahub/reana-job-controller
   - https://github.com/reanahub/reana-commons
   - https://github.com/reanahub/reana-db

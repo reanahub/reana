@@ -4,6 +4,8 @@ Changes
 Version 0.8.0 (UNRELEASED)
 --------------------------
 
+- Users:
+   - Adds support for Snakemake workflow engine.
 - Administrators
     - Adds new configuration to set node labels splitting workflow nodes, job nodes and session nodes
       (``node_label_runtimebatch``, ``node_label_runtimejobs``, ``node_label_runtimesessions``).

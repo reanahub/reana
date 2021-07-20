@@ -46,7 +46,7 @@ def construct_workflow_name(example, workflow_engine, compute_backend):
     """Construct suitable workflow name for given REANA example.
 
     :param example: REANA example (e.g. reana-demo-root6-roofit)
-    :param workflow_engine: workflow engine to use (cwl, serial, yadage)
+    :param workflow_engine: workflow engine to use (cwl, serial, yadage, snakemake)
     :param compute_backend: compute backend to use (kubernetes, htcondorcern, slurmcern)
     :type example: str
     :type workflow_engine: str
@@ -421,7 +421,7 @@ def run_example(
                       [default=reana-demo-root6-roofit]
     :param workflow_engine: The option ``workflow_engine`` can be repeated. The
                             value is the workflow engine to use to run the
-                            example. [default=cwl,serial,yadage]
+                            example. [default=cwl,serial,yadage,snakemake]
     :param compute_backend: The option ``compute_backend`` can be repeated. The
                             value is the compute backend to use to run the
                             example. [default=kubernetes,htcondorcern,slurmcern]

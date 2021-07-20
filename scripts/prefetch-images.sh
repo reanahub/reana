@@ -18,7 +18,8 @@ for image in \
     reanahub/reana-workflow-controller:0.8.0-alpha.2 \
     reanahub/reana-workflow-engine-cwl:0.8.0-alpha.2 \
     reanahub/reana-workflow-engine-serial:0.8.0-alpha.2 \
-    reanahub/reana-workflow-engine-yadage:0.8.0-alpha.2; do
+    reanahub/reana-workflow-engine-yadage:0.8.0-alpha.2 \
+    reanahub/reana-workflow-engine-snakemake:0.8.0-alpha.0; do
     docker pull $image
     kind load docker-image $image
 done

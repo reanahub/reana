@@ -105,6 +105,8 @@ spec:
             value: {{ .Values.components.reana_workflow_engine_yadage.image }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_SERIAL
             value: {{ .Values.components.reana_workflow_engine_serial.image }}
+          - name: REANA_WORKFLOW_ENGINE_IMAGE_SNAKEMAKE
+            value: {{ .Values.components.reana_workflow_engine_snakemake.image }}
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
             value: {{ .Values.reana_hostname }}

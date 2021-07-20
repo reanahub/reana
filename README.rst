@@ -44,7 +44,7 @@ Features
 - instantiate computational workflows on remote clouds
 - rerun analyses with modified input data, parameters or code
 - support for several compute clouds (Kubernetes/OpenStack)
-- support for several workflow specifications (CWL, Serial, Yadage)
+- support for several workflow specifications (CWL, Serial, Yadage, Snakemake)
 - support for several shared storage systems (Ceph)
 - support for several container technologies (Docker)
 
