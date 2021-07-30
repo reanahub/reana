@@ -232,6 +232,13 @@ def cluster_build(
     "cluster_node_path:job_pod_mountpath, e.g /var/reana/mydata:/mydata",
 )
 @click.option(
+    "-w",
+    "--workspace-mounts",
+    multiple=True,
+    help="Which directories from the Kubernetes nodes to mount inside the cluster pods? "
+    "cluster_node_path:job_pod_mountpath, e.g /var/reana/mydata:/mydata",
+)
+@click.option(
     "--mode",
     default="latest",
     callback=validate_mode_option,
@@ -260,6 +267,7 @@ def cluster_build(
 def cluster_deploy(
     namespace,
     job_mounts,
+    workspace_mounts,
     mode,
     values,
     exclude_components,
@@ -308,6 +316,14 @@ def cluster_deploy(
         values_dict.setdefault("components", {}).setdefault(
             "reana_workflow_controller", {}
         ).setdefault("environment", {})["REANA_JOB_HOSTPATH_MOUNTS"] = job_mount_config
+
+    if workspace_mounts:
+        workspace_mounts = ",".join(workspace_mounts)
+        values_dict.setdefault("components", {}).setdefault(
+            "reana_workflow_controller", {}
+        ).setdefault("environment", {})[
+            "REANA_WORKSPACE_HOSTPATH_MOUNTS"
+        ] = workspace_mounts
 
     if mode in ("debug"):
         values_dict.setdefault("debug", {})["enabled"] = True

@@ -50,6 +50,14 @@ spec:
           {{- end }}
           - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
             name: reana-shared-volume
+          {{- if .Values.components.reana_workflow_controller.environment.REANA_WORKSPACE_HOSTPATH_MOUNTS }}
+          {{- range  $workspace_paths := split "," .Values.components.reana_workflow_controller.environment.REANA_WORKSPACE_HOSTPATH_MOUNTS }}
+          {{- $workspace_path := split ":" $workspace_paths }}
+          - name: {{ $workspace_path._0 | quote | replace "/" "" }}
+            mountPath: {{ $workspace_path._1 }}
+            mountPropagation: HostToContainer
+          {{- end }}
+          {{- end }}
         env:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
@@ -231,4 +239,12 @@ spec:
       {{- $full_label := split "=" .Values.node_label_infrastructure }}
       nodeSelector:
         {{ $full_label._0 }}: {{ $full_label._1 }}
+      {{- end }}
+      {{- if .Values.components.reana_workflow_controller.environment.REANA_WORKSPACE_HOSTPATH_MOUNTS }}
+      {{- range  $workspace_paths := split "," .Values.components.reana_workflow_controller.environment.REANA_WORKSPACE_HOSTPATH_MOUNTS }}
+      {{- $workspace_path := split ":" $workspace_paths }}
+      - name: {{ $workspace_path._0 | quote | replace "/" "" }}
+        hostPath:
+          path: {{ $workspace_path._0 }}
+      {{- end }}
       {{- end }}
