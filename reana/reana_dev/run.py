@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020, 2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -247,6 +247,15 @@ def run_commands():
 @click.option(
     "--admin-password", required=True, help="Admin user password",
 )
+@click.option(
+    "--workflow-engine",
+    "-w",
+    multiple=True,
+    default=WORKFLOW_ENGINE_LIST_ALL,
+    help="Which workflow engine to run? [default={}]".format(
+        ",".join(WORKFLOW_ENGINE_LIST_ALL)
+    ),
+)
 @run_commands.command(name="run-ci")
 def run_ci(
     build_arg,
@@ -258,6 +267,7 @@ def run_ci(
     component,
     admin_email,
     admin_password,
+    workflow_engine,
 ):  # noqa: D301
     """Run CI build.
 
@@ -277,14 +287,13 @@ def run_ci(
     \b
     Example:
        $ reana-dev run-ci -m /var/reana:/var/reana
-                           -m /usr/share/local/mydata:/mydata
-                           -j /mydata:/mydata
-                           -c r-d-helloworld
-                           --exclude-components=r-ui,r-a-vomsproxy
-                           --mode debug
-                           --admin-email john.doe@example.org
-                           --admin-password mysecretpassword
-
+                          -m /usr/share/local/mydata:/mydata
+                          -j /mydata:/mydata
+                          -c r-d-helloworld
+                          --exclude-components=r-ui,r-a-vomsproxy
+                          --mode debug
+                          --admin-email john.doe@example.org
+                          --admin-password mysecretpassword
     """
     # parse arguments
     components = select_components(component)
@@ -332,6 +341,8 @@ def run_ci(
     cmd = "eval $(reana-dev client-setup-environment) && reana-dev run-example"
     for component in components:
         cmd += " -c {}".format(component)
+    for a_workflow_engine in workflow_engine:
+        cmd += " -w {}".format(a_workflow_engine)
     run_command(cmd, "reana")
 
 
