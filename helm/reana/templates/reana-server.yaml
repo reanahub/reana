@@ -61,6 +61,13 @@ spec:
             mountPropagation: HostToContainer
           {{- end }}
           {{- end }}
+          {{- if .Values.workspaces }}{{ if .Values.workspaces.paths }}
+          {{- range $workspace_paths := .Values.workspaces.paths }}
+          - name: {{ $workspace_paths | quote | replace "/" "" }}
+            mountPath: {{ $workspace_paths }}
+            mountPropagation: HostToContainer
+          {{- end }}
+          {{- end }}{{ end }}
           - name: uwsgi-config
             mountPath: '/var/reana/uwsgi'
           - name: reana-config
@@ -78,6 +85,14 @@ spec:
             value: {{ .Values.quota.default_disk_limit | default 0 | quote }}
           - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
             value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" }}
+          {{- if .Values.workspaces }}{{ if .Values.workspaces.paths }}
+          - name: WORKSPACE_PATHS
+            value: {{ join "," .Values.workspaces.paths }}
+          {{- end }}{{ end }}
+          {{- if .Values.workspaces }}{{ if .Values.workspaces.paths }}
+          - name: DEFAULT_WORKSPACE_PATH
+            value: {{ index .Values.workspaces.paths 0 }}
+          {{- end }}{{ end }}
           {{- range $key, $value := .Values.db_env_config }}
           - name: {{ $key }}
             value: {{ $value | quote }}
@@ -262,3 +277,10 @@ spec:
           path: {{ $workspace_path._0 }}
       {{- end }}
       {{- end }}
+      {{- if .Values.workspaces }}{{ if .Values.workspaces.paths }}
+      {{- range $workspace_paths := .Values.workspaces.paths }}
+      - name: {{ $workspace_paths | quote | replace "/" "" }}
+        hostPath:
+          path: {{ $workspace_paths }}
+      {{- end }}
+      {{- end }}{{ end }}

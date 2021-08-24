@@ -236,7 +236,7 @@ def cluster_build(
     "--workspace-mounts",
     multiple=True,
     help="Which directories from the Kubernetes nodes to mount inside the cluster pods? "
-    "cluster_node_path:job_pod_mountpath, e.g /var/reana/mydata:/mydata",
+    "cluster_node_path:cluster_pod_mountpath, e.g /var/reana/mydata:/mydata",
 )
 @click.option(
     "--mode",

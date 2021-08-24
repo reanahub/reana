@@ -99,3 +99,4 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `quota.disk_update`                                      | Cronjob pattern representing how often the users disk quota usage should be updated. Leave it empty to deactivate it | "0 3 * * *"     |
 | `quota.default_disk_limit`                               | Default users disk quota limit in bytes.                                             | None                                            |
 | `quota.default_cpu_limit`                                | Default users CPU quota limit in milliseconds.                                       | None                                            |
+| `workspaces.paths`                                       | List of additional workspace paths, e.g `{cluster_node_path_1, cluster_node_path_2}`. The first will be the default workspace root path. Any POSIX filesystem mounted on cluster nodes is supported | None               |
