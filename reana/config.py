@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020, 2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -197,7 +197,7 @@ DOCKER_PREFETCH_IMAGES = {
         "redis:5.0.5",
     ],
     "reana-demo-helloworld": ["python:2.7-slim",],
-    "reana-demo-worldpopulation": ["reanahub/reana-env-jupyter:1.0.0",],
+    "reana-demo-worldpopulation": ["reanahub/reana-env-jupyter:2.0.0",],
     "reana-demo-root6-roofit": ["reanahub/reana-env-root6:6.18.04",],
     "reana-demo-atlas-recast": [
         "reanahub/reana-demo-atlas-recast-eventselection:1.0",
