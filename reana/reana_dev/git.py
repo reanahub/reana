@@ -333,8 +333,9 @@ def git_fork(component, exclude_components, browser):  # noqa: D301
 )
 @click.option(
     "--target-directory",
+    default=".",
     callback=validate_directory,
-    help="In which directory to clone?",
+    help="In which directory to clone?[.]",
 )
 @git_commands.command(name="git-clone")
 def git_clone(user, component, exclude_components, target_directory):  # noqa: D301
@@ -379,11 +380,7 @@ def git_clone(user, component, exclude_components, target_directory):  # noqa: D
     components = select_components(component, exclude_components)
 
     for component in components:
-        if target_directory:
-            os.chdir(target_directory)
-        else:
-            os.chdir(get_srcdir())
-
+        os.chdir(target_directory)
         if os.path.exists("{0}/.git/config".format(component)):
             msg = "Component seems already cloned. Skipping."
             display_message(msg, component)

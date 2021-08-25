@@ -796,20 +796,19 @@ def click_add_git_base_branch_option(func):
 
 def validate_directory(ctx, param, target_directory):
     """Validate if directory is valid for first time cloning."""
-    if target_directory:
-        target_directory = os.path.realpath(target_directory)
+    target_directory = os.path.realpath(target_directory)
 
-        if not os.path.isdir(target_directory):
-            message = "[ERROR] Directory {0} does not exist. Exiting.".format(
-                target_directory
-            )
-            click.echo(click.style(message, fg="red"), err=True)
-            ctx.exit(1)
+    if not os.path.isdir(target_directory):
+        message = "[ERROR] Directory {0} does not exist. Exiting.".format(
+            target_directory
+        )
+        click.echo(click.style(message, fg="red"), err=True)
+        ctx.exit(1)
 
-        if len(os.listdir(target_directory)) != 0:
-            message = "[ERROR] Directory {0} is not empty. Cloning aborted.".format(
-                target_directory
-            )
-            click.echo(click.style(message, fg="red"), err=True)
-            ctx.exit(1)
+    if len(os.listdir(target_directory)) != 0:
+        message = "[ERROR] Directory {0} is not empty. Cloning aborted.".format(
+            target_directory
+        )
+        click.echo(click.style(message, fg="red"), err=True)
+        ctx.exit(1)
     return target_directory
