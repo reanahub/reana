@@ -50,21 +50,13 @@ spec:
           {{- end }}
           - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
             name: reana-shared-volume
-          {{- if .Values.components.reana_workflow_controller.environment.REANA_WORKSPACE_HOSTPATH_MOUNTS }}
-          {{- range  $workspace_paths := split "," .Values.components.reana_workflow_controller.environment.REANA_WORKSPACE_HOSTPATH_MOUNTS }}
-          {{- $workspace_path := split ":" $workspace_paths }}
-          - name: {{ $workspace_path._0 | quote | replace "/" "" }}
-            mountPath: {{ $workspace_path._1 }}
-            mountPropagation: HostToContainer
-          {{- end }}
-          {{- end }}
-          {{- if .Values.workspaces }}{{ if .Values.workspaces.paths }} 
           {{- range $workspace_paths := .Values.workspaces.paths }}
-          - name: {{ $workspace_paths | quote | replace "/" "" }}
+          {{- if not (eq $workspace_paths "/var/reana")}}
+          - name: {{ $workspace_paths | quote |replace "/" "" }}
             mountPath: {{ $workspace_paths }}
             mountPropagation: HostToContainer
           {{- end }}
-          {{- end }}{{ end }}
+          {{- end }}
         env:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
@@ -190,10 +182,13 @@ spec:
           value: {{ .Release.Namespace }}
         - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
           value: {{ .Values.namespace_runtime | default .Release.Namespace }}
-        {{- if .Values.workspaces }}{{ if .Values.workspaces.paths }}
+        {{- if not (eq (index .Values.workspaces.paths 0) "/var/reana")}}
         - name: DEFAULT_WORKSPACE_PATH
           value: {{ index .Values.workspaces.paths 0 }}
-        {{- end }}{{ end }}
+        {{- else if ( gt (len .Values.workspaces.paths) 1)}}
+        - name: DEFAULT_WORKSPACE_PATH
+          value: {{ index .Values.workspaces.paths 1 }}
+        {{- end }}
         {{- range $key, $value := .Values.db_env_config }}
         - name: {{ $key }}
           value: {{ $value | quote }}
@@ -255,18 +250,10 @@ spec:
       nodeSelector:
         {{ $full_label._0 }}: {{ $full_label._1 }}
       {{- end }}
-      {{- if .Values.components.reana_workflow_controller.environment.REANA_WORKSPACE_HOSTPATH_MOUNTS }}
-      {{- range  $workspace_paths := split "," .Values.components.reana_workflow_controller.environment.REANA_WORKSPACE_HOSTPATH_MOUNTS }}
-      {{- $workspace_path := split ":" $workspace_paths }}
-      - name: {{ $workspace_path._0 | quote | replace "/" "" }}
-        hostPath:
-          path: {{ $workspace_path._0 }}
-      {{- end }}
-      {{- end }}
-      {{- if .Values.workspaces }}{{ if .Values.workspaces.paths }}
       {{- range $workspace_paths := .Values.workspaces.paths }}
-      - name: {{ $workspace_paths | quote | replace "/" "" }}
+      {{- if not (eq $workspace_paths "/var/reana")}}
+      - name: {{ $workspace_paths | quote |replace "/" "" }}
         hostPath:
           path: {{ $workspace_paths }}
       {{- end }}
-      {{- end }}{{ end }}
+      {{- end }}

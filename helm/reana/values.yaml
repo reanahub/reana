@@ -11,6 +11,10 @@ debug:
 eos:
   enabled: false
 
+workspaces:
+  paths:
+    - "/var/reana"
+
 shared_storage:
   backend: hostpath  # hostpath | cephfs | nfs
   volume_size: 200
