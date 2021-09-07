@@ -76,7 +76,13 @@ def python_install_eggs():
     default=["ALL"],
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
-def python_unit_tests(component):  # noqa: D301
+@click.option(
+    "--keep-virtual-environment",
+    "-k",
+    is_flag=True,
+    help="Whether to keep or not virtual environment after tests are finished",
+)
+def python_unit_tests(component: str, keep_virtual_environment: bool):  # noqa: D301
     """Run Python unit tests in independent environments.
 
     For each component, create a dedicated throw-away virtual environment,
@@ -101,19 +107,20 @@ def python_unit_tests(component):  # noqa: D301
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
+    :param keep_virtual_environment: flag, whether to keep or not virtual environment
+                                    after tests are finished
+    :type keep_virtual_environment: bool
     """
     components = select_components(component)
     for component in components:
         if component == "reana-job-controller" and platform.system() == "Darwin":
             msg = (
-                "Ignoring component {} that cannot be tested"
-                " on a macOS platform yet.".format(component)
+                f"Ignoring component {component} that cannot be tested"
+                " on a macOS platform yet."
             )
             display_message(msg, component)
         elif is_component_python_package(component):
-            cmd_activate_venv = "source  ~/.virtualenvs/_{}/bin/activate".format(
-                component
-            )
+            cmd_activate_venv = f"source  ~/.virtualenvs/_{component}/bin/activate"
             if does_component_need_db(component):
                 run_command(
                     f"docker stop postgres__{component}\n"
@@ -138,9 +145,11 @@ def python_unit_tests(component):  # noqa: D301
                     if does_component_need_db(component)
                     else "",
                 ),
-                "rm -rf ~/.virtualenvs/_{}".format(component),
             ]:
                 run_command(cmd, component)
+
+            if not keep_virtual_environment:
+                run_command(f"rm -rf ~/.virtualenvs/_{component}")
 
             if does_component_need_db(component):
                 run_command(f"docker stop postgres__{component}")
