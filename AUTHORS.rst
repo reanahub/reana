@@ -22,3 +22,4 @@ The list of contributors in alphabetical order:
 - `Sasha Baranov <https://github.com/sashabaranov>`_
 - `Sinclert Perez <https://www.linkedin.com/in/sinclert>`_
 - `Tibor Simko <https://orcid.org/0000-0001-7202-5803>`_
+- `Vladyslav Moisieienkov <https://orcid.org/0000-0001-9717-0775>`_
