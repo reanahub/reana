@@ -8,17 +8,18 @@
 
 """`reana-dev` related utils."""
 
-import click
 import datetime
 import functools
 import importlib.util
 import json
 import os
-import semver
 import subprocess
 import sys
-import yaml
+from typing import Dict, List, Optional
 
+import click
+import semver
+import yaml
 from packaging.version import InvalidVersion, Version
 
 from reana.config import (
@@ -498,7 +499,7 @@ def update_module_in_cluster_components(
         )
 
 
-def get_component_version_files(component, abs_path=False):
+def get_component_version_files(component, abs_path=False) -> Dict[str, str]:
     """Get a dictionary with all component's version files."""
     version_files = {}
     for file_ in [
@@ -521,32 +522,52 @@ def get_component_version_files(component, abs_path=False):
     return version_files
 
 
-def get_current_component_version_from_source_files(component):
-    """Get component's current version."""
-    version_files = get_component_version_files(component, abs_path=True)
+def get_current_component_version_from_source_files(
+    component: str, version_file: Optional[str] = None
+) -> str:
+    """Get component's current version.
+
+    :param component: standard component name
+    :param version_file: version file type e.g HELM_VERSION_FILE, etc.
+    :type component: str
+    :type version_file: str
+
+    :return: version in SemVer2 or PEP440 format
+    :rtype: str
+    """
+    all_version_files = get_component_version_files(component, abs_path=True)
+
+    if version_file:
+        all_version_files = {version_file: all_version_files[version_file]}
+
     version = ""
-    if version_files.get(HELM_VERSION_FILE):
-        with open(version_files.get(HELM_VERSION_FILE)) as f:
+    if all_version_files.get(HELM_VERSION_FILE):
+        with open(all_version_files.get(HELM_VERSION_FILE)) as f:
             chart_yaml = yaml.safe_load(f.read())
             version = chart_yaml["version"]
 
-    elif version_files.get(PYTHON_VERSION_FILE):
+    elif all_version_files.get(PYTHON_VERSION_FILE):
         spec = importlib.util.spec_from_file_location(
-            component, version_files.get(PYTHON_VERSION_FILE)
+            component, all_version_files.get(PYTHON_VERSION_FILE)
         )
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         version = module.__version__
 
-    elif version_files.get(JAVASCRIPT_VERSION_FILE):
-        with open(version_files.get(JAVASCRIPT_VERSION_FILE)) as f:
+    elif all_version_files.get(JAVASCRIPT_VERSION_FILE):
+        with open(all_version_files.get(JAVASCRIPT_VERSION_FILE)) as f:
             package_json = json.loads(f.read())
             version = package_json["version"]
+
+    elif all_version_files.get(OPENAPI_VERSION_FILE):
+        with open(all_version_files.get(OPENAPI_VERSION_FILE)) as f:
+            openapi_json = json.loads(f.read())
+            version = openapi_json.get("info", {}).get("version")
 
     return version
 
 
-def bump_semver2_version(current_version, part=None, pre_version_prefix=None):
+def bump_semver2_version(current_version: str, part=None) -> str:
     """Bump a semver2 version string.
 
     :param current_version: current version to be bumped
@@ -560,7 +581,6 @@ def bump_semver2_version(current_version, part=None, pre_version_prefix=None):
             f"Current version {current_version} is not a valid semver2 version. Please amend it"
         )
 
-    pre_version_prefix = pre_version_prefix or "alpha"
     parsed_current_version = semver.VersionInfo.parse(current_version)
     next_version = ""
     if parsed_current_version.build or part == "build":
@@ -577,7 +597,7 @@ def bump_semver2_version(current_version, part=None, pre_version_prefix=None):
     return str(next_version)
 
 
-def parse_pep440_version(version):
+def parse_pep440_version(version) -> Optional[Version]:
     """Determine whether the provided version is PEP440 compliant.
 
     :param version: String representation of a version.
@@ -590,12 +610,12 @@ def parse_pep440_version(version):
 
 
 def bump_pep440_version(
-    current_version,
+    current_version: str,
     part=None,
     dev_version_prefix=None,
     post_version_prefix=None,
     pre_version_prefix=None,
-):
+) -> str:
     """Bump a PEP440 version string.
 
     :param current_version: current version to be bumped
@@ -668,7 +688,7 @@ def bump_pep440_version(
     return str(next_version)
 
 
-def translate_pep440_to_semver2(pep440_version):
+def translate_pep440_to_semver2(pep440_version: str) -> str:
     """Translate a PEP440 compliant version to semver2."""
     prerelease_translation_dict = {
         "a": "alpha",
@@ -679,8 +699,8 @@ def translate_pep440_to_semver2(pep440_version):
     }
     parsed_pep440_version = parse_pep440_version(pep440_version)
     if not parsed_pep440_version:
-        click.secho(f"Version {pep440_version} is not a correct PEP440 version.")
-        sys.exit(1)
+        raise Exception(f"Version {pep440_version} is not a correct PEP440 version.")
+
     dev_post_pre_semver2 = ""
     if parsed_pep440_version.is_devrelease:
         dev_post_pre_semver2 = f"dev.{parsed_pep440_version.dev}"
@@ -704,37 +724,67 @@ def translate_pep440_to_semver2(pep440_version):
         sys.exit(1)
 
 
-def bump_component_version(component, current_version, next_version=None):
-    """Bump to next component version."""
-    try:
-        version_files = get_component_version_files(component)
-        files_to_update = []
+def bump_component_version(
+    component: str, next_version: Optional[str] = None
+) -> (str, List[str]):
+    """Bump to next component version.
 
-        if version_files.get(HELM_VERSION_FILE):
-            next_version = next_version or bump_semver2_version(current_version)
-            files_to_update.append(version_files.get(HELM_VERSION_FILE))
-        elif version_files.get(PYTHON_VERSION_FILE):
-            next_version = next_version or bump_pep440_version(current_version)
-            files_to_update.append(version_files.get(PYTHON_VERSION_FILE))
-            if version_files.get(OPENAPI_VERSION_FILE):
-                files_to_update.append(version_files.get(OPENAPI_VERSION_FILE))
-        elif version_files.get(JAVASCRIPT_VERSION_FILE):
-            next_version = next_version or bump_semver2_version(current_version)
-            files_to_update.append(version_files.get(JAVASCRIPT_VERSION_FILE))
+    If next_version is set, it will be used for the component.
+    If not, version will be bumped automatically from the current one.
 
-        for file_ in files_to_update:
-            replace_string(
-                file_=file_,
-                find=current_version,
-                replace=next_version,
-                component=component,
-            )
+    :param component: standard component name
+    :param next_version: new version
+    :type component: str
+    :type next_version: str
 
-        return next_version, files_to_update
-    except Exception as e:
-        display_message(
-            f"Something went wront while bumping the version: {e}", component
+    :return: next_version and list of modified version files
+    :rtype: str, List[str]
+    """
+    version_files = get_component_version_files(component)
+
+    updated_files = []
+    next_version_per_file_type = {}
+
+    # bump all version files
+    for file_type, file_path in version_files.items():
+        if not file_path:
+            continue
+
+        current_version = get_current_component_version_from_source_files(
+            component, version_file=file_type
         )
+
+        if file_type in [HELM_VERSION_FILE, JAVASCRIPT_VERSION_FILE]:
+            new_version = (
+                translate_pep440_to_semver2(next_version)
+                if next_version
+                else bump_semver2_version(current_version)
+            )
+        elif file_type in [PYTHON_VERSION_FILE, OPENAPI_VERSION_FILE]:
+            new_version = (
+                str(parse_pep440_version(next_version))
+                if next_version
+                else bump_pep440_version(current_version)
+            )
+        else:
+            raise Exception(f"Cannot bump the following {file_type} file")
+
+        replace_string(
+            file_=file_path,
+            find=current_version,
+            replace=new_version,
+            component=component,
+        )
+        updated_files.append(file_path)
+        next_version_per_file_type[file_type] = new_version
+
+    # depending on a component, return proper component version
+    if HELM_VERSION_FILE in next_version_per_file_type.keys():
+        return next_version_per_file_type[HELM_VERSION_FILE], updated_files
+    elif JAVASCRIPT_VERSION_FILE in next_version_per_file_type:
+        return next_version_per_file_type[JAVASCRIPT_VERSION_FILE], updated_files
+    else:
+        return next_version_per_file_type[PYTHON_VERSION_FILE], updated_files
 
 
 def get_git_tag(component):

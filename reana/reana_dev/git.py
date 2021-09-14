@@ -8,10 +8,10 @@
 
 """`reana-dev`'s git commands."""
 
-import datetime
 import os
 import subprocess
 import sys
+from typing import Optional
 
 import click
 
@@ -22,7 +22,6 @@ from reana.config import (
     REPO_LIST_ALL,
     REPO_LIST_SHARED,
 )
-
 from reana.reana_dev.utils import (
     bump_component_version,
     click_add_git_base_branch_option,
@@ -117,8 +116,10 @@ def git_is_current_version_tagged(component):
 
 
 def git_create_release_commit(
-    component, base=GIT_DEFAULT_BASE_BRANCH, next_version=None
-):
+    component: str,
+    base: str = GIT_DEFAULT_BASE_BRANCH,
+    next_version: Optional[str] = None,
+) -> bool:
     """Create a release commit for the given component."""
     if "release:" in get_current_commit(get_srcdir(component)):
         display_message("Nothing to do, last commit is a release commit.", component)
@@ -139,7 +140,7 @@ def git_create_release_commit(
         sys.exit(1)
 
     next_version, modified_files = bump_component_version(
-        component, current_version, next_version=next_version
+        component, next_version=next_version
     )
 
     if (
