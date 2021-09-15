@@ -54,10 +54,13 @@ spec:
           - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
             name: reana-shared-volume
           {{- range $workspace_paths := .Values.workspaces.paths }}
-          {{- if not (eq $workspace_paths "/var/reana")}}
-          - name: {{ $workspace_paths | quote |replace "/" "" }}
-            mountPath: {{ $workspace_paths }}
-            mountPropagation: HostToContainer
+          {{- if ne (typeOf $workspace_paths) "string" -}}
+          {{- fail "The workspaces.paths should be a list of strings e.g node_host_path:pod_mount_path" -}}
+          {{- end }}
+          {{- $workspace_path := split ":" $workspace_paths }}
+          {{- if and (ne $workspace_path._0 $.Values.shared_storage.hostpath.root_path) (ne $workspace_path._1 $.Values.shared_storage.shared_volume_mount_path) }}
+          - name: {{ $workspace_path._0 | quote | replace "/" "" }}
+            mountPath: {{ $workspace_path._1 }}
           {{- end }}
           {{- end }}
           - name: uwsgi-config
@@ -76,16 +79,9 @@ spec:
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
             value: {{ .Values.quota.default_disk_limit | default 0 | quote }}
           - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
-            value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" }}
+            value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" }}          
           - name: WORKSPACE_PATHS
-            value: {{ join "," .Values.workspaces.paths }}
-          {{- if not (eq (index .Values.workspaces.paths 0) "/var/reana")}}
-          - name: DEFAULT_WORKSPACE_PATH
-            value: {{ index .Values.workspaces.paths 0 }}
-          {{- else if ( gt (len .Values.workspaces.paths) 1)}}
-          - name: DEFAULT_WORKSPACE_PATH
-            value: {{ index .Values.workspaces.paths 1 }}
-          {{- end }}
+            value: {{ .Values.workspaces.paths | toJson | quote }}
           {{- range $key, $value := .Values.db_env_config }}
           - name: {{ $key }}
             value: {{ $value | quote }}
@@ -263,9 +259,10 @@ spec:
         {{ $full_label._0 }}: {{ $full_label._1 }}
       {{- end }}
       {{- range $workspace_paths := .Values.workspaces.paths }}
-      {{- if not (eq $workspace_paths "/var/reana")}}
-      - name: {{ $workspace_paths | quote |replace "/" "" }}
+      {{- $workspace_path := split ":" $workspace_paths }}
+      {{- if and (ne $workspace_path._0 $.Values.shared_storage.hostpath.root_path) (ne $workspace_path._1 $.Values.shared_storage.shared_volume_mount_path) }}
+      - name: {{ $workspace_path._0 | quote | replace "/" "" }}
         hostPath:
-          path: {{ $workspace_paths }}
+          path: {{ $workspace_path._0 }}
       {{- end }}
       {{- end }}

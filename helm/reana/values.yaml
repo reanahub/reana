@@ -13,7 +13,7 @@ eos:
 
 workspaces:
   paths:
-    - "/var/reana"
+    - /var/reana:/var/reana
 
 shared_storage:
   backend: hostpath  # hostpath | cephfs | nfs
