@@ -119,19 +119,19 @@ serviceAccount:
 
 # Traefik's chart values.yaml
 traefik:
+  ports:
+    web:
+      nodePort: 30080
+    websecure:
+      nodePort: 30443
+      tls:
+        # without additional configs will use default insecure one
+        enabled: true
   enabled: true
   rbac:
     enabled: true
-  dashboard:
-    enabled: true
-  serviceType: NodePort
   service:
-    nodePorts:
-      http: 30080
-      https: 30443
-  ssl:
-    enabled: true
-    generateTLS: true
+    type: NodePort
 
 # Quota
 quota:

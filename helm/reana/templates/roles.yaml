@@ -11,11 +11,11 @@ rules:
 - apiGroups: ["storage.k8s.io"]
   resources: ["storageclasses"]
   verbs: ["*"]
-- apiGroups: ["batch", "extensions"]
+- apiGroups: ["batch", "networking.k8s.io"]
   resources: ["jobs"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 # Interactive web notebooks permissions
-- apiGroups: ["", "extensions", "apps", "networking.k8s.io"]
+- apiGroups: ["", "apps", "networking.k8s.io"]
   resources: ["deployments", "services", "ingresses"]
   verbs: ["get", "create", "delete"]
 # Metrics (`kubectl top node/pod`)

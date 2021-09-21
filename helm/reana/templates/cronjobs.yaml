@@ -1,6 +1,6 @@
 {{- if .Values.notifications.enabled }}
 {{- if .Values.notifications.system_status }}
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ include "reana.prefix" . }}-system-status
@@ -107,7 +107,7 @@ spec:
 {{- end }}
 ---
 {{- if and .Values.quota.enabled (tpl .Values.quota.periodic_update_policy .) }}
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ include "reana.prefix" . }}-resource-quota-update

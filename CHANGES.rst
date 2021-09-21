@@ -1,11 +1,18 @@
 Changes
 =======
 
+Version 0.9.0 (UNRELEASED)
+--------------------------
+
+- Administrators:
+    - Adds support for Kubernetes version 1.22 and 1.23 clusters.
+    - Removes support for Kubernetes version prior to 1.19.
+
 Version 0.8.2 (UNRELEASED)
 --------------------------
 
 - Administrators:
-    - Adds configuration environment variable, ``reana_server.environment.REANA_SCHEDULER_REQUEUE_COUNT``, to set requeue count for submitted workflows in case of scheduling error or busy cluster.
+    - Adds new configuration environment variable ``reana_server.environment.REANA_SCHEDULER_REQUEUE_COUNT`` to set workflow requeue count in case of scheduling errors or busy cluster situations.
 
 Version 0.8.1 (2022-02-15)
 --------------------------
