@@ -32,6 +32,9 @@ spec:
       containers:
       - name: db
         image: postgres:9.6.2
+        args:
+        - -c
+        - max_connections=300
         ports:
         - containerPort: 5432
         env:
