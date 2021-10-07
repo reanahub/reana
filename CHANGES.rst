@@ -11,6 +11,7 @@ Version 0.8.0 (UNRELEASED)
       (``node_label_runtimebatch``, ``node_label_runtimejobs``, ``node_label_runtimesessions``).
     - Adds a default ``kubernetes_memory_limit`` value (4Gi).
     - Adds configuration environment variable to set workflow scheduling policy (``REANA_WORKFLOW_SCHEDULING_POLICY``).
+    - Changes Helm templates to use PostgreSQL 12.8 version.
 
 Version 0.7.4 (2021-07-07)
 --------------------------

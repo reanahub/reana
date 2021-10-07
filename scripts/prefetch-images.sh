@@ -8,7 +8,7 @@
 
 for image in \
     maildev/maildev:1.1.0 \
-    postgres:9.6.2 \
+    postgres:12.8 \
     redis:5.0.5 \
     jupyter/scipy-notebook \
     reanahub/reana-job-controller:0.8.0-alpha.3 \
