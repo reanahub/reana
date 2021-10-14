@@ -53,6 +53,7 @@ REPO_LIST_ALL = [
     "reana-env-aliphysics",
     "reana-env-jupyter",
     "reana-env-root6",
+    "reana-github-actions",
     "reana-job-controller",
     "pytest-reana",
     "reana-message-broker",
