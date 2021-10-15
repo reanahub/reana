@@ -430,7 +430,8 @@ def update_module_in_cluster_components(
 ):
     """Update the specified module version in all affected components."""
     updatable_components = {
-        "reana-commons": COMPONENTS_USING_SHARED_MODULE_COMMONS + ["reana-client"],
+        "reana-commons": COMPONENTS_USING_SHARED_MODULE_COMMONS
+        + ["reana-client", "reana-db"],
         "reana-db": COMPONENTS_USING_SHARED_MODULE_DB,
     }[module]
 
