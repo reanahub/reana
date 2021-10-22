@@ -27,12 +27,13 @@ spec:
     app: {{ include "reana.prefix" . }}-message-broker
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "reana.prefix" . }}-message-broker
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
+  serviceName: {{ include "reana.prefix" . }}-message-broker
   selector:
     matchLabels:
       app: {{ include "reana.prefix" . }}-message-broker
@@ -51,14 +52,21 @@ spec:
         - containerPort: 15672
           name: management
         volumeMounts:
-        - name: data
-          mountPath: /var/lib/rabbitmq/mnesia
+        - mountPath: /var/lib/rabbitmq/mnesia
+          subPath: rabbitmq/mnesia
+          name: reana-shared-volume
       {{- if .Values.node_label_infrastructure }}
       {{- $full_label := split "=" .Values.node_label_infrastructure }}
       nodeSelector:
         {{ $full_label._0 }}: {{ $full_label._1 }}
       {{- end }}
       volumes:
-      - name: data
+      - name: reana-shared-volume
+        {{- if not (eq .Values.shared_storage.backend "hostpath") }}
+        persistentVolumeClaim:
+          claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
+          readOnly: false
+        {{- else }}
         hostPath:
-          path: /var/reana/rabbitmq/mnesia
+          path:  {{ .Values.shared_storage.hostpath.root_path }}
+        {{- end }}
