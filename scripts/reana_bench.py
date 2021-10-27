@@ -238,7 +238,7 @@ def _max_min_mean_median(series: pd.Series) -> (int, int, int, int):
     return int(max_value), int(min_value), int(mean_value), int(median_value)
 
 
-def _execution_progress_plot(path: Path, df: pd.DataFrame) -> None:
+def _execution_progress_plot(path: Path, df: pd.DataFrame, title: str) -> None:
     plt.clf()
 
     sorted_df = df.sort_values(["submit_date", "submit_number"])
@@ -264,10 +264,11 @@ def _execution_progress_plot(path: Path, df: pd.DataFrame) -> None:
     plt.xlabel("workflow run")
     plt.ylabel("time [s]")
     plt.legend()
+    plt.title(title)
     plt.savefig(path)
 
 
-def _execution_status_plot(path: Path, df: pd.DataFrame) -> None:
+def _execution_status_plot(path: Path, df: pd.DataFrame, title: str) -> None:
     plt.clf()
     total = len(df)
     statuses = list(df["status"].unique())
@@ -277,13 +278,13 @@ def _execution_status_plot(path: Path, df: pd.DataFrame) -> None:
         labels=stats.keys(),
         autopct=lambda val: round(((val / 100) * sum(stats.values()))),
     )
-    plt.title("Status distribution")
-    plt.text(-1, 1, f"total: {total}")
+    plt.text(-1, 1, f"workflows: {total}")
+    plt.title(title)
     plt.savefig(path)
 
 
 def _create_histogram_plot(
-    path: Path, series: pd.Series, bin_size: int, label: str,
+    path: Path, series: pd.Series, bin_size: int, label: str, title: str,
 ) -> None:
     plt.clf()
     plt.hist(series, bin_size, color="b", label=label)
@@ -294,41 +295,48 @@ def _create_histogram_plot(
     slowest, fastest, mean, median = _max_min_mean_median(series)
 
     plt.title(
-        f"fastest: {fastest}, median: {median}," f" mean: {mean}, slowest: {slowest}"
+        f"{title}\nfastest: {fastest}, median: {median},"
+        f" mean: {mean}, slowest: {slowest}"
     )
 
     plt.savefig(path)
 
 
-def _total_time_histogram(path: Path, df: pd.DataFrame) -> None:
-    _create_histogram_plot(path, df["runtime"] + df["pending_time"], 10, "total_time")
+def _total_time_histogram(path: Path, df: pd.DataFrame, title: str) -> None:
+    _create_histogram_plot(
+        path, df["runtime"] + df["pending_time"], 10, "total_time", title
+    )
 
 
-def _runtime_histogram(path: Path, df: pd.DataFrame) -> None:
-    _create_histogram_plot(path, df["runtime"], 10, "runtime")
+def _runtime_histogram(path: Path, df: pd.DataFrame, title: str) -> None:
+    _create_histogram_plot(path, df["runtime"], 10, "runtime", title)
 
 
-def _pending_time_histogram(path: Path, df: pd.DataFrame) -> None:
-    _create_histogram_plot(path, df["pending_time"], 10, "pending_time")
+def _pending_time_histogram(path: Path, df: pd.DataFrame, title: str) -> None:
+    _create_histogram_plot(path, df["pending_time"], 10, "pending_time", title)
 
 
-def _create_plots(prefix: str, df: pd.DataFrame) -> None:
+def _create_plots(prefix: str, title: str, df: pd.DataFrame) -> None:
     logging.info("Creating plots...")
 
+    # as for now, having to pass only one additional parameter title is okay
+    #   but, in future, if more parameters are added it will become harder
+    #   so a better code solution will be needed
+
     progress_plot_path = Path(f"{prefix}_execution_progress.png")
-    _execution_progress_plot(progress_plot_path, df)
+    _execution_progress_plot(progress_plot_path, df, title)
 
     status_plot_path = Path(f"{prefix}_execution_status.png")
-    _execution_status_plot(status_plot_path, df)
+    _execution_status_plot(status_plot_path, df, title)
 
     total_time_histogram_path = Path(f"{prefix}_histogram_total_time.png")
-    _total_time_histogram(total_time_histogram_path, df)
+    _total_time_histogram(total_time_histogram_path, df, title)
 
     runtime_histogram_path = Path(f"{prefix}_histogram_runtime.png")
-    _runtime_histogram(runtime_histogram_path, df)
+    _runtime_histogram(runtime_histogram_path, df, title)
 
     pending_time_histogram_path = Path(f"{prefix}_histogram_pending_time.png")
-    _pending_time_histogram(pending_time_histogram_path, df)
+    _pending_time_histogram(pending_time_histogram_path, df, title)
 
 
 def _start_benchmark(
@@ -386,8 +394,8 @@ def _save_original_results(workflow: str, df: pd.DataFrame):
     "--concurrency",
     "-c",
     help=f"Number of workers to submit workflows, default {WORKERS_DEFAULT_COUNT}",
-    default=WORKERS_DEFAULT_COUNT,
     type=int,
+    default=WORKERS_DEFAULT_COUNT,
 )
 def launch(workflow: str, number: int, file: str, concurrency: int) -> NoReturn:
     """Launch multiple workflows."""
@@ -406,7 +414,15 @@ def launch(workflow: str, number: int, file: str, concurrency: int) -> NoReturn:
 
 @cli.command()
 @click.option("--workflow", "-w", help="Name of the workflow", required=True, type=str)
-def analyze(workflow: str) -> NoReturn:
+@click.option(
+    "--title",
+    "-t",
+    help="Title of the generated plots",
+    type=str,
+    # use workflow parameter as default if title is not provided
+    callback=lambda c, p, v: v if v is not None else c.params["workflow"],
+)
+def analyze(workflow: str, title: str) -> NoReturn:
     """Produce various plots and derive metrics based on launch results collected before."""
     original_results_path = _build_original_results_path(workflow)
     original_results = pd.read_csv(original_results_path)
@@ -417,7 +433,7 @@ def analyze(workflow: str) -> NoReturn:
     processed_results_path = _build_processed_results_path(workflow)
     processed_results.to_csv(processed_results_path, index=False)
 
-    _create_plots(workflow, processed_results)
+    _create_plots(workflow, title, processed_results)
 
 
 @cli.command()
