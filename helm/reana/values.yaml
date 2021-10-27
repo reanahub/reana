@@ -53,7 +53,7 @@ db_env_config:
 components:
   reana_ui:
     enabled: true
-    docs_url: http://docs.reana.io
+    docs_url: https://docs.reana.io
     forum_url: https://forum.reana.io
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-ui:0.8.0-alpha.3
@@ -125,4 +125,6 @@ traefik:
 
 # Quota
 quota:
+  enabled: true
   disk_update: "0 3 * * *"  # everyday at 3am
+  termination_update_policy: "disk,cpu"

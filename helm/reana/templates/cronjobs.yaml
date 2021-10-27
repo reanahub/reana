@@ -106,7 +106,7 @@ spec:
 {{- end }}
 {{- end }}
 ---
-{{- if .Values.quota.disk_update }}
+{{- if and .Values.quota.enabled .Values.quota.disk_update }}
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
@@ -133,6 +133,8 @@ spec:
             stdin: true
             {{- end }}
             env:
+            - name: REANA_CRONJOB_DISK_QUOTA_UPDATE_POLICY
+              value: "true"
             {{- range $key, $value := .Values.db_env_config }}
             - name: {{ $key }}
               value: {{ $value | quote }}

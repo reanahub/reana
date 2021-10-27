@@ -79,9 +79,13 @@ spec:
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
             value: {{ .Values.quota.default_disk_limit | default 0 | quote }}
           - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
-            value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" }}          
+            value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" }}
           - name: WORKSPACE_PATHS
             value: {{ .Values.workspaces.paths | toJson | quote }}
+          {{- if .Values.quota.enabled }}
+          - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
+            value: {{ .Values.quota.termination_update_policy | default "null" }}
+          {{- end }}
           {{- range $key, $value := .Values.db_env_config }}
           - name: {{ $key }}
             value: {{ $value | quote }}

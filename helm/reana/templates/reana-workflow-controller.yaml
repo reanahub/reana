@@ -71,10 +71,14 @@ spec:
             value: {{ .Values.quota.default_cpu_limit | default 0 | quote }}
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
             value: {{ .Values.quota.default_disk_limit | default 0 | quote }}
+          {{- if .Values.quota.enabled }}
+          - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
+            value: {{ .Values.quota.termination_update_policy | default "null" }}
+          {{- end }}
           {{- if .Values.naming_scheme }}
           - name: REANA_COMPONENT_NAMING_SCHEME
             value: {{ .Values.naming_scheme }}
-          {{- end }}          
+          {{- end }}
           - name: WORKSPACE_PATHS
             value: {{ .Values.workspaces.paths | toJson | quote }}
           {{- range $key, $value := .Values.db_env_config }}
@@ -183,6 +187,10 @@ spec:
           value: {{ .Release.Namespace }}
         - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
           value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+        {{- if .Values.quota.enabled }}
+        - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
+          value: {{ .Values.quota.termination_update_policy | default "null" }}
+        {{- end }}
         {{- range $key, $value := .Values.db_env_config }}
         - name: {{ $key }}
           value: {{ $value | quote }}

@@ -5,13 +5,15 @@ Version 0.8.0 (UNRELEASED)
 --------------------------
 
 - Users:
-   - Adds support for Snakemake workflow engine.
+    - Adds support for Snakemake workflow engine.
 - Administrators
     - Adds new configuration to set node labels splitting workflow nodes, job nodes and session nodes
       (``node_label_runtimebatch``, ``node_label_runtimejobs``, ``node_label_runtimesessions``).
     - Adds a default ``kubernetes_memory_limit`` value (4Gi).
     - Adds configuration environment variable to set workflow scheduling policy (``REANA_WORKFLOW_SCHEDULING_POLICY``).
     - Adds configuration environment variables to set REST API rate limit values (``REANA_RATELIMIT_GUEST_USER``, ``REANA_RATELIMIT_AUTHENTICATED_USER``).
+    - Adds new configuration ``quota.enabled`` to enable or disable quota accounting.
+    - Adds new configuration ``quota.termination_update_policy`` to select the resources for which the quota must be calculated.
     - Changes Helm templates to use PostgreSQL 12.8 version.
 
 Version 0.7.4 (2021-07-07)
