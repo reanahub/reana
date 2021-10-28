@@ -7,7 +7,7 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 
 for image in \
-        jupyter/scipy-notebook \
+        jupyter/scipy-notebook:notebook-6.4.5 \
         maildev/maildev:1.1.0 \
         postgres:12.8 \
         redis:5.0.5 \
