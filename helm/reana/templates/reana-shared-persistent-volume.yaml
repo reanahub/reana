@@ -11,9 +11,39 @@ spec:
   resources:
     requests:
       storage: {{ .Values.shared_storage.volume_size }}G
+  {{- if and (eq .Values.shared_storage.backend "cephfs") (semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion) }}
+  storageClassName: ""
+  volumeName: {{ include "reana.prefix" . }}-shared-persistent-volume-storage
+  {{- else }}
   storageClassName: {{ include "reana.prefix" . }}-shared-volume-storage-class
+  {{- end }}
 # Which storage class to create depending on the backend
 {{- if eq .Values.shared_storage.backend "cephfs" }}
+{{- if semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "reana.prefix" . }}-shared-persistent-volume-storage
+  namespace: {{ .Release.Namespace }}
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: {{ .Values.shared_storage.volume_size }}G
+  csi:
+    driver: cephfs.manila.csi.openstack.org
+    volumeHandle: {{ .Values.shared_storage.cephfs.cephfs_os_share_id }}
+    nodeStageSecretRef:
+      name: {{ .Values.shared_storage.cephfs.os_secret_name }}
+      namespace: {{ .Values.shared_storage.cephfs.os_secret_namespace }}
+    nodePublishSecretRef:
+      name: {{ .Values.shared_storage.cephfs.os_secret_name }}
+      namespace: {{ .Values.shared_storage.cephfs.os_secret_namespace }}
+    volumeAttributes:
+      shareID: {{ .Values.shared_storage.cephfs.cephfs_os_share_id }}
+      shareAccessID: {{ .Values.shared_storage.cephfs.cephfs_os_share_access_id }}
+{{- else }}
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -31,5 +61,6 @@ parameters:
   csi-driver: cephfs.csi.ceph.com
   osShareID: {{ .Values.shared_storage.cephfs.cephfs_os_share_id }}
   osShareAccessID: {{ .Values.shared_storage.cephfs.cephfs_os_share_access_id }}
+{{- end }}
 {{- end }}
 {{- end }}
