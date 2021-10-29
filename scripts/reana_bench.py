@@ -175,8 +175,9 @@ def _workflows_finished(df: pd.DataFrame) -> bool:
 
 
 def _convert_str_date_to_epoch(series: pd.Series) -> pd.Series:
+    datetime_format = "%Y-%m-%dT%H:%M:%S"
     return series.apply(
-        lambda x: int(time.mktime(datetime.fromisoformat(x).timetuple()))
+        lambda x: int(time.mktime(datetime.strptime(x, datetime_format).timetuple()))
     )
 
 
