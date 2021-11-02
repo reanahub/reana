@@ -36,6 +36,9 @@ REANA_ACCESS_TOKEN = os.getenv("REANA_ACCESS_TOKEN")
 # 2 or more workers could hit reana-server API rate limit sometimes
 WORKERS_DEFAULT_COUNT = 1
 
+# common datetime format
+DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
+
 
 @click.group()
 def cli():
@@ -52,7 +55,7 @@ def cli():
 
         \b
         $ cd reana-demo-root6-roofit  # find an example of REANA workflow
-        $ reana_bench.py launch -w roofit50yadage -n 50 -f reana-yadage.yaml  # submit and start
+        $ reana_bench.py launch -w roofit50yadage -n 1-50 -f reana-yadage.yaml  # submit and start
         $ reana_bench.py collect -w roofit50yadage  # collect results and save them locally
         $ reana_bench.py analyze -w roofit50yadage  # analyzes results that were saved locally
 
@@ -62,8 +65,8 @@ def cli():
 
         \b
         $ cd reana-demo-root6-roofit  # find an example of REANA workflow
-        $ reana_bench.py submit -w roofit50yadage -n 50 -f reana-yadage.yaml  # submit, do not start
-        $ reana_bench.py start -w roofit50yadage  # start workflows
+        $ reana_bench.py submit -w roofit50yadage -n 1-50 -f reana-yadage.yaml  # submit, do not start
+        $ reana_bench.py start -w roofit50yadage  -n 1-50 # start workflows
         $ reana_bench.py collect -w roofit50yadage  # collect results and save them locally
         $ reana_bench.py analyze -w roofit50yadage  # analyzes results that were saved locally
     """
@@ -99,11 +102,11 @@ def _build_extended_workflow_name(workflow: str, run_number: int) -> str:
 
 def _create_and_upload_workflows(
     workflow: str,
-    n: int,
+    workflow_range: (int, int),
     file: Optional[str] = None,
     workers: int = WORKERS_DEFAULT_COUNT,
 ) -> None:
-    logging.info(f"Creating and uploading {n} workflows...")
+    logging.info(f"Creating and uploading {workflow_range} workflows...")
     with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
         futures = [
             executor.submit(
@@ -111,7 +114,7 @@ def _create_and_upload_workflows(
                 _build_extended_workflow_name(workflow, i),
                 file,
             )
-            for i in range(0, n)
+            for i in range(workflow_range[0], workflow_range[1] + 1)
         ]
         for future in concurrent.futures.as_completed(futures):
             # collect results, in case of exception, it will be raised here
@@ -119,7 +122,7 @@ def _create_and_upload_workflows(
 
 
 def _get_utc_now_timestamp() -> str:
-    return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
+    return datetime.utcnow().strftime(DATETIME_FORMAT)
 
 
 def _start_single_workflow(workflow_name: str) -> (str, str):
@@ -130,9 +133,9 @@ def _start_single_workflow(workflow_name: str) -> (str, str):
 
 
 def _start_workflows_and_record_submit_dates(
-    workflow_name: str, n: int, workers: int = WORKERS_DEFAULT_COUNT
+    workflow_name: str, workflow_range: (int, int), workers: int = WORKERS_DEFAULT_COUNT
 ) -> pd.DataFrame:
-    logging.info(f"Starting {n} workflows...")
+    logging.info(f"Starting {workflow_range} workflows...")
     df = pd.DataFrame(columns=["name", "submit_date", "submit_number"])
     submit_number = 0
     with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
@@ -140,7 +143,7 @@ def _start_workflows_and_record_submit_dates(
             executor.submit(
                 _start_single_workflow, _build_extended_workflow_name(workflow_name, i)
             )
-            for i in range(0, n)
+            for i in range(workflow_range[0], workflow_range[1] + 1)
         ]
         for future in concurrent.futures.as_completed(futures):
             workflow_name, submit_datetime = future.result()
@@ -164,13 +167,6 @@ def _get_workflows(workflow_prefix: str) -> pd.DataFrame:
     return pd.DataFrame(json.loads(subprocess.check_output(cmd).decode("ascii")))
 
 
-def _workflow_already_exists(workflow: str) -> bool:
-    """Retrieve as little data as possible and check if workflow exists."""
-    cmd = _build_reana_client_list_command(workflow, page=1, size=1)
-    workflows = json.loads(subprocess.check_output(cmd).decode("ascii"))
-    return len(workflows) != 0
-
-
 def _build_reana_client_list_command(
     workflow: str, page: Optional[int] = None, size: Optional[int] = None
 ) -> List[str]:
@@ -190,9 +186,8 @@ def _workflows_finished(df: pd.DataFrame) -> bool:
 
 
 def _convert_str_date_to_epoch(series: pd.Series) -> pd.Series:
-    datetime_format = "%Y-%m-%dT%H:%M:%S"
     return series.apply(
-        lambda x: int(time.mktime(datetime.strptime(x, datetime_format).timetuple()))
+        lambda x: int(time.mktime(datetime.strptime(x, DATETIME_FORMAT).timetuple()))
     )
 
 
@@ -381,39 +376,78 @@ def _save_original_results(workflow: str, df: pd.DataFrame):
 
 
 def submit(
-    workflow_prefix: str, number_of_workflows: int, file: str, workers: int
+    workflow_prefix: str, workflow_range: (int, int), file: str, workers: int
 ) -> None:
     """Submit multiple workflows, do not start them."""
-    if _workflow_already_exists(workflow_prefix):
-        raise Exception("Found duplicated workflow name(s). Please use unique name.")
-
-    _create_and_upload_workflows(workflow_prefix, number_of_workflows, file, workers)
+    _create_and_upload_workflows(workflow_prefix, workflow_range, file, workers)
     logging.info("Finished creating and uploading workflows.")
 
 
-def start(workflow_name: str, workers: int) -> None:
+def _append_to_existing_submit_results(
+    workflow_name: str, new_submit_results: pd.DataFrame
+) -> pd.DataFrame:
+    """Append new submit results to existing submit results and return them."""
+
+    submitted_results_path = _build_submitted_results_path(workflow_name)
+
+    existing_submit_results = pd.DataFrame()
+
+    if submitted_results_path.exists():
+        logging.info("Loading existing submit results. Appending...")
+        existing_submit_results = pd.read_csv(submitted_results_path)
+
+    return existing_submit_results.append(new_submit_results, ignore_index=True)
+
+
+def start(workflow_name: str, workflow_range: (int, int), workers: int) -> None:
     """Start already submitted workflows."""
 
-    number_of_workflows = len(_get_workflows(workflow_name))
-
-    if number_of_workflows == 0:
-        raise Exception("Cannot start. Workflow(s) do not exist.")
-
     submitted_results = _start_workflows_and_record_submit_dates(
-        workflow_name, number_of_workflows, workers
+        workflow_name, workflow_range, workers
+    )
+
+    submitted_results = _append_to_existing_submit_results(
+        workflow_name, submitted_results
     )
 
     logging.info("Saving intermediate submit results...")
     submitted_results_path = _build_submitted_results_path(workflow_name)
     submitted_results.to_csv(submitted_results_path, index=False)
-    logging.info("Finished. Don't forget to collect the results.")
+    logging.info("Finished starting workflows.")
 
 
 workflow_option = click.option(
     "--workflow", "-w", help="Name of the workflow", required=True, type=str
 )
-number_of_workflows_option = click.option(
-    "--number", "-n", help="Number of workflows to start", required=True, type=int
+
+
+def _to_range(workflow_range: str) -> (int, int):
+    """Convert string range to an integer tuple with two elements start and end.
+
+    This is callback for click.option.
+    """
+    workflow_range = workflow_range.split("-")
+
+    # remove empty stings
+    workflow_range = [s for s in workflow_range if s]
+
+    if len(workflow_range) != 2:
+        logging.error(
+            "Workflow range is incorrect. Correct format: 'number-number', e.g '100-200'."
+        )
+        exit(1)
+
+    return int(workflow_range[0]), int(workflow_range[1])
+
+
+workflow_range_option = click.option(
+    "--number",
+    "-n",
+    "workflow_range",
+    help="Workflow range, inclusive, e.g '10-20'",
+    required=True,
+    type=str,
+    callback=lambda c, p, v: _to_range(v),
 )
 concurrency_option = click.option(
     "--concurrency",
@@ -434,43 +468,50 @@ reana_file_option = click.option(
 
 @cli.command(name="submit")
 @workflow_option
-@number_of_workflows_option
+@workflow_range_option
 @reana_file_option
 @concurrency_option
-def submit_command(workflow: str, number: int, file: str, concurrency: int) -> NoReturn:
+def submit_command(
+    workflow: str, workflow_range: (int, int), file: str, concurrency: int
+) -> NoReturn:
     """Submit workflows, do not start them."""
     try:
-        submit(workflow, number, file, concurrency)
+        submit(workflow, workflow_range, file, concurrency)
     except Exception as e:
         logging.error(f"Something went wrong during workflow submission: {e}")
 
 
 @cli.command(name="start")
 @workflow_option
+@workflow_range_option
 @concurrency_option
-def start_command(workflow: str, concurrency: int) -> NoReturn:
+def start_command(
+    workflow: str, workflow_range: (int, int), concurrency: int
+) -> NoReturn:
     """Start submitted workflows and record intermediate results."""
     try:
-        start(workflow, concurrency)
+        start(workflow, workflow_range, concurrency)
     except Exception as e:
         logging.error(f"Something went wrong during benchmark launch: {e}")
 
 
 @cli.command()
 @workflow_option
-@number_of_workflows_option
+@workflow_range_option
 @reana_file_option
 @concurrency_option
-def launch(workflow: str, number: int, file: str, concurrency: int) -> NoReturn:
+def launch(
+    workflow: str, workflow_range: (int, int), file: str, concurrency: int
+) -> NoReturn:
     """Submit and start workflows."""
     try:
-        submit(workflow, number, file, concurrency)
+        submit(workflow, workflow_range, file, concurrency)
     except Exception as e:
         logging.error(f"Something went wrong during workflow submission: {e}")
         return
 
     try:
-        start(workflow, concurrency)
+        start(workflow, workflow_range, concurrency)
     except Exception as e:
         logging.error(f"Something went wrong during benchmark launch: {e}")
 
