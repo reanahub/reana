@@ -12,6 +12,7 @@ Version 0.8.0 (UNRELEASED)
     - Adds a default ``kubernetes_memory_limit`` value (4Gi).
     - Adds configuration environment variable to set workflow scheduling policy (``REANA_WORKFLOW_SCHEDULING_POLICY``).
     - Adds configuration environment variables to set REST API rate limit values (``REANA_RATELIMIT_GUEST_USER``, ``REANA_RATELIMIT_AUTHENTICATED_USER``).
+    - Adds configuration environment variable to set a prefetch count for job status consumer (``REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT``).
     - Adds new configuration ``quota.enabled`` to enable or disable quota accounting.
     - Adds new configuration ``quota.termination_update_policy`` to select the resources for which the quota must be calculated.
     - Changes Helm templates to use PostgreSQL 12.8 version.
