@@ -9,20 +9,23 @@
 
 """reana_bench script - benchmark script for REANA cluster"""
 
+import concurrent.futures
 import json
 import logging
 import os
 import subprocess
 import time
-import concurrent.futures
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, NoReturn
-import urllib3
+from typing import Optional, List, NoReturn, Dict, Tuple
 
 import click
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import pandas as pd
+import urllib3
+from matplotlib.figure import Figure
+from matplotlib.ticker import MaxNLocator
 
 from reana_client.api.client import start_workflow, create_workflow
 from reana_client.utils import load_reana_spec
@@ -57,7 +60,7 @@ def cli():
         $ cd reana-demo-root6-roofit  # find an example of REANA workflow
         $ reana_bench.py launch -w roofit50yadage -n 1-50 -f reana-yadage.yaml  # submit and start
         $ reana_bench.py collect -w roofit50yadage  # collect results and save them locally
-        $ reana_bench.py analyze -w roofit50yadage  # analyzes results that were saved locally
+        $ reana_bench.py analyze -w roofit50yadage -n 1-50  # analyzes results that were saved locally
 
     How to launch 50 concurrent workflows and collect results (option 2):
 
@@ -66,9 +69,9 @@ def cli():
         \b
         $ cd reana-demo-root6-roofit  # find an example of REANA workflow
         $ reana_bench.py submit -w roofit50yadage -n 1-50 -f reana-yadage.yaml  # submit, do not start
-        $ reana_bench.py start -w roofit50yadage  -n 1-50 # start workflows
+        $ reana_bench.py start -w roofit50yadage  -n 1-50  # start workflows
         $ reana_bench.py collect -w roofit50yadage  # collect results and save them locally
-        $ reana_bench.py analyze -w roofit50yadage  # analyzes results that were saved locally
+        $ reana_bench.py analyze -w roofit50yadage -n 1-50  # analyzes results that were saved locally
     """
     pass
 
@@ -218,27 +221,164 @@ def _clean_results(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _pre_process_results(df: pd.DataFrame) -> pd.DataFrame:
-    logging.info("Pre-processing results...")
-
-    df["started"] = _convert_str_date_to_epoch(df["started"])
-    df["ended"] = _convert_str_date_to_epoch(df["ended"])
-    df["created"] = _convert_str_date_to_epoch(df["created"])
-    df["submit_date"] = _convert_str_date_to_epoch(df["submit_date"])
-    return df
+def _get_workflow_number_from_name(name: str) -> int:
+    return int(name.split("-")[-1])
 
 
 def _derive_metrics(df: pd.DataFrame) -> pd.DataFrame:
-    df = _pre_process_results(df)
-
     logging.info("Deriving metrics...")
 
-    df["pending_time"] = df["started"] - df["submit_date"]
+    df["workflow_number"] = df.apply(
+        lambda row: _get_workflow_number_from_name(row["name"]), axis=1
+    )
+
+    df["pending_time"] = _convert_str_date_to_epoch(
+        df["started"]
+    ) - _convert_str_date_to_epoch(df["submit_date"])
     df["pending_time"] = df["pending_time"].astype(int)
 
-    df["runtime"] = df["ended"] - df["started"]
+    df["runtime"] = _convert_str_date_to_epoch(
+        df["ended"]
+    ) - _convert_str_date_to_epoch(df["started"])
     df["runtime"] = df["runtime"].astype(int)
     return df
+
+
+def _build_execution_progress_plot(
+    df: pd.DataFrame, plot_parameters: Dict
+) -> (str, Figure):
+    title = plot_parameters["title"]
+    interval = plot_parameters["time_interval"]
+
+    fig, ax = plt.subplots(figsize=(8, 4), dpi=200, constrained_layout=True)
+
+    for index, row in df.iterrows():
+        created_date = datetime.strptime(row["created"], DATETIME_FORMAT)
+        started_date = datetime.strptime(row["started"], DATETIME_FORMAT)
+        ended_date = datetime.strptime(row["ended"], DATETIME_FORMAT)
+        start_submit_date = datetime.strptime(row["submit_date"], DATETIME_FORMAT)
+        workflow_number = row["workflow_number"]
+
+        # add created point
+        ax.plot(
+            created_date,
+            workflow_number,
+            ".",
+            markerfacecolor="grey",
+            markersize=1,
+            color="grey",
+            label="1-created",
+        )
+
+        # add asked to start point
+        ax.plot(
+            start_submit_date,
+            workflow_number,
+            ".",
+            markerfacecolor="darkorange",
+            markersize=1,
+            color="darkorange",
+            label="2-asked to start",
+        )
+
+        # add pending line
+        ax.hlines(
+            workflow_number,
+            xmin=start_submit_date,
+            xmax=started_date,
+            colors=["orange"],
+            label="3-pending",
+        )
+
+        # add started point
+        ax.plot(
+            started_date,
+            workflow_number,
+            ".",
+            markerfacecolor="darkgreen",
+            markersize=1,
+            color="darkgreen",
+            label="4-started",
+        )
+
+        # add running line
+        ax.hlines(
+            workflow_number,
+            xmin=started_date,
+            xmax=ended_date,
+            colors=["blue"],
+            label="5-running",
+        )
+
+        # add finished point
+        ax.plot(
+            ended_date,
+            workflow_number,
+            ".",
+            markerfacecolor="lightblue",
+            markersize=1,
+            color="lightblue",
+            label="6-finished",
+        )
+
+    # force integers on y axis
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+
+    ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=interval))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+
+    # rotate dates on x axis
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+
+    ax.set(title=title)
+    ax.set(ylabel="workflow run")
+    ax.set_ylim(ymin=df["workflow_number"].min())
+    ax.grid(color="black", linestyle="--", alpha=0.15)
+
+    def _build_legend(axes):
+        # remove labels duplicates
+        # origin - https://stackoverflow.com/a/56253636
+        handles, labels = axes.get_legend_handles_labels()
+        unique = [
+            (h, l)
+            for i, (h, l) in enumerate(zip(handles, labels))
+            if l not in labels[:i]
+        ]
+
+        # sort labels in preferred order according to label values
+        unique.sort(key=lambda x: x[1])
+        unique = [(h, l.split("-")[1]) for h, l in unique]
+
+        legends = ax.legend(*zip(*unique), loc="upper left")
+
+        # increase size of dots on the legend, indexes according to label order
+        legends.legendHandles[0]._legmarker.set_markersize(6)
+        legends.legendHandles[1]._legmarker.set_markersize(6)
+        legends.legendHandles[3]._legmarker.set_markersize(6)
+        legends.legendHandles[5]._legmarker.set_markersize(6)
+
+    _build_legend(ax)
+    return "execution_progress", fig
+
+
+def _build_execution_status_plot(
+    df: pd.DataFrame, plot_parameters: Dict
+) -> (str, Figure):
+    title = plot_parameters["title"]
+    total = len(df)
+    statuses = list(df["status"].unique())
+    stats = {status: len(df[df["status"] == status]) for status in statuses}
+
+    fig, ax = plt.subplots(figsize=(6, 6), constrained_layout=True)
+
+    ax.pie(
+        stats.values(),
+        labels=stats.keys(),
+        autopct=lambda val: round(((val / 100) * sum(stats.values()))),
+    )
+    ax.text(-1, 1, f"workflows: {total}")
+    ax.set(title=title)
+    return "execution_status", fig
 
 
 def _max_min_mean_median(series: pd.Series) -> (int, int, int, int):
@@ -249,117 +389,92 @@ def _max_min_mean_median(series: pd.Series) -> (int, int, int, int):
     return int(max_value), int(min_value), int(mean_value), int(median_value)
 
 
-def _execution_progress_plot(path: Path, df: pd.DataFrame, title: str) -> None:
-    plt.clf()
+def _build_histogram_plot(
+    series: pd.Series, bin_size: int, label: str, title: str,
+) -> Figure:
+    fig, ax = plt.subplots(figsize=(8, 6), constrained_layout=True)
 
-    sorted_df = df.sort_values(["submit_date", "submit_number"])
-
-    submit_offset = sorted_df["submit_date"] - sorted_df["submit_date"].iloc[0]
-
-    # dummy x axis
-    numbers = [int(i) for i in range(0, len(sorted_df))]
-
-    plt.bar(
-        numbers,
-        sorted_df["runtime"],
-        bottom=sorted_df["pending_time"] + submit_offset,
-        label="runtime",
-    )
-
-    plt.bar(
-        numbers, sorted_df["pending_time"], bottom=submit_offset, label="pending_time",
-    )
-
-    plt.bar(numbers, submit_offset, color="grey")
-
-    plt.xlabel("workflow run")
-    plt.ylabel("time [s]")
-    plt.legend()
-    plt.title(title)
-    plt.savefig(path)
-
-
-def _execution_status_plot(path: Path, df: pd.DataFrame, title: str) -> None:
-    plt.clf()
-    total = len(df)
-    statuses = list(df["status"].unique())
-    stats = {status: len(df[df["status"] == status]) for status in statuses}
-    plt.pie(
-        stats.values(),
-        labels=stats.keys(),
-        autopct=lambda val: round(((val / 100) * sum(stats.values()))),
-    )
-    plt.text(-1, 1, f"workflows: {total}")
-    plt.title(title)
-    plt.savefig(path)
-
-
-def _create_histogram_plot(
-    path: Path, series: pd.Series, bin_size: int, label: str, title: str,
-) -> None:
-    plt.clf()
-    plt.hist(series, bin_size, color="b", label=label)
-    plt.xlabel(f"{label} [s] (bin size = {bin_size})")
-    plt.ylabel("Number of runs")
-    plt.legend()
+    ax.hist(series, bin_size, color="b", label=label)
+    ax.set(xlabel=f"{label} [s] (bin size = {bin_size})")
+    ax.set(ylabel="Number of runs")
+    ax.legend()
 
     slowest, fastest, mean, median = _max_min_mean_median(series)
 
-    plt.title(
-        f"{title}\nfastest: {fastest}, median: {median},"
-        f" mean: {mean}, slowest: {slowest}"
+    ax.set(
+        title=f"{title}\nfastest: {fastest}, median: {median}, mean: {mean}, slowest: {slowest}"
+    )
+    return fig
+
+
+def _build_total_time_histogram(
+    df: pd.DataFrame, plot_parameters: Dict
+) -> (str, Figure):
+    title = plot_parameters["title"]
+    return (
+        "histogram_total_time",
+        _build_histogram_plot(
+            df["runtime"] + df["pending_time"], 10, "total_time", title
+        ),
     )
 
-    plt.savefig(path)
 
-
-def _total_time_histogram(path: Path, df: pd.DataFrame, title: str) -> None:
-    _create_histogram_plot(
-        path, df["runtime"] + df["pending_time"], 10, "total_time", title
+def _build_runtime_histogram(df: pd.DataFrame, plot_parameters: Dict) -> (str, Figure):
+    title = plot_parameters["title"]
+    return (
+        "histogram_runtime",
+        _build_histogram_plot(df["runtime"], 10, "runtime", title),
     )
 
 
-def _runtime_histogram(path: Path, df: pd.DataFrame, title: str) -> None:
-    _create_histogram_plot(path, df["runtime"], 10, "runtime", title)
+def _build_pending_time_histogram(
+    df: pd.DataFrame, plot_parameters: Dict
+) -> (str, Figure):
+    title = plot_parameters["title"]
+    return (
+        "histogram_pending_time",
+        _build_histogram_plot(df["pending_time"], 10, "pending_time", title),
+    )
 
 
-def _pending_time_histogram(path: Path, df: pd.DataFrame, title: str) -> None:
-    _create_histogram_plot(path, df["pending_time"], 10, "pending_time", title)
+def _build_plots(df: pd.DataFrame, plot_parameters: Dict) -> List[Tuple[str, Figure]]:
+    logging.info("Building plots...")
+
+    plots = []
+    for build_plot in [
+        _build_execution_progress_plot,
+        _build_execution_status_plot,
+        _build_total_time_histogram,
+        _build_runtime_histogram,
+        _build_pending_time_histogram,
+    ]:
+        plot_base_name, figure = build_plot(df, plot_parameters)
+        plots.append((plot_base_name, figure))
+
+    return plots
 
 
-def _create_plots(prefix: str, title: str, df: pd.DataFrame) -> None:
-    logging.info("Creating plots...")
-
-    # as for now, having to pass only one additional parameter title is okay
-    #   but, in future, if more parameters are added it will become harder
-    #   so a better code solution will be needed
-
-    progress_plot_path = Path(f"{prefix}_execution_progress.png")
-    _execution_progress_plot(progress_plot_path, df, title)
-
-    status_plot_path = Path(f"{prefix}_execution_status.png")
-    _execution_status_plot(status_plot_path, df, title)
-
-    total_time_histogram_path = Path(f"{prefix}_histogram_total_time.png")
-    _total_time_histogram(total_time_histogram_path, df, title)
-
-    runtime_histogram_path = Path(f"{prefix}_histogram_runtime.png")
-    _runtime_histogram(runtime_histogram_path, df, title)
-
-    pending_time_histogram_path = Path(f"{prefix}_histogram_pending_time.png")
-    _pending_time_histogram(pending_time_histogram_path, df, title)
+def _save_plots(
+    plots: List[Tuple[str, Figure]], workflow: str, workflow_range: (int, int)
+) -> None:
+    logging.info("Saving plots...")
+    for base_name, figure in plots:
+        path = Path(
+            f"{workflow}_{base_name}_{workflow_range[0]}_{workflow_range[1]}.png"
+        )
+        figure.savefig(path)
 
 
-def _build_original_results_path(workflow: str) -> Path:
-    return Path(f"{workflow}_original_results.csv")
+def _build_collected_results_path(workflow: str) -> Path:
+    return Path(f"{workflow}_collected_results.csv")
 
 
 def _build_submitted_results_path(workflow: str) -> Path:
     return Path(f"{workflow}_submitted_results.csv")
 
 
-def _build_processed_results_path(workflow: str) -> Path:
-    return Path(f"{workflow}_processed_results.csv")
+def _build_derived_results_path(workflow: str) -> Path:
+    return Path(f"{workflow}_analyzed_results.csv")
 
 
 def _merge_workflows_and_submitted_results(
@@ -369,10 +484,10 @@ def _merge_workflows_and_submitted_results(
     return workflows.merge(submitted, on=["name"])
 
 
-def _save_original_results(workflow: str, df: pd.DataFrame):
-    logging.info("Saving original results...")
-    original_results_path = _build_original_results_path(workflow)
-    df.to_csv(original_results_path, index=False)
+def _save_collected_results(workflow: str, df: pd.DataFrame):
+    logging.info("Saving collected results...")
+    results_path = _build_collected_results_path(workflow)
+    df.to_csv(results_path, index=False)
 
 
 def submit(
@@ -518,26 +633,53 @@ def launch(
 
 @cli.command()
 @workflow_option
+@workflow_range_option
 @click.option(
     "--title",
     "-t",
-    help="Title of the generated plots",
+    help="Title of the generated plots.",
     type=str,
     # use workflow parameter as default if title is not provided
     callback=lambda c, p, v: v if v is not None else c.params["workflow"],
 )
-def analyze(workflow: str, title: str) -> NoReturn:
+@click.option(
+    "--interval",
+    "-i",
+    help="Execution progress plot interval in minutes.",
+    type=int,
+    default=10,
+)
+def analyze(
+    workflow: str, workflow_range: (int, int), title: str, interval: int
+) -> NoReturn:
     """Produce various plots and derive metrics based on launch results collected before."""
-    original_results_path = _build_original_results_path(workflow)
-    original_results = pd.read_csv(original_results_path)
+    results_path = _build_collected_results_path(workflow)
+    collected_results = pd.read_csv(results_path)
 
-    processed_results = _derive_metrics(original_results)
+    derived_results = _derive_metrics(collected_results)
 
-    logging.info("Saving processed results...")
-    processed_results_path = _build_processed_results_path(workflow)
-    processed_results.to_csv(processed_results_path, index=False)
+    logging.info("Saving analyzed results...")
+    derived_results_path = _build_derived_results_path(workflow)
+    derived_results.to_csv(derived_results_path, index=False)
 
-    _create_plots(workflow, title, processed_results)
+    filtered_df = derived_results[
+        derived_results["workflow_number"].between(*workflow_range)
+    ]
+
+    # trim workflow_range to existing workflow numbers
+    workflow_range = (
+        filtered_df["workflow_number"].min(),
+        filtered_df["workflow_number"].max(),
+    )
+
+    plot_params = {
+        "title": title,
+        "time_interval": interval,
+    }
+
+    plots = _build_plots(filtered_df, plot_params)
+
+    _save_plots(plots, workflow, workflow_range)
 
 
 @cli.command()
@@ -558,7 +700,7 @@ def collect(workflow: str, force: bool) -> NoReturn:
     if _workflows_finished(workflows) or force:
         results = _merge_workflows_and_submitted_results(workflows, submitted_results)
         results = _clean_results(results)
-        _save_original_results(workflow, results)
+        _save_collected_results(workflow, results)
         logging.info(f"Collected {len(results)} workflows. Finished.")
     else:
         logging.info(
