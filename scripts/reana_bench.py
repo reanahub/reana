@@ -141,7 +141,7 @@ def _start_workflows_and_record_submit_dates(
     logging.info(f"Starting {workflow_range} workflows...")
     df = pd.DataFrame(columns=["name", "submit_date", "submit_number"])
     submit_number = 0
-    with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [
             executor.submit(
                 _start_single_workflow, _build_extended_workflow_name(workflow_name, i)
