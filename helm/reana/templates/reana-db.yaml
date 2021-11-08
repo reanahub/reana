@@ -60,12 +60,19 @@ spec:
               key: password
         {{- end }}
         volumeMounts:
-          - name: data
-            mountPath: /var/lib/postgresql/data
+          - mountPath: /var/lib/postgresql/data
+            subPath: db
+            name: reana-shared-volume
       volumes:
-        - name: data
+        - name: reana-shared-volume
+          {{- if not (eq .Values.shared_storage.backend "hostpath") }}
+          persistentVolumeClaim:
+            claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
+            readOnly: false
+          {{- else }}
           hostPath:
-            path: /var/reana/db
+            path: {{ .Values.shared_storage.hostpath.root_path }}
+          {{- end }}
       {{- if .Values.node_label_infrastructure }}
       {{- $full_label := split "=" .Values.node_label_infrastructure }}
       nodeSelector:
