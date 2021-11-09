@@ -16,9 +16,9 @@ import os
 import subprocess
 import time
 from datetime import datetime
+from functools import lru_cache, partial
 from pathlib import Path
 from typing import Optional, List, NoReturn, Dict, Tuple
-from functools import partial
 
 import click
 import matplotlib.dates as mdates
@@ -28,12 +28,18 @@ import urllib3
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 
-from reana_client.api.client import start_workflow, create_workflow
+from reana_client.api.client import (
+    start_workflow,
+    create_workflow,
+    upload_to_server,
+)
 from reana_client.utils import load_reana_spec
 
 urllib3.disable_warnings()
 
-logging.basicConfig(format="%(asctime)s %(message)s", level=logging.INFO)
+logging.basicConfig(format="%(asctime)s %(message)s", level=logging.WARNING)
+logger = logging.getLogger("reana-bench")
+logger.setLevel(logging.INFO)
 
 REANA_ACCESS_TOKEN = os.getenv("REANA_ACCESS_TOKEN")
 
@@ -42,6 +48,8 @@ WORKERS_DEFAULT_COUNT = 1
 
 # common datetime format
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
+
+CURRENT_WORKING_DIRECTORY = os.getcwd()
 
 
 @click.group()
@@ -78,22 +86,42 @@ def cli():
 
 
 def _create_workflow(workflow: str, file: str) -> None:
-    reana_specification = load_reana_spec(
-        click.format_filename(file),
-        access_token=REANA_ACCESS_TOKEN,
-        skip_validation=True,
-    )
+    reana_specification = load_reana_specification(file)
     create_workflow(reana_specification, workflow, REANA_ACCESS_TOKEN)
 
 
-def _upload_workflow(workflow: str) -> None:
-    upload_cmd = _build_reana_command("upload", workflow)
-    subprocess.run(upload_cmd, stdout=subprocess.DEVNULL)
+@lru_cache(maxsize=None)
+def load_reana_specification(reana_file_path: str) -> Dict:
+    return load_reana_spec(
+        click.format_filename(reana_file_path),
+        access_token=REANA_ACCESS_TOKEN,
+        skip_validation=True,
+    )
 
 
-def _create_and_upload_single_workflow(workflow_name: str, file: str) -> None:
-    _create_workflow(workflow_name, file)
-    _upload_workflow(workflow_name)
+def _upload_workflow(workflow: str, file: str) -> None:
+    reana_specification = load_reana_specification(file)
+
+    filenames = []
+
+    if "inputs" in reana_specification:
+        filenames += [
+            os.path.join(CURRENT_WORKING_DIRECTORY, f)
+            for f in reana_specification["inputs"].get("files") or []
+        ]
+        filenames += [
+            os.path.join(CURRENT_WORKING_DIRECTORY, d)
+            for d in reana_specification["inputs"].get("directories") or []
+        ]
+
+    for filename in filenames:
+        upload_to_server(workflow, filename, REANA_ACCESS_TOKEN)
+
+
+def _create_and_upload_single_workflow(workflow_name: str, reana_file: str) -> None:
+    absolute_file_path = f"{CURRENT_WORKING_DIRECTORY}/{reana_file}"
+    _create_workflow(workflow_name, absolute_file_path)
+    _upload_workflow(workflow_name, absolute_file_path)
 
 
 def _build_extended_workflow_name(workflow: str, run_number: int) -> str:
@@ -106,8 +134,8 @@ def _create_and_upload_workflows(
     file: Optional[str] = None,
     workers: int = WORKERS_DEFAULT_COUNT,
 ) -> None:
-    logging.info(f"Creating and uploading {workflow_range} workflows...")
-    with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+    logger.info(f"Creating and uploading {workflow_range} workflows...")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [
             executor.submit(
                 _create_and_upload_single_workflow,
@@ -139,7 +167,7 @@ def _create_empty_dataframe_for_started_results() -> pd.DataFrame:
 def _start_workflows_and_record_start_time(
     workflow_name: str, workflow_range: (int, int), workers: int = WORKERS_DEFAULT_COUNT
 ) -> pd.DataFrame:
-    logging.info(f"Starting {workflow_range} workflows...")
+    logger.info(f"Starting {workflow_range} workflows...")
     df = _create_empty_dataframe_for_started_results()
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [
@@ -503,7 +531,7 @@ def _build_plots(df: pd.DataFrame, plot_parameters: Dict) -> List[Tuple[str, Fig
 def _save_plots(
     plots: List[Tuple[str, Figure]], workflow: str, workflow_range: (int, int)
 ) -> None:
-    logging.info("Saving plots...")
+    logger.info("Saving plots...")
     for base_name, figure in plots:
         path = Path(
             f"{workflow}_{base_name}_{workflow_range[0]}_{workflow_range[1]}.png"
@@ -526,12 +554,12 @@ def _merge_workflows_and_started_results(
 
     Required columns: name (workflow_name)
     """
-    logging.info("Merging workflows and started results...")
+    logger.info("Merging workflows and started results...")
     return workflows.merge(started_results, on=["name"], how="left")
 
 
 def _save_collected_results(workflow: str, df: pd.DataFrame):
-    logging.info("Saving collected results...")
+    logger.info("Saving collected results...")
     results_path = _build_collected_results_path(workflow)
     df.to_csv(results_path, index=False)
 
@@ -541,7 +569,7 @@ def submit(
 ) -> None:
     """Submit multiple workflows, do not start them."""
     _create_and_upload_workflows(workflow_prefix, workflow_range, file, workers)
-    logging.info("Finished creating and uploading workflows.")
+    logger.info("Finished creating and uploading workflows.")
 
 
 def _append_to_existing_started_results(
@@ -554,7 +582,7 @@ def _append_to_existing_started_results(
     existing_results = pd.DataFrame()
 
     if results_path.exists():
-        logging.info("Loading existing started results. Appending...")
+        logger.info("Loading existing started results. Appending...")
         existing_results = pd.read_csv(results_path)
 
     return existing_results.append(new_results, ignore_index=True)
@@ -571,10 +599,10 @@ def start(workflow_name: str, workflow_range: (int, int), workers: int) -> None:
         workflow_name, started_results
     )
 
-    logging.info("Saving intermediate submit results...")
+    logger.info("Saving intermediate submit results...")
     results_path = _build_started_results_path(workflow_name)
     started_results.to_csv(results_path, index=False)
-    logging.info("Finished starting workflows.")
+    logger.info("Finished starting workflows.")
 
 
 workflow_option = click.option(
@@ -593,7 +621,7 @@ def _to_range(workflow_range: str) -> (int, int):
     workflow_range = [s for s in workflow_range if s]
 
     if len(workflow_range) != 2:
-        logging.error(
+        logger.error(
             "Workflow range is incorrect. Correct format: 'number-number', e.g '100-200'."
         )
         exit(1)
@@ -639,7 +667,7 @@ def submit_command(
     try:
         submit(workflow, workflow_range, file, concurrency)
     except Exception as e:
-        logging.error(f"Something went wrong during workflow submission: {e}")
+        logger.error(f"Something went wrong during workflow submission: {e}")
 
 
 @cli.command(name="start")
@@ -653,7 +681,7 @@ def start_command(
     try:
         start(workflow, workflow_range, concurrency)
     except Exception as e:
-        logging.error(f"Something went wrong during benchmark launch: {e}")
+        logger.error(f"Something went wrong during benchmark launch: {e}")
 
 
 @cli.command()
@@ -668,13 +696,13 @@ def launch(
     try:
         submit(workflow, workflow_range, file, concurrency)
     except Exception as e:
-        logging.error(f"Something went wrong during workflow submission: {e}")
+        logger.error(f"Something went wrong during workflow submission: {e}")
         return
 
     try:
         start(workflow, workflow_range, concurrency)
     except Exception as e:
-        logging.error(f"Something went wrong during benchmark launch: {e}")
+        logger.error(f"Something went wrong during benchmark launch: {e}")
 
 
 @cli.command()
@@ -740,7 +768,7 @@ def collect(workflow: str, force: bool) -> NoReturn:
     if results_path.exists():
         started_results = pd.read_csv(results_path)
     else:
-        logging.warning("Started results are not found.")
+        logger.warning("Started results are not found.")
         started_results = _create_empty_dataframe_for_started_results()
 
     workflows = _get_workflows(workflow)
@@ -752,9 +780,9 @@ def collect(workflow: str, force: bool) -> NoReturn:
         results["collected_date"] = [collect_datetime] * len(results)
 
         _save_collected_results(workflow, results)
-        logging.info(f"Collected {len(results)} workflows. Finished.")
+        logger.info(f"Collected {len(results)} workflows. Finished.")
     else:
-        logging.info(
+        logger.info(
             "Not collecting. Workflows are still running. Use -f option to force collect."
         )
 
