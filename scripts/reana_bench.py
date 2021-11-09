@@ -18,6 +18,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, NoReturn, Dict, Tuple
+from functools import partial
 
 import click
 import matplotlib.dates as mdates
@@ -76,10 +77,6 @@ def cli():
     pass
 
 
-def _build_command(command_type: str, workflow_name: str) -> List[str]:
-    return ["reana-client", command_type, "-w", workflow_name]
-
-
 def _create_workflow(workflow: str, file: str) -> None:
     reana_specification = load_reana_spec(
         click.format_filename(file),
@@ -90,7 +87,7 @@ def _create_workflow(workflow: str, file: str) -> None:
 
 
 def _upload_workflow(workflow: str) -> None:
-    upload_cmd = _build_command("upload", workflow)
+    upload_cmd = _build_reana_command("upload", workflow)
     subprocess.run(upload_cmd, stdout=subprocess.DEVNULL)
 
 
@@ -131,16 +128,19 @@ def _get_utc_now_timestamp() -> str:
 def _start_single_workflow(workflow_name: str) -> (str, str):
     # TODO: maybe we can add "after" - "before" start_workflow to compensate for API latency
     start_workflow(workflow_name, REANA_ACCESS_TOKEN, {})
-    submit_datetime = _get_utc_now_timestamp()
-    return workflow_name, submit_datetime
+    asked_to_start_datetime = _get_utc_now_timestamp()
+    return workflow_name, asked_to_start_datetime
 
 
-def _start_workflows_and_record_submit_dates(
+def _create_empty_dataframe_for_started_results() -> pd.DataFrame:
+    return pd.DataFrame(columns=["name", "asked_to_start_date"])
+
+
+def _start_workflows_and_record_start_time(
     workflow_name: str, workflow_range: (int, int), workers: int = WORKERS_DEFAULT_COUNT
 ) -> pd.DataFrame:
     logging.info(f"Starting {workflow_range} workflows...")
-    df = pd.DataFrame(columns=["name", "submit_date", "submit_number"])
-    submit_number = 0
+    df = _create_empty_dataframe_for_started_results()
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [
             executor.submit(
@@ -149,17 +149,14 @@ def _start_workflows_and_record_submit_dates(
             for i in range(workflow_range[0], workflow_range[1] + 1)
         ]
         for future in concurrent.futures.as_completed(futures):
-            workflow_name, submit_datetime = future.result()
+            workflow_name, asked_to_start_datetime = future.result()
             df = df.append(
                 {
                     "name": workflow_name,
-                    "submit_date": submit_datetime,
-                    "submit_number": submit_number,
+                    "asked_to_start_date": asked_to_start_datetime,
                 },
                 ignore_index=True,
             )
-            submit_number += 1
-    df["submit_number"] = df["submit_number"].astype(int)
     return df
 
 
@@ -168,6 +165,10 @@ def _get_workflows(workflow_prefix: str) -> pd.DataFrame:
     #  maybe, consider pagination and page size
     cmd = _build_reana_client_list_command(workflow_prefix)
     return pd.DataFrame(json.loads(subprocess.check_output(cmd).decode("ascii")))
+
+
+def _build_reana_command(command_type: str, workflow_name: str) -> List[str]:
+    return ["reana-client", command_type, "-w", workflow_name]
 
 
 def _build_reana_client_list_command(
@@ -188,36 +189,31 @@ def _workflows_finished(df: pd.DataFrame) -> bool:
     return df["status"].isin(["failed", "finished"]).all()
 
 
-def _convert_str_date_to_epoch(series: pd.Series) -> pd.Series:
-    return series.apply(
-        lambda x: int(time.mktime(datetime.strptime(x, DATETIME_FORMAT).timetuple()))
-    )
+def _convert_str_date_to_epoch(s: str) -> int:
+    return int(time.mktime(datetime.strptime(s, DATETIME_FORMAT).timetuple()))
 
 
 def _clean_results(df: pd.DataFrame) -> pd.DataFrame:
     logging.info("Cleaning results...")
 
-    df["run_number"] = df["run_number"].astype(int)
-    df["submit_number"] = df["submit_number"].astype(int)
-
     # fix "-" values for created status
-    df.loc[df["status"] == "created", "started"] = df[df["status"] == "created"][
-        "created"
-    ]
-    df.loc[df["status"] == "created", "ended"] = df[df["status"] == "created"][
-        "created"
-    ]
+    df.loc[df["status"] == "created", "started"] = None
+    df.loc[df["status"] == "created", "ended"] = None
+    df["asked_to_start_date"] = df.apply(
+        lambda row: None
+        if pd.isna(row["asked_to_start_date"])
+        else row["asked_to_start_date"],
+        axis=1,
+    )
 
     # fix "-" values for running, pending, queued statuses
-    utc_now = _get_utc_now_timestamp()
+    df.loc[df["status"] == "running", "ended"] = None
 
-    df.loc[df["status"] == "running", "ended"] = utc_now
+    df.loc[df["status"] == "pending", "started"] = None
+    df.loc[df["status"] == "pending", "ended"] = None
 
-    df.loc[df["status"] == "pending", "started"] = utc_now
-    df.loc[df["status"] == "pending", "ended"] = utc_now
-
-    df.loc[df["status"] == "queued", "started"] = utc_now
-    df.loc[df["status"] == "queued", "ended"] = utc_now
+    df.loc[df["status"] == "queued", "started"] = None
+    df.loc[df["status"] == "queued", "ended"] = None
     return df
 
 
@@ -232,14 +228,46 @@ def _derive_metrics(df: pd.DataFrame) -> pd.DataFrame:
         lambda row: _get_workflow_number_from_name(row["name"]), axis=1
     )
 
-    df["pending_time"] = _convert_str_date_to_epoch(
-        df["started"]
-    ) - _convert_str_date_to_epoch(df["submit_date"])
+    collected_date = df["collected_date"].iloc[0]
+
+    def _calculate_difference(
+        row: pd.Series, start_column: str, end_column: str
+    ) -> int:
+        """Calculate difference between two date times in string format."""
+
+        start_date = row[start_column]
+        end_date = row[end_column]
+
+        start_date_exists = not pd.isna(start_date)
+        end_date_exists = not pd.isna(end_date)
+
+        if start_date_exists and end_date_exists:
+            return _convert_str_date_to_epoch(end_date) - _convert_str_date_to_epoch(
+                start_date
+            )
+
+        # if only start date exists, take current time as ended
+        if start_date_exists and not end_date_exists:
+            return _convert_str_date_to_epoch(
+                collected_date
+            ) - _convert_str_date_to_epoch(start_date)
+
+        return 0
+
+    df["pending_time"] = df.apply(
+        partial(
+            _calculate_difference,
+            start_column="asked_to_start_date",
+            end_column="started",
+        ),
+        axis=1,
+    )
     df["pending_time"] = df["pending_time"].astype(int)
 
-    df["runtime"] = _convert_str_date_to_epoch(
-        df["ended"]
-    ) - _convert_str_date_to_epoch(df["started"])
+    df["runtime"] = df.apply(
+        partial(_calculate_difference, start_column="started", end_column="ended"),
+        axis=1,
+    )
     df["runtime"] = df["runtime"].astype(int)
     return df
 
@@ -253,73 +281,88 @@ def _build_execution_progress_plot(
     fig, ax = plt.subplots(figsize=(8, 4), dpi=200, constrained_layout=True)
 
     for index, row in df.iterrows():
-        created_date = datetime.strptime(row["created"], DATETIME_FORMAT)
-        started_date = datetime.strptime(row["started"], DATETIME_FORMAT)
-        ended_date = datetime.strptime(row["ended"], DATETIME_FORMAT)
-        start_submit_date = datetime.strptime(row["submit_date"], DATETIME_FORMAT)
         workflow_number = row["workflow_number"]
+        collected_date = row["collected_date"]
+        created_date = datetime.strptime(row["created"], DATETIME_FORMAT)
 
-        # add created point
+        asked_to_start_date_exists = not pd.isna(row["asked_to_start_date"])
+        started_exists = not pd.isna(row["started"])
+        ended_exists = not pd.isna(row["ended"])
+
+        # add created point, should always exist
         ax.plot(
             created_date,
             workflow_number,
             ".",
             markerfacecolor="grey",
-            markersize=1,
+            markersize=2,
             color="grey",
             label="1-created",
         )
 
-        # add asked to start point
-        ax.plot(
-            start_submit_date,
-            workflow_number,
-            ".",
-            markerfacecolor="darkorange",
-            markersize=1,
-            color="darkorange",
-            label="2-asked to start",
-        )
+        if asked_to_start_date_exists:
+            asked_to_start_date = datetime.strptime(
+                row["asked_to_start_date"], DATETIME_FORMAT
+            )
+            # add asked to start point
+            ax.plot(
+                asked_to_start_date,
+                workflow_number,
+                ".",
+                markerfacecolor="darkorange",
+                markersize=2,
+                color="darkorange",
+                label="2-asked to start",
+            )
 
-        # add pending line
-        ax.hlines(
-            workflow_number,
-            xmin=start_submit_date,
-            xmax=started_date,
-            colors=["orange"],
-            label="3-pending",
-        )
+            if started_exists:
+                started_date = datetime.strptime(row["started"], DATETIME_FORMAT)
+                # add started point
+                ax.plot(
+                    started_date,
+                    workflow_number,
+                    ".",
+                    markerfacecolor="darkgreen",
+                    markersize=2,
+                    color="darkgreen",
+                    label="4-started",
+                )
 
-        # add started point
-        ax.plot(
-            started_date,
-            workflow_number,
-            ".",
-            markerfacecolor="darkgreen",
-            markersize=1,
-            color="darkgreen",
-            label="4-started",
-        )
+                if ended_exists:
+                    ended_date = datetime.strptime(row["ended"], DATETIME_FORMAT)
 
-        # add running line
-        ax.hlines(
-            workflow_number,
-            xmin=started_date,
-            xmax=ended_date,
-            colors=["blue"],
-            label="5-running",
-        )
+                    # add ended point
+                    ax.plot(
+                        ended_date,
+                        workflow_number,
+                        ".",
+                        markerfacecolor="lightblue",
+                        markersize=2,
+                        color="lightblue",
+                        label="6-finished",
+                    )
+                else:
+                    ended_date = datetime.strptime(collected_date, DATETIME_FORMAT)
 
-        # add finished point
-        ax.plot(
-            ended_date,
-            workflow_number,
-            ".",
-            markerfacecolor="lightblue",
-            markersize=1,
-            color="lightblue",
-            label="6-finished",
-        )
+                # draw running line
+                ax.hlines(
+                    workflow_number,
+                    xmin=started_date,
+                    xmax=ended_date,
+                    colors=["blue"],
+                    label="5-running",
+                )
+            else:
+                started_date = datetime.strptime(collected_date, DATETIME_FORMAT)
+
+            # add pending line
+            ax.hlines(
+                workflow_number,
+                xmin=asked_to_start_date,
+                xmax=started_date,
+                colors=["orange"],
+                label="3-pending",
+            )
 
     # force integers on y axis
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
@@ -332,7 +375,9 @@ def _build_execution_progress_plot(
 
     ax.set(title=title)
     ax.set(ylabel="workflow run")
-    ax.set_ylim(ymin=df["workflow_number"].min())
+
+    ax.set_ylim(ymin=df["workflow_number"].min() - 1)
+
     ax.grid(color="black", linestyle="--", alpha=0.15)
 
     def _build_legend(axes):
@@ -345,17 +390,18 @@ def _build_execution_progress_plot(
             if l not in labels[:i]
         ]
 
-        # sort labels in preferred order according to label values
+        # sort labels in order of leading number in value if label (e.g 1-created)
         unique.sort(key=lambda x: x[1])
+
+        # remove leading number from label
         unique = [(h, l.split("-")[1]) for h, l in unique]
 
         legends = ax.legend(*zip(*unique), loc="upper left")
 
-        # increase size of dots on the legend, indexes according to label order
-        legends.legendHandles[0]._legmarker.set_markersize(6)
-        legends.legendHandles[1]._legmarker.set_markersize(6)
-        legends.legendHandles[3]._legmarker.set_markersize(6)
-        legends.legendHandles[5]._legmarker.set_markersize(6)
+        # increase size of points on the legend to be more visible
+        for handler in legends.legendHandles:
+            if hasattr(handler, "_legmarker"):
+                handler._legmarker.set_markersize(6)
 
     _build_legend(ax)
     return "execution_progress", fig
@@ -469,19 +515,19 @@ def _build_collected_results_path(workflow: str) -> Path:
     return Path(f"{workflow}_collected_results.csv")
 
 
-def _build_submitted_results_path(workflow: str) -> Path:
-    return Path(f"{workflow}_submitted_results.csv")
+def _build_started_results_path(workflow: str) -> Path:
+    return Path(f"{workflow}_started_results.csv")
 
 
-def _build_derived_results_path(workflow: str) -> Path:
-    return Path(f"{workflow}_analyzed_results.csv")
-
-
-def _merge_workflows_and_submitted_results(
-    workflows: pd.DataFrame, submitted: pd.DataFrame
+def _merge_workflows_and_started_results(
+    workflows: pd.DataFrame, started_results: pd.DataFrame
 ) -> pd.DataFrame:
-    logging.info("Merging workflows and submitted results...")
-    return workflows.merge(submitted, on=["name"])
+    """Merge workflows status results and recorded started results.
+
+    Required columns: name (workflow_name)
+    """
+    logging.info("Merging workflows and started results...")
+    return workflows.merge(started_results, on=["name"], how="left")
 
 
 def _save_collected_results(workflow: str, df: pd.DataFrame):
@@ -498,36 +544,36 @@ def submit(
     logging.info("Finished creating and uploading workflows.")
 
 
-def _append_to_existing_submit_results(
-    workflow_name: str, new_submit_results: pd.DataFrame
+def _append_to_existing_started_results(
+    workflow_name: str, new_results: pd.DataFrame
 ) -> pd.DataFrame:
-    """Append new submit results to existing submit results and return them."""
+    """Append new started results to existing started results and return them."""
 
-    submitted_results_path = _build_submitted_results_path(workflow_name)
+    results_path = _build_started_results_path(workflow_name)
 
-    existing_submit_results = pd.DataFrame()
+    existing_results = pd.DataFrame()
 
-    if submitted_results_path.exists():
-        logging.info("Loading existing submit results. Appending...")
-        existing_submit_results = pd.read_csv(submitted_results_path)
+    if results_path.exists():
+        logging.info("Loading existing started results. Appending...")
+        existing_results = pd.read_csv(results_path)
 
-    return existing_submit_results.append(new_submit_results, ignore_index=True)
+    return existing_results.append(new_results, ignore_index=True)
 
 
 def start(workflow_name: str, workflow_range: (int, int), workers: int) -> None:
     """Start already submitted workflows."""
 
-    submitted_results = _start_workflows_and_record_submit_dates(
+    started_results = _start_workflows_and_record_start_time(
         workflow_name, workflow_range, workers
     )
 
-    submitted_results = _append_to_existing_submit_results(
-        workflow_name, submitted_results
+    started_results = _append_to_existing_started_results(
+        workflow_name, started_results
     )
 
     logging.info("Saving intermediate submit results...")
-    submitted_results_path = _build_submitted_results_path(workflow_name)
-    submitted_results.to_csv(submitted_results_path, index=False)
+    results_path = _build_started_results_path(workflow_name)
+    started_results.to_csv(results_path, index=False)
     logging.info("Finished starting workflows.")
 
 
@@ -656,14 +702,10 @@ def analyze(
     results_path = _build_collected_results_path(workflow)
     collected_results = pd.read_csv(results_path)
 
-    derived_results = _derive_metrics(collected_results)
+    collected_results = _derive_metrics(collected_results)
 
-    logging.info("Saving analyzed results...")
-    derived_results_path = _build_derived_results_path(workflow)
-    derived_results.to_csv(derived_results_path, index=False)
-
-    filtered_df = derived_results[
-        derived_results["workflow_number"].between(*workflow_range)
+    filtered_df = collected_results[
+        collected_results["workflow_number"].between(*workflow_range)
     ]
 
     # trim workflow_range to existing workflow numbers
@@ -693,13 +735,22 @@ def analyze(
 )
 def collect(workflow: str, force: bool) -> NoReturn:
     """Collect workflows results, merge them with intermediate results and save."""
-    submitted_results_path = _build_submitted_results_path(workflow)
-    submitted_results = pd.read_csv(submitted_results_path)
+    results_path = _build_started_results_path(workflow)
+
+    if results_path.exists():
+        started_results = pd.read_csv(results_path)
+    else:
+        logging.warning("Started results are not found.")
+        started_results = _create_empty_dataframe_for_started_results()
 
     workflows = _get_workflows(workflow)
     if _workflows_finished(workflows) or force:
-        results = _merge_workflows_and_submitted_results(workflows, submitted_results)
+        results = _merge_workflows_and_started_results(workflows, started_results)
         results = _clean_results(results)
+
+        collect_datetime = _get_utc_now_timestamp()
+        results["collected_date"] = [collect_datetime] * len(results)
+
         _save_collected_results(workflow, results)
         logging.info(f"Collected {len(results)} workflows. Finished.")
     else:
