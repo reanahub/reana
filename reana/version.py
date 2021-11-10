@@ -13,4 +13,4 @@ This file is imported by ``reana.__init__`` and parsed by ``setup.py``.
 
 from __future__ import absolute_import, print_function
 
-__version__ = "0.8.0a4"
+__version__ = "0.8.0a5"
