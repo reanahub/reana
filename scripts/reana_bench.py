@@ -37,7 +37,11 @@ from reana_client.utils import load_reana_spec
 
 urllib3.disable_warnings()
 
-logging.basicConfig(format="%(asctime)s %(message)s", level=logging.WARNING)
+logging.basicConfig(
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    level=logging.WARNING,
+    force=True,
+)
 logger = logging.getLogger("reana-bench")
 logger.setLevel(logging.INFO)
 
