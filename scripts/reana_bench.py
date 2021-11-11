@@ -154,8 +154,13 @@ def _get_utc_now_timestamp() -> str:
 
 
 def _start_single_workflow(workflow_name: str) -> (str, str):
-    # TODO: maybe we can add "after" - "before" start_workflow to compensate for API latency
-    start_workflow(workflow_name, REANA_ACCESS_TOKEN, {})
+    try:
+        start_workflow(workflow_name, REANA_ACCESS_TOKEN, {})
+    except Exception as e:
+        raise Exception(
+            f"Workflow {workflow_name} failed during the start. Details: {e}"
+        )
+
     asked_to_start_datetime = _get_utc_now_timestamp()
     return workflow_name, asked_to_start_datetime
 
@@ -177,14 +182,17 @@ def _start_workflows_and_record_start_time(
             for i in range(workflow_range[0], workflow_range[1] + 1)
         ]
         for future in concurrent.futures.as_completed(futures):
-            workflow_name, asked_to_start_datetime = future.result()
-            df = df.append(
-                {
-                    "name": workflow_name,
-                    "asked_to_start_date": asked_to_start_datetime,
-                },
-                ignore_index=True,
-            )
+            try:
+                workflow_name, asked_to_start_datetime = future.result()
+                df = df.append(
+                    {
+                        "name": workflow_name,
+                        "asked_to_start_date": asked_to_start_datetime,
+                    },
+                    ignore_index=True,
+                )
+            except Exception as e:
+                logger.error(e)
     return df
 
 
@@ -599,7 +607,7 @@ def start(workflow_name: str, workflow_range: (int, int), workers: int) -> None:
         workflow_name, started_results
     )
 
-    logger.info("Saving intermediate submit results...")
+    logger.info("Saving started results...")
     results_path = _build_started_results_path(workflow_name)
     started_results.to_csv(results_path, index=False)
     logger.info("Finished starting workflows.")
