@@ -2,6 +2,47 @@ apiVersion: v1
 entries:
   reana:
   - apiVersion: v2
+    created: "2021-11-15T11:29:22.540639274+01:00"
+    dependencies:
+    - condition: traefik.enabled
+      name: traefik
+      repository: https://charts.helm.sh/stable
+      tags:
+      - ingress
+      version: 1.85.x
+    description: REANA reproducible research data analysis platform
+    digest: 4ebabea66e353e2d6711d2877bcd355cc43848f423930c905928598332e579ab
+    home: www.reana.io
+    icon: http://www.reana.io/static/img/logo-reana.svg
+    keywords:
+    - research-data
+    - reproducible-analyses
+    - reproducible-workflows
+    - kubernetes
+    - containers
+    - cwl
+    - reusable-science
+    kubeVersion: '>= 1.13.0-0 < 1.22.0-0'
+    name: reana
+    sources:
+    - https://github.com/reanahub/reana
+    - https://github.com/reanahub/reana-client
+    - https://github.com/reanahub/reana-server
+    - https://github.com/reanahub/reana-workflow-controller
+    - https://github.com/reanahub/reana-workflow-engine-cwl
+    - https://github.com/reanahub/reana-workflow-engine-serial
+    - https://github.com/reanahub/reana-workflow-engine-yadage
+    - https://github.com/reanahub/reana-workflow-engine-snakemake
+    - https://github.com/reanahub/reana-job-controller
+    - https://github.com/reanahub/reana-commons
+    - https://github.com/reanahub/reana-db
+    - https://github.com/reanahub/pytest-reana
+    - https://github.com/reanahub/www.reana.io
+    type: application
+    urls:
+    - https://github.com/reanahub/reana/releases/download/0.8.0-alpha.5/reana-0.8.0-alpha.5.tgz
+    version: 0.8.0-alpha.5
+  - apiVersion: v2
     created: "2021-10-15T16:39:11.5816+02:00"
     dependencies:
     - condition: traefik.enabled
