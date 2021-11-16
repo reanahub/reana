@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
 # Copyright (C) 2017, 2018, 2019, 2020, 2021 CERN.
@@ -25,6 +24,7 @@ tests_require = [
 extras_require = {
     "docs": ["Sphinx>=1.4.4",],
     "tests": tests_require,
+    "benchmark": ["pandas>=1.1.5", "matplotlib>=3.3.4",],
 }
 
 extras_require["all"] = []
@@ -66,7 +66,12 @@ setup(
     url="http://www.reana.io/",
     packages=packages,
     zip_safe=False,
-    entry_points={"console_scripts": ["reana-dev = reana.reana_dev.cli:reana_dev",],},
+    entry_points={
+        "console_scripts": [
+            "reana-dev = reana.reana_dev.cli:reana_dev",
+            "reana-benchmark = reana.reana_benchmark.cli:reana_benchmark",
+        ],
+    },
     extras_require=extras_require,
     install_requires=install_requires,
     setup_requires=setup_requires,
