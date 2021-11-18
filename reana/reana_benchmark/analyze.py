@@ -20,7 +20,17 @@ from matplotlib.ticker import MaxNLocator
 
 from reana.reana_benchmark.collect import build_collected_results_path
 from reana.reana_benchmark.utils import logger
-from reana.reana_benchmark.config import DATETIME_FORMAT
+from reana.reana_benchmark.config import DATETIME_FORMAT, WorkflowStatus
+
+
+STATUS_TO_COLOR = {
+    WorkflowStatus.created: "grey",
+    WorkflowStatus.queued: "darkgoldenrod",
+    WorkflowStatus.pending: "darkorange",
+    WorkflowStatus.running: "blue",
+    WorkflowStatus.failed: "firebrick",
+    WorkflowStatus.finished: "forestgreen",
+}
 
 
 def _get_workflow_number_from_name(name: str) -> int:
@@ -106,9 +116,13 @@ def _build_execution_progress_plot(
 
     fig, ax = plt.subplots(figsize=(8, 4), dpi=200, constrained_layout=True)
 
+    collected_date = df["collected_date"].iloc[0]
+    collected_datetime = datetime.strptime(collected_date, DATETIME_FORMAT)
+
     for index, row in df.iterrows():
         workflow_number = row["workflow_number"]
-        collected_date = row["collected_date"]
+        workflow_status = row["status"]
+
         created_date = datetime.strptime(row["created"], DATETIME_FORMAT)
 
         asked_to_start_date_exists = not pd.isna(row["asked_to_start_date"])
@@ -120,9 +134,9 @@ def _build_execution_progress_plot(
             created_date,
             workflow_number,
             ".",
-            markerfacecolor="grey",
-            markersize=2,
-            color="grey",
+            markerfacecolor=STATUS_TO_COLOR[WorkflowStatus.created],
+            markersize=3,
+            color=STATUS_TO_COLOR[WorkflowStatus.created],
             label="1-created",
         )
 
@@ -135,51 +149,54 @@ def _build_execution_progress_plot(
                 asked_to_start_date,
                 workflow_number,
                 ".",
-                markerfacecolor="darkorange",
-                markersize=2,
-                color="darkorange",
+                markerfacecolor="navy",
+                markersize=3,
+                color="navy",
                 label="2-asked to start",
             )
 
             if started_exists:
                 started_date = datetime.strptime(row["started"], DATETIME_FORMAT)
+
                 # add started point
                 ax.plot(
                     started_date,
                     workflow_number,
                     ".",
-                    markerfacecolor="darkgreen",
-                    markersize=2,
-                    color="darkgreen",
+                    markerfacecolor="sienna",
+                    markersize=3,
+                    color="sienna",
                     label="4-started",
                 )
 
                 if ended_exists:
                     ended_date = datetime.strptime(row["ended"], DATETIME_FORMAT)
 
-                    # add ended point
+                    # add ended point to indicate whatever workflow finished or failed
                     ax.plot(
                         ended_date,
                         workflow_number,
                         ".",
-                        markerfacecolor="lightblue",
-                        markersize=2,
-                        color="lightblue",
-                        label="6-finished",
+                        markerfacecolor=STATUS_TO_COLOR[workflow_status],
+                        markersize=4 if workflow_status == WorkflowStatus.failed else 3,
+                        # zorder, acts similar to z-index
+                        zorder=10 if workflow_status == WorkflowStatus.failed else 5,
+                        color=STATUS_TO_COLOR[workflow_status],
+                        label=f"6-{workflow_status}",
                     )
                 else:
-                    ended_date = datetime.strptime(collected_date, DATETIME_FORMAT)
+                    ended_date = collected_datetime
 
                 # draw running line
                 ax.hlines(
                     workflow_number,
                     xmin=started_date,
                     xmax=ended_date,
-                    colors=["blue"],
+                    colors=[STATUS_TO_COLOR[WorkflowStatus.running]],
                     label="5-running",
                 )
             else:
-                started_date = datetime.strptime(collected_date, DATETIME_FORMAT)
+                started_date = collected_datetime
 
             # add pending line
             ax.hlines(
@@ -243,12 +260,21 @@ def _build_execution_status_plot(
 
     fig, ax = plt.subplots(figsize=(6, 6), constrained_layout=True)
 
-    ax.pie(
+    patches, texts, pcts = ax.pie(
         stats.values(),
         labels=stats.keys(),
         autopct=lambda val: round(((val / 100) * sum(stats.values()))),
     )
-    ax.text(-1, 1, f"workflows: {total}")
+
+    for i, patch in enumerate(patches):
+        status = texts[i]._text
+        color = STATUS_TO_COLOR[status]
+        patch.set_color(color)
+
+    plt.setp(pcts, color="white", fontsize=11, fontweight=600)
+    plt.setp(texts, fontweight=600)
+
+    ax.text(-1.3, 1.1, f"workflows: {total}", fontweight=600, fontsize=12)
     ax.set(title=title)
     return "execution_status", fig
 

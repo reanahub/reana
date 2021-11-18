@@ -7,6 +7,7 @@
 """Defines values shared between reana-benchmark modules."""
 
 import os
+from enum import Enum
 
 REANA_ACCESS_TOKEN = os.getenv("REANA_ACCESS_TOKEN")
 
@@ -15,3 +16,18 @@ WORKERS_DEFAULT_COUNT = 1
 
 # common datetime format
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
+
+
+class WorkflowStatus(str, Enum):
+    """Enumeration of workflow statuses.
+
+    Example:
+        WorkflowStatus.failed == "failed"  # True
+    """
+
+    created = "created"
+    queued = "queued"
+    pending = "pending"
+    running = "running"
+    failed = "failed"
+    finished = "finished"
