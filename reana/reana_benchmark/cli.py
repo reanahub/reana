@@ -19,6 +19,7 @@ from reana.reana_benchmark.config import WORKERS_DEFAULT_COUNT
 from reana.reana_benchmark.start import start
 from reana.reana_benchmark.submit import submit
 from reana.reana_benchmark.utils import logger
+from reana.reana_benchmark.monitor import monitor
 
 urllib3.disable_warnings()
 
@@ -98,7 +99,7 @@ workflow_range_option = click.option(
 concurrency_option = click.option(
     "--concurrency",
     "-c",
-    help=f"Number of workers to submit workflows, default {WORKERS_DEFAULT_COUNT}",
+    help=f"Number of workers to submit workflows [default {WORKERS_DEFAULT_COUNT}]",
     type=int,
     default=WORKERS_DEFAULT_COUNT,
 )
@@ -176,7 +177,7 @@ def launch(
 @click.option(
     "--interval",
     "-i",
-    help="Execution progress plot interval in minutes.",
+    help="Execution progress plot interval in minutes [default=10]",
     type=int,
     default=10,
 )
@@ -210,3 +211,20 @@ def collect_command(workflow: str, force: bool) -> NoReturn:
         collect(workflow, force)
     except Exception as e:
         logger.error(f"Something went wrong when collecting results: {e}")
+
+
+@reana_benchmark.command(name="monitor")
+@workflow_option
+@click.option(
+    "--sleep",
+    "-s",
+    help="Sleep in seconds between collecting metrics [default=30]",
+    type=int,
+    default=30,
+)
+def monitor_command(workflow: str, sleep: int) -> NoReturn:
+    """Monitor various metrics and record results."""
+    try:
+        monitor(workflow, sleep)
+    except Exception as e:
+        logger.error(f"Something went wrong during monitoring: {e}")
