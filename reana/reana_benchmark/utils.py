@@ -15,6 +15,16 @@ logger = logging.getLogger("reana-benchmark")
 logger.setLevel(logging.INFO)
 
 
+def validate_date(date_text: str) -> None:
+    """Validate datetime string against common reana-benchmark datetime format."""
+    try:
+        datetime.strptime(date_text, DATETIME_FORMAT)
+    except ValueError:
+        raise ValueError(
+            f'"{date_text}" has incorrect datetime format, correct format is "{DATETIME_FORMAT}".'
+        )
+
+
 def get_utc_now_timestamp() -> str:  # noqa: D103
     return datetime.utcnow().strftime(DATETIME_FORMAT)
 

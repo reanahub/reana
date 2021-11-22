@@ -8,18 +8,22 @@
 """Combines reana-benchmark modules into CLI commands."""
 
 import logging
-from typing import NoReturn
+from typing import NoReturn, Tuple, Optional, Union
 
 import click
 import urllib3
 
 from reana.reana_benchmark.analyze import analyze
 from reana.reana_benchmark.collect import collect
-from reana.reana_benchmark.config import WORKERS_DEFAULT_COUNT
+from reana.reana_benchmark.config import (
+    WORKERS_DEFAULT_COUNT,
+    DATETIME_RANGE_SEPARATOR_POSITION,
+    DATETIME_RANGE_LENGTH,
+)
 from reana.reana_benchmark.start import start
 from reana.reana_benchmark.submit import submit
-from reana.reana_benchmark.utils import logger
 from reana.reana_benchmark.monitor import monitor
+from reana.reana_benchmark.utils import logger, validate_date
 
 urllib3.disable_warnings()
 
@@ -68,7 +72,7 @@ workflow_option = click.option(
 )
 
 
-def _to_range(workflow_range: str) -> (int, int):
+def _to_range(workflow_range: str) -> Tuple[int, int]:
     """Convert string range to an integer tuple with two elements start and end.
 
     This is callback for click.option.
@@ -96,6 +100,37 @@ workflow_range_option = click.option(
     type=str,
     callback=lambda c, p, v: _to_range(v),
 )
+
+
+def _to_datetime_range(
+    datetime_range: Optional[str],
+) -> Union[Tuple[str, str], None, NoReturn]:
+    """Take datetime range string, split it into left and right datetime limits, validate and return."""
+    if not datetime_range:
+        return None
+
+    if len(datetime_range) != DATETIME_RANGE_LENGTH:
+        logger.error(
+            "Datetime range is incorrect. "
+            "Example of the correct range: '2021-11-16T10:00:00-2021-11-16T11:00:00'"
+        )
+        exit(1)
+
+    left, right = (
+        datetime_range[:DATETIME_RANGE_SEPARATOR_POSITION],
+        datetime_range[DATETIME_RANGE_SEPARATOR_POSITION + 1 :],
+    )
+
+    try:
+        validate_date(left)
+        validate_date(right)
+    except ValueError as error:
+        logger.error(error)
+        exit(1)
+
+    return left, right
+
+
 concurrency_option = click.option(
     "--concurrency",
     "-c",
@@ -167,6 +202,15 @@ def launch(
 @workflow_option
 @workflow_range_option
 @click.option(
+    "--datetime",
+    "-d",
+    "datetime_range",
+    help="Filter execution progress plot to contain data within the specified datetime range, "
+    "e.g '2021-11-16T10:00:00-2021-11-16T11:00:00'",
+    type=str,
+    callback=lambda c, p, v: _to_datetime_range(v),
+)
+@click.option(
     "--title",
     "-t",
     help="Title of the generated plots.",
@@ -177,17 +221,22 @@ def launch(
 @click.option(
     "--interval",
     "-i",
-    help="Execution progress plot interval in minutes [default=10]",
+    help="Ticks interval in minutes for execution progress plot [default=10]",
     type=int,
     default=10,
 )
 def analyze_command(
-    workflow: str, workflow_range: (int, int), title: str, interval: int
+    workflow: str,
+    workflow_range: Tuple[int, int],
+    datetime_range: Tuple[str, str],
+    title: str,
+    interval: int,
 ) -> NoReturn:
     """Produce plots based on workflows results collected before."""
     plot_params = {
         "title": title,
         "time_interval": interval,
+        "datetime_range": datetime_range,
     }
 
     try:

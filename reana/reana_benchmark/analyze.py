@@ -110,9 +110,10 @@ def _build_plots(df: pd.DataFrame, plot_parameters: Dict) -> List[Tuple[str, Fig
 
 def _build_execution_progress_plot(
     df: pd.DataFrame, plot_parameters: Dict
-) -> (str, Figure):
+) -> Tuple[str, Figure]:
     title = plot_parameters["title"]
     interval = plot_parameters["time_interval"]
+    datetime_range = plot_parameters.get("datetime_range")
 
     fig, ax = plt.subplots(figsize=(8, 4), dpi=200, constrained_layout=True)
 
@@ -221,6 +222,11 @@ def _build_execution_progress_plot(
 
     ax.set_ylim(ymin=df["workflow_number"].min() - 1)
 
+    if datetime_range:
+        left = datetime.strptime(datetime_range[0], DATETIME_FORMAT)
+        right = datetime.strptime(datetime_range[1], DATETIME_FORMAT)
+        ax.set_xlim(left=left, right=right)
+
     ax.grid(color="black", linestyle="--", alpha=0.15)
 
     def _build_legend(axes):
@@ -252,7 +258,7 @@ def _build_execution_progress_plot(
 
 def _build_execution_status_plot(
     df: pd.DataFrame, plot_parameters: Dict
-) -> (str, Figure):
+) -> Tuple[str, Figure]:
     title = plot_parameters["title"]
     total = len(df)
     statuses = list(df["status"].unique())
@@ -279,7 +285,7 @@ def _build_execution_status_plot(
     return "execution_status", fig
 
 
-def _max_min_mean_median(series: pd.Series) -> (int, int, int, int):
+def _max_min_mean_median(series: pd.Series) -> Tuple[int, int, int, int]:
     max_value = series.max()
     min_value = series.min()
     mean_value = series.mean()
@@ -336,7 +342,7 @@ def _build_pending_time_histogram(
 
 
 def _save_plots(
-    plots: List[Tuple[str, Figure]], workflow: str, workflow_range: (int, int)
+    plots: List[Tuple[str, Figure]], workflow: str, workflow_range: Tuple[int, int]
 ) -> None:
     logger.info("Saving plots...")
     for base_name, figure in plots:
@@ -347,7 +353,7 @@ def _save_plots(
 
 
 def analyze(
-    workflow_prefix: str, workflow_range: (int, int), plot_params: Dict
+    workflow_prefix: str, workflow_range: Tuple[int, int], plot_params: Dict
 ) -> None:  # noqa: D103
     results_path = build_collected_results_path(workflow_prefix)
     collected_results = pd.read_csv(results_path)

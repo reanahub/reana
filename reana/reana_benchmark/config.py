@@ -31,3 +31,9 @@ class WorkflowStatus(str, Enum):
     running = "running"
     failed = "failed"
     finished = "finished"
+
+
+# position in a string of a "-" separator in datetime range
+DATETIME_RANGE_SEPARATOR_POSITION = 19
+
+DATETIME_RANGE_LENGTH = 19 * 2 + 1
