@@ -11,15 +11,15 @@ for image in \
         maildev/maildev:1.1.0 \
         postgres:12.8 \
         redis:5.0.5 \
-        reanahub/reana-job-controller:0.8.0-alpha.7 \
-        reanahub/reana-message-broker:0.8.0-alpha.2 \
-        reanahub/reana-server:0.8.0-alpha.6 \
-        reanahub/reana-ui:0.8.0-alpha.4 \
-        reanahub/reana-workflow-controller:0.8.0-alpha.5 \
-        reanahub/reana-workflow-engine-cwl:0.8.0-alpha.4 \
-        reanahub/reana-workflow-engine-serial:0.8.0-alpha.4 \
-        reanahub/reana-workflow-engine-snakemake:0.8.0-alpha.2 \
-        reanahub/reana-workflow-engine-yadage:0.8.0-alpha.5 \
+        reanahub/reana-job-controller:0.8.0 \
+        reanahub/reana-message-broker:0.8.0 \
+        reanahub/reana-server:0.8.1 \
+        reanahub/reana-ui:0.8.0 \
+        reanahub/reana-workflow-controller:0.8.0 \
+        reanahub/reana-workflow-engine-cwl:0.8.0 \
+        reanahub/reana-workflow-engine-serial:0.8.0 \
+        reanahub/reana-workflow-engine-snakemake:0.8.0 \
+        reanahub/reana-workflow-engine-yadage:0.8.0 \
     ; do
         docker pull $image
         kind load docker-image $image

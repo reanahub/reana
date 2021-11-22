@@ -1,21 +1,46 @@
 Changes
 =======
 
-Version 0.8.0 (UNRELEASED)
+Version 0.8.0 (2021-11-30)
 --------------------------
 
 - Users:
-    - Adds support for Snakemake workflow engine.
-- Administrators
-    - Adds new configuration to set node labels splitting workflow nodes, job nodes and session nodes
-      (``node_label_runtimebatch``, ``node_label_runtimejobs``, ``node_label_runtimesessions``).
-    - Adds a default ``kubernetes_memory_limit`` value (4Gi).
-    - Adds configuration environment variable to set workflow scheduling policy (``REANA_WORKFLOW_SCHEDULING_POLICY``).
-    - Adds configuration environment variables to set REST API rate limit values (``REANA_RATELIMIT_GUEST_USER``, ``REANA_RATELIMIT_AUTHENTICATED_USER``).
-    - Adds configuration environment variable to set a prefetch count for job status consumer (``REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT``).
-    - Adds new configuration ``quota.enabled`` to enable or disable quota accounting.
-    - Adds new configuration ``quota.termination_update_policy`` to select the resources for which the quota must be calculated.
-    - Changes Helm templates to use PostgreSQL 12.8 version.
+    - Adds support for running and validating Snakemake workflows.
+    - Adds support for ``outputs.directories`` in ``reana.yaml`` allowing to easily download output directories.
+    - Adds new command ``quota-show`` to retrieve information about total CPU and Disk usage and quota limits.
+    - Adds new command ``info`` that retrieves general information about the cluster, such as available workspace path settings.
+    - Changes ``validate`` command to add the possibility to check the workflow against server capabilities such as desired workspace path via ``--server-capabilities`` option.
+    - Changes ``list`` command to add the possibility to filter by workflow status and search by workflow name via ``--filter`` option.
+    - Changes ``list`` command to add the possibility to filter and display all the runs of a given workflow via ``-w`` option.
+    - Changes ``list`` command to stop including workflow progress and workspace size by default. Please use new options ``--include-progress`` and ``--include-workspace-size`` to show this information.
+    - Changes ``list --sessions`` command to display the status of interactive sessions.
+    - Changes ``logs`` command to display also the start and finish times of individual jobs.
+    - Changes ``ls`` command to add the possibility to filter by file name, size and last-modified values via ``--filter`` option.
+    - Changes ``du`` command to add the possibility filter by file name and size via ``--filter`` option.
+    - Changes ``delete`` command to prevent hard-deletion of workflows.
+    - Changes Yadage workflow specification loading to be done in ``reana-commons``.
+    - Changes CWL workflow engine to ``cwltool`` version ``3.1.20210628163208``.
+    - Removes support for Python 2.7. Please use Python 3.6 or higher from now on.
+- Administrators:
+    - Adds new configuration options ``node_label_runtimebatch``, ``node_label_runtimejobs``, ``node_label_runtimesessions`` allowing to set cluster node labels for splitting runtime workload into dedicated workflow batch nodes, workflow job nodes and interactive session nodes.
+    - Adds new configuration option ``workspaces.paths`` allowing to set a dictionary of available workspace paths to pairs of ``cluster_node_path:cluster_pod_mountpath`` for mounting directories from cluster nodes.
+    - Adds new configuration option ``quota.enabled`` to enable or disable CPU and Disk quota accounting for users.
+    - Adds new configuration option ``quota.termination_update_policy`` to select the quota resources such as CPU and Disk for which the quota usage will be calculated immediately at the workflow termination time.
+    - Adds new periodic cron job to update Disk quotas nightly. Useful if the ``quota.termination_update_policy`` does not include Disk quota resource.
+    - Adds configuration environment variable ``reana_server.environment.REANA_WORKFLOW_SCHEDULING_POLICY`` allowing to set workflow scheduling policy (first-in first-out, user-balanced and workflow-complexity balanced).
+    - Adds configuration environment variables ``reana_server.environment.REANA_RATELIMIT_GUEST_USER``, ``reana_server.environment.REANA_RATELIMIT_AUTHENTICATED_USER`` allowing to set REST API rate limit values.
+    - Adds configuration environment variable ``reana_server.environment.REANA_SCHEDULER_REQUEUE_SLEEP`` to set a time to wait between processing queued workflows.
+    - Adds configuration environment variable ``reana_workflow_controller.environment.REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT`` allowing to set a prefetch count for the job status consumer.
+    - Adds support for Kubernetes 1.21 version clusters.
+    - Adds default ``kubernetes_memory_limit`` value (4 GiB) that will be used for all user jobs unless they specify otherwise.
+    - Changes Helm template to use PostgreSQL 12.8 version.
+    - Changes Helm template for ``reana-db`` component to allow 300 maximum number of database connections by default.
+    - Fixes email validation procedure during ``create-admin-user`` command to recognize more permissive email address formats.
+- Developers:
+    - Changes ``git-*`` commands to add the possibility of excluding certain components via the ``--exclude-components`` option.
+    - Changes ``git-create-release-commit`` command to bump all version files in a component.
+    - Changes ``git-log`` command to show diff patch or to pass any wanted argument.
+    - Changes ``helm-upgrade-components`` command to also upgrade the image tags in ``prefetch-images.sh`` script.
 
 Version 0.7.4 (2021-07-07)
 --------------------------
