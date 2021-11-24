@@ -1,5 +1,13 @@
 The REANA system has been installed!
 
+If you are upgrading from a previous REANA release series, you may need to
+upgrade database schema now:
+
+   $ kubectl -n {{ .Release.Namespace }} exec -i -t deployment/{{ .Release.Name }}-server -- reana-db alembic upgrade
+
+Please see the dedicated upgrade documentation at
+<https://docs.reana.io/administration/deployment/upgrading-db/>
+
 If you are deploying REANA for the first time, there are a few steps left to
 finalise its configuration.
 
