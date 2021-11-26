@@ -112,7 +112,6 @@ def _build_execution_progress_plot(
     df: pd.DataFrame, plot_parameters: Dict
 ) -> Tuple[str, Figure]:
     title = plot_parameters["title"]
-    interval = plot_parameters["time_interval"]
     datetime_range = plot_parameters.get("datetime_range")
 
     fig, ax = plt.subplots(figsize=(8, 4), dpi=200, constrained_layout=True)
@@ -211,7 +210,10 @@ def _build_execution_progress_plot(
     # force integers on y axis
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
-    ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=interval))
+    interval = plot_parameters.get("time_interval")
+    if interval:
+        ax.xaxis.set_major_locator(mdates.SecondLocator(interval=interval))
+
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
 
     # rotate dates on x axis

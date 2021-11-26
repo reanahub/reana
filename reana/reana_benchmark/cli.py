@@ -8,7 +8,7 @@
 """Combines reana-benchmark modules into CLI commands."""
 
 import logging
-from typing import NoReturn, Tuple, Optional, Union
+from typing import NoReturn, Optional, Tuple, Union
 
 import click
 import urllib3
@@ -221,16 +221,15 @@ def launch(
 @click.option(
     "--interval",
     "-i",
-    help="Ticks interval in minutes for execution progress plot [default=10]",
+    help="Ticks interval in seconds for execution progress plot",
     type=int,
-    default=10,
 )
 def analyze_command(
     workflow: str,
     workflow_range: Tuple[int, int],
     datetime_range: Tuple[str, str],
     title: str,
-    interval: int,
+    interval: Optional[int],
 ) -> NoReturn:
     """Produce plots based on workflows results collected before."""
     plot_params = {
