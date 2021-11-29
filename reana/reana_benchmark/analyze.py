@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -19,9 +19,8 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 
 from reana.reana_benchmark.collect import build_collected_results_path
-from reana.reana_benchmark.utils import logger
 from reana.reana_benchmark.config import DATETIME_FORMAT, WorkflowStatus
-
+from reana.reana_benchmark.utils import logger
 
 STATUS_TO_COLOR = {
     WorkflowStatus.created: "grey",
@@ -48,11 +47,9 @@ def _derive_metrics(df: pd.DataFrame) -> pd.DataFrame:
         lambda row: _get_workflow_number_from_name(row["name"]), axis=1
     )
 
-    collected_date = df["collected_date"].iloc[0]
-
     def _calculate_difference(
         row: pd.Series, start_column: str, end_column: str
-    ) -> int:
+    ) -> Optional[int]:
         """Calculate difference between two date times in string format."""
         start_date = row[start_column]
         end_date = row[end_column]
@@ -64,14 +61,7 @@ def _derive_metrics(df: pd.DataFrame) -> pd.DataFrame:
             return _convert_str_date_to_epoch(end_date) - _convert_str_date_to_epoch(
                 start_date
             )
-
-        # if only start date exists, take current time as ended
-        if start_date_exists and not end_date_exists:
-            return _convert_str_date_to_epoch(
-                collected_date
-            ) - _convert_str_date_to_epoch(start_date)
-
-        return 0
+        return None
 
     df["pending_time"] = df.apply(
         partial(
@@ -81,13 +71,11 @@ def _derive_metrics(df: pd.DataFrame) -> pd.DataFrame:
         ),
         axis=1,
     )
-    df["pending_time"] = df["pending_time"].astype(int)
 
     df["runtime"] = df.apply(
         partial(_calculate_difference, start_column="started", end_column="ended"),
         axis=1,
     )
-    df["runtime"] = df["runtime"].astype(int)
     return df
 
 
@@ -315,31 +303,44 @@ def _build_histogram_plot(
 
 def _build_total_time_histogram(
     df: pd.DataFrame, plot_parameters: Dict
-) -> (str, Figure):
+) -> Tuple[str, Figure]:
     title = plot_parameters["title"]
+    title = f"{title}\n(only finished workflows are included)"
+    data = df[df["status"] == WorkflowStatus.finished]
+    series = data["runtime"] + data["pending_time"]
     return (
         "histogram_total_time",
-        _build_histogram_plot(
-            df["runtime"] + df["pending_time"], 10, "total_time", title
-        ),
+        _build_histogram_plot(series, 10, "total_time", title),
     )
 
 
-def _build_runtime_histogram(df: pd.DataFrame, plot_parameters: Dict) -> (str, Figure):
+def _build_runtime_histogram(
+    df: pd.DataFrame, plot_parameters: Dict
+) -> Tuple[str, Figure]:
     title = plot_parameters["title"]
+    title = f"{title}\n(only finished workflows are included)"
+    data = df[df["status"] == WorkflowStatus.finished]
+    series = data["runtime"]
     return (
         "histogram_runtime",
-        _build_histogram_plot(df["runtime"], 10, "runtime", title),
+        _build_histogram_plot(series, 10, "runtime", title),
     )
 
 
 def _build_pending_time_histogram(
     df: pd.DataFrame, plot_parameters: Dict
-) -> (str, Figure):
+) -> Tuple[str, Figure]:
     title = plot_parameters["title"]
+    title = f"{title}\n(only finished, failed and running workflows are included)"
+    data = df[
+        df["status"].isin(
+            [WorkflowStatus.finished, WorkflowStatus.failed, WorkflowStatus.running]
+        )
+    ]
+    series = data["pending_time"].dropna()
     return (
         "histogram_pending_time",
-        _build_histogram_plot(df["pending_time"], 10, "pending_time", title),
+        _build_histogram_plot(series, 10, "pending_time", title),
     )
 
 
