@@ -23,6 +23,9 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_server.imagePullPolicy`                | REANA-Server image pull policy                                                       | IfNotPresent                                    |
 | `components.reana_server.uwsgi.processes`                | Number of uWSGI processes                                                            | 6                                               |
 | `components.reana_server.uwsgi.threads`                  | Number of uWSGI threads                                                              | 4                                               |
+| `components.reana_server.uwsgi.log_all`                  | Log all HTTP requests                                                                | true                                            |
+| `components.reana_server.uwsgi.log_4xx`                  | Log only error HTTP requests with status code 4xx. To make this configuration effective `components.reana_server.uwsgi.log_all` must be false. | true |
+| `components.reana_server.uwsgi.log_5xx`                  | Log only error HTTP requests with status code 5xx. To make this configuration effective `components.reana_server.uwsgi.log_all` must be false. | true |
 | `components.reana_ui.announcement`                       | Announcement message displayed in site top banner                                    | None                                            |
 | `components.reana_ui.enabled`                            | Instantiate the [REANA-UI](https://github.com/reanahub/reana-ui)                     | true                                            |
 | `components.reana_ui.image`                              | [REANA-UI image](https://hub.docker.com/r/reanahub/reana-ui) to use                  | `reanahub/reana-ui:<chart-release-version>`     |

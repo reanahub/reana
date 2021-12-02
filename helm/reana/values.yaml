@@ -72,6 +72,9 @@ components:
     uwsgi:
       processes: 6
       threads: 4
+      log_all: true
+      log_4xx: true
+      log_5xx: true
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-workflow-controller:0.8.0

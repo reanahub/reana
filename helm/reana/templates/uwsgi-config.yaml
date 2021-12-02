@@ -25,9 +25,11 @@ data:
                           # https://uwsgi-docs.readthedocs.io/en/latest/articles/SerializingAccept.html
 
     # Logging
+    {{- if not .Values.components.reana_server.uwsgi.log_all }}
     disable-logging = true
-    log-4xx = true
-    log-5xx = true
+    log-4xx = {{ .Values.components.reana_server.uwsgi.log_4xx }}
+    log-5xx = {{ .Values.components.reana_server.uwsgi.log_5xx }}
+    {{- end }}
 
     # Workers management
     max-requests = 1999

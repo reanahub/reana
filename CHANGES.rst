@@ -1,6 +1,14 @@
 Changes
 =======
 
+Version 0.8.1 (UNRELEASED)
+--------------------------
+
+- Administrators:
+    - Adds new configuration option ``reana_server.uwsgi.log_all`` to toggle the logging of all the HTTP requests.
+    - Adds new configuration options ``reana_server.uwsgi.log_4xx`` and ``reana_server.uwsgi.log_5xx`` to only log HTTP error requests, i.e. HTTP requests with status code 4XX and 5XX. To make this configuration effective ``reana_server.uwsgi.log_all`` must be ``false``.
+    - Changes uWSGI configuration to log all HTTP requests in REANA-Server by default.
+
 Version 0.8.0 (2021-11-30)
 --------------------------
 
