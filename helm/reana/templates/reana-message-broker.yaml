@@ -55,7 +55,11 @@ spec:
         - mountPath: /var/lib/rabbitmq/mnesia
           subPath: rabbitmq/mnesia
           name: reana-shared-volume
-      {{- if .Values.node_label_infrastructure }}
+      {{- if .Values.node_label_infrastructuremq }}
+      {{- $full_label := split "=" .Values.node_label_infrastructuremq }}
+      nodeSelector:
+        {{ $full_label._0 }}: {{ $full_label._1 }}
+      {{- else if .Values.node_label_infrastructure }}
       {{- $full_label := split "=" .Values.node_label_infrastructure }}
       nodeSelector:
         {{ $full_label._0 }}: {{ $full_label._1 }}

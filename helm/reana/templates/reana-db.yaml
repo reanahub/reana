@@ -73,7 +73,11 @@ spec:
           hostPath:
             path: {{ .Values.shared_storage.hostpath.root_path }}
           {{- end }}
-      {{- if .Values.node_label_infrastructure }}
+      {{- if .Values.node_label_infrastructuredb }}
+      {{- $full_label := split "=" .Values.node_label_infrastructuredb }}
+      nodeSelector:
+        {{ $full_label._0 }}: {{ $full_label._1 }}
+      {{- else if .Values.node_label_infrastructure }}
       {{- $full_label := split "=" .Values.node_label_infrastructure }}
       nodeSelector:
         {{ $full_label._0 }}: {{ $full_label._1 }}
