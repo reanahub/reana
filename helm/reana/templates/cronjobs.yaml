@@ -106,14 +106,14 @@ spec:
 {{- end }}
 {{- end }}
 ---
-{{- if and .Values.quota.enabled .Values.quota.disk_update }}
+{{- if and .Values.quota.enabled (tpl .Values.quota.periodic_update_policy .) }}
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: {{ include "reana.prefix" . }}-disk-quota-update
+  name: {{ include "reana.prefix" . }}-resource-quota-update
   namespace: {{ .Release.Namespace }}
 spec:
-  schedule: "{{ .Values.quota.disk_update }}"
+  schedule: "{{ tpl .Values.quota.periodic_update_policy . }}"
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
   jobTemplate:
@@ -121,19 +121,19 @@ spec:
       template:
         spec:
           containers:
-          - name: {{ include "reana.prefix" . }}-disk-quota-update
+          - name: {{ include "reana.prefix" . }}-resource-quota-update
             image: {{ .Values.components.reana_server.image }}
             command:
             - '/bin/sh'
             - '-c'
             args:
-            - 'reana-db quota disk-usage-update'
+            - 'reana-db quota resource-usage-update'
             {{- if .Values.debug.enabled }}
             tty: true
             stdin: true
             {{- end }}
             env:
-            - name: REANA_CRONJOB_DISK_QUOTA_UPDATE_POLICY
+            - name: REANA_PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
               value: "true"
             {{- range $key, $value := .Values.db_env_config }}
             - name: {{ $key }}

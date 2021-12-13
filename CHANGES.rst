@@ -9,6 +9,8 @@ Version 0.8.1 (UNRELEASED)
     - Adds new configuration options ``reana_server.uwsgi.log_4xx`` and ``reana_server.uwsgi.log_5xx`` to only log HTTP error requests, i.e. HTTP requests with status code 4XX and 5XX. To make this configuration effective ``reana_server.uwsgi.log_all`` must be ``false``.
     - Adds new configuration options ``node_label_infrastructuremq`` and ``node_label_infrastructuredb`` to have the possibility to run the Message Broker and the Database pods in specific nodes.
     - Changes uWSGI configuration to log all HTTP requests in REANA-Server by default.
+    - Changes ``.Values.quota.disk_update`` to ``.Values.quota.periodic_update_policy`` to also update the CPU quota. Keeps ``.Values.quota.disk_update`` for backward compatibility.
+    - Changes the name of configuration option ``quota.termination_update_policy`` to ``quota.workflow_termination_update_policy``. Keeps ``quota.termination_update_policy`` for backward compatibility.
 
 Version 0.8.0 (2021-11-30)
 --------------------------

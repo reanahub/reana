@@ -73,7 +73,7 @@ spec:
             value: {{ .Values.quota.default_disk_limit | default 0 | quote }}
           {{- if .Values.quota.enabled }}
           - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-            value: {{ .Values.quota.termination_update_policy | default "null" }}
+            value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" }}
           {{- end }}
           {{- if .Values.naming_scheme }}
           - name: REANA_COMPONENT_NAMING_SCHEME
@@ -189,7 +189,7 @@ spec:
           value: {{ .Values.namespace_runtime | default .Release.Namespace }}
         {{- if .Values.quota.enabled }}
         - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-          value: {{ .Values.quota.termination_update_policy | default "null" }}
+          value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" }}
         {{- end }}
         {{- range $key, $value := .Values.db_env_config }}
         - name: {{ $key }}

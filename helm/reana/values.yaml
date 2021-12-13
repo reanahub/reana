@@ -132,5 +132,8 @@ traefik:
 # Quota
 quota:
   enabled: true
+  periodic_update_policy: "{{ .Values.quota.disk_update }}"
+  workflow_termination_update_policy: "{{ .Values.quota.termination_update_policy }}"
+  # backward compatibility
   disk_update: "0 3 * * *"  # everyday at 3am
   termination_update_policy: "disk,cpu"

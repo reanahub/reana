@@ -84,7 +84,7 @@ spec:
             value: {{ .Values.workspaces.paths | toJson | quote }}
           {{- if .Values.quota.enabled }}
           - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-            value: {{ .Values.quota.termination_update_policy | default "null" }}
+            value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" }}
           {{- end }}
           {{- range $key, $value := .Values.db_env_config }}
           - name: {{ $key }}
