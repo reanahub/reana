@@ -301,7 +301,14 @@ def is_component_runnable_example(component):
     return False
 
 
-def run_command(cmd, component="", display=True, return_output=False, directory=None):
+def run_command(
+    cmd: str,
+    component: str = "",
+    display: bool = True,
+    return_output: bool = False,
+    directory: str = None,
+    dry_run: bool = False,
+) -> Optional[str]:
     """Run given command in the given component source directory.
 
     Exit in case of troubles.
@@ -310,16 +317,22 @@ def run_command(cmd, component="", display=True, return_output=False, directory=
     :param component: standard component name
     :param display: should we display command to run?
     :param return_output: shall the output of the command be returned?
+    :param directory: directory where to run the command
+    :param dry_run: should we only show the command without executing it?
     :type cmd: str
     :type component: str
     :type display: bool
     :type return_output: bool
+    :type directory: str
+    :type dry_run: bool
     """
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     if display:
         click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
         click.secho("{0}: ".format(component), bold=True, nl=False, fg="yellow")
         click.secho("{0}".format(cmd), bold=True)
+    if dry_run:
+        return
     if component and directory:
         os.chdir(os.path.join(directory, component))
     elif component:
