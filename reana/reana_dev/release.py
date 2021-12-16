@@ -18,6 +18,7 @@ import click
 
 from reana.reana_dev.docker import docker_push
 from reana.reana_dev.git import (
+    get_current_commit,
     git_clean,
     git_is_current_version_tagged,
     is_last_commit_release_commit,
@@ -189,9 +190,15 @@ def release_pypi(ctx, component, timeout):  # noqa: D301
 
 
 @click.option("--user", "-u", default="reanahub", help="DockerHub user name [reanahub]")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Display the command without executing it.",
+)
 @release_commands.command(name="release-helm")
 @click.pass_context
-def release_helm(ctx, user):  # noqa: D301
+def release_helm(ctx, user: str, dry_run: bool) -> None:  # noqa: D301
     """Release REANA as a Helm chart."""
     component = "reana"
     version = get_current_component_version_from_source_files(component)
@@ -215,16 +222,17 @@ def release_helm(ctx, user):  # noqa: D301
         )
         sys.exit(1)
 
+    current_commit_sha = get_current_commit(get_srcdir(component)).split(" ")[0]
     for cmd in [
         f"rm -rf {package_path}",
         f"mkdir {package_path}",
         f"rm -rf {index_path}",
         f"mkdir {index_path}",
         f"helm package helm/reana --destination {package_path} --dependency-update",
-        f"cr upload -o {user} -r {component} --release-name-template '{{{{ .Version }}}}'",
+        f"cr upload -o {user} -r {component} --release-name-template '{{{{ .Version }}}}' --commit {current_commit_sha}",
         f"cr index -o {user} -r {component} -c {repository} --release-name-template '{{{{ .Version }}}}'",
     ]:
-        run_command(cmd, component)
+        run_command(cmd, component, dry_run=dry_run)
 
     with tempfile.TemporaryDirectory() as gh_pages_worktree:
         run_command(
@@ -236,6 +244,7 @@ def release_helm(ctx, user):  # noqa: D301
             f"git push origin {github_pages_branch} && "
             f"cd - && "
             f"git worktree remove '{gh_pages_worktree}'",
+            dry_run=dry_run,
         )
 
 
