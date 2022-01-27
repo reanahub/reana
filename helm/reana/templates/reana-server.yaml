@@ -70,6 +70,8 @@ spec:
         env:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
+          - name: REANA_COMPUTE_BACKENDS
+            value: {{ .Values.compute_backends | toJson | quote }}
           - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
             value: {{ .Release.Namespace }}
           - name: REANA_RUNTIME_KUBERNETES_NAMESPACE

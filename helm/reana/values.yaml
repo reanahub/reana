@@ -15,6 +15,9 @@ workspaces:
   paths:
     - /var/reana:/var/reana
 
+compute_backends:
+  - kubernetes
+
 shared_storage:
   backend: hostpath  # hostpath | cephfs | nfs
   volume_size: 200

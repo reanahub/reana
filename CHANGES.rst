@@ -9,6 +9,7 @@ Version 0.8.1 (UNRELEASED)
 - Administrators:
     - Adds configuration to set default job timeout value for the Kubernetes compute backend jobs (``kubernetes_jobs_timeout_limit``).
     - Adds configuration to set maximum job timeout that users can assign to their jobs for the Kubernetes compute backend (``kubernetes_jobs_max_user_timeout_limit``).
+    - Adds new configuration option ``compute_backends`` to specify the supported list of compute backends for validation purposes.
     - Adds new configuration option ``reana_server.uwsgi.log_all`` to toggle the logging of all the HTTP requests.
     - Adds new configuration options ``reana_server.uwsgi.log_4xx`` and ``reana_server.uwsgi.log_5xx`` to only log HTTP error requests, i.e. HTTP requests with status code 4XX and 5XX. To make this configuration effective ``reana_server.uwsgi.log_all`` must be ``false``.
     - Adds new configuration options ``node_label_infrastructuremq`` and ``node_label_infrastructuredb`` to have the possibility to run the Message Broker and the Database pods in specific nodes.
