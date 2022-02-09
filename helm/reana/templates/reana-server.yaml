@@ -80,6 +80,10 @@ spec:
             value: {{ .Values.quota.default_cpu_limit | default 0 | quote }}
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
             value: {{ .Values.quota.default_disk_limit | default 0 | quote }}
+          {{- if .Values.kubernetes_jobs_max_user_memory_limit }}
+          - name: REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_LIMIT
+            value: {{ .Values.kubernetes_jobs_max_user_memory_limit }}
+          {{- end }}
           - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
             value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" }}
           - name: WORKSPACE_PATHS
