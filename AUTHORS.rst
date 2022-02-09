@@ -16,6 +16,7 @@ The list of contributors in alphabetical order:
 - `Kenyi Hurtado-Anampa <https://orcid.org/0000-0002-9779-3566>`_
 - `Leticia Wanderley <https://orcid.org/0000-0003-4649-6630>`_
 - `Lukas Heinrich <https://orcid.org/0000-0002-4048-7584>`_
+- `Marco Donadoni <https://orcid.org/0000-0003-2922-5505>`_
 - `Marco Vidal <https://orcid.org/0000-0002-9363-4971>`_
 - `Matthew Feickert <https://orcid.org/0000-0003-4124-7862>`_
 - `Michael R. Crusoe <https://orcid.org/0000-0002-2961-9670>`_

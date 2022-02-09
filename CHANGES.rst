@@ -1,21 +1,33 @@
 Changes
 =======
 
-Version 0.8.1 (UNRELEASED)
+Version 0.8.1 (2022-02-15)
 --------------------------
 
 - Users:
     - Adds support for specifying ``kubernetes_job_timeout`` for Kubernetes compute backend jobs.
+    - Adds Kubernetes job memory limits validation before accepting workflows for execution.
+    - Adds support for HTML preview of workspace files in the web user interface.
+    - Adds an option to search for concrete file names in the workflow's workspace web user interface page.
+    - Changes the Cluster Health web interface page to display the cluster status information based on resource availability rather than only usage.
+    - Changes ``info`` command to include the list of supported compute backends.
+    - Fixes workflow stuck in pending status due to early Yadage failures.
+    - Fixes formatting of error messages and sets appropriate exit status codes.
 - Administrators:
-    - Adds configuration to set default job timeout value for the Kubernetes compute backend jobs (``kubernetes_jobs_timeout_limit``).
-    - Adds configuration to set maximum job timeout that users can assign to their jobs for the Kubernetes compute backend (``kubernetes_jobs_max_user_timeout_limit``).
+    - Adds new configuration option to set default job timeout value for the Kubernetes compute backend jobs (``kubernetes_jobs_timeout_limit``).
+    - Adds new configuration option to set maximum job timeout that users can assign to their jobs for the Kubernetes compute backend (``kubernetes_jobs_max_user_timeout_limit``).
     - Adds new configuration option ``compute_backends`` to specify the supported list of compute backends for validation purposes.
     - Adds new configuration option ``reana_server.uwsgi.log_all`` to toggle the logging of all the HTTP requests.
     - Adds new configuration options ``reana_server.uwsgi.log_4xx`` and ``reana_server.uwsgi.log_5xx`` to only log HTTP error requests, i.e. HTTP requests with status code 4XX and 5XX. To make this configuration effective ``reana_server.uwsgi.log_all`` must be ``false``.
     - Adds new configuration options ``node_label_infrastructuremq`` and ``node_label_infrastructuredb`` to have the possibility to run the Message Broker and the Database pods in specific nodes.
     - Changes uWSGI configuration to log all HTTP requests in REANA-Server by default.
-    - Changes ``.Values.quota.disk_update`` to ``.Values.quota.periodic_update_policy`` to also update the CPU quota. Keeps ``.Values.quota.disk_update`` for backward compatibility.
+    - Changes ``quota.disk_update`` to ``quota.periodic_update_policy`` to also update the CPU quota. Keeps ``quota.disk_update`` for backward compatibility.
     - Changes the name of configuration option ``quota.termination_update_policy`` to ``quota.workflow_termination_update_policy``. Keeps ``quota.termination_update_policy`` for backward compatibility.
+- Developers:
+    - Adds workflow name validation to the ``create_workflow`` endpoint, restricting special characters like dots.
+    - Changes ``/api/info`` endpoint to return a list of supported compute backends.
+    - Changes ``/api/status`` endpoint to calculate the cluster health status based on the availability instead of the usage.
+    - Changes the way of determining Snakemake job statuses, polling the Job Controller API instead of checking local files.
 
 Version 0.8.0 (2021-11-30)
 --------------------------
