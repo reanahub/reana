@@ -1,6 +1,12 @@
 Changes
 =======
 
+Version 0.8.2 (UNRELEASED)
+--------------------------
+
+- Administrators:
+    - Adds configuration environment variable, ``reana_server.environment.REANA_SCHEDULER_REQUEUE_COUNT``, to set requeue count for submitted workflows in case of scheduling error or busy cluster.
+
 Version 0.8.1 (2022-02-15)
 --------------------------
 

@@ -16,6 +16,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_server.environment.REANA_MAX_CONCURRENT_BATCH_WORKFLOWS` | Upper limit on concurrent REANA batch workflows running in the cluster. | 30 |
 | `components.reana_server.environment.REANA_USER_EMAIL_CONFIRMATION` | Enable user to confirm their email address. | true |
 | `components.reana_server.environment.REANA_SCHEDULER_REQUEUE_SLEEP` | Seconds to wait between consuming workflows. | 15 |
+| `components.reana_server.environment.REANA_SCHEDULER_REQUEUE_COUNT` | The number of times to requeue workflow before failing it. | 200 |
 | `components.reana_server.environment.REANA_WORKFLOW_SCHEDULING_POLICY` | Define workflow scheduling strategy. Options are "fifo" for first-in-first-out strategy regardless of users and "balanced" for multi-user-aware scheduling strategy. | "fifo" |
 | `components.reana_server.environment.REANA_RATELIMIT_GUEST_USER` | Set API limiter config for guest users. Users using reana-client will be treated as guests. | "20 per second" |
 | `components.reana_server.environment.REANA_RATELIMIT_AUTHENTICATED_USER` | Set API limiter config for authenticated web UI users. | "20 per second" |
