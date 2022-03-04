@@ -1,5 +1,5 @@
 # This file is part of REANA.
-# Copyright (C) 2021 CERN.
+# Copyright (C) 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -17,7 +17,7 @@ from reana_client.api.client import (
     create_workflow,
     upload_to_server,
 )
-from reana_client.utils import load_reana_spec
+from reana_client.utils import load_validate_reana_spec
 
 from reana.reana_benchmark.utils import (
     logger,
@@ -31,7 +31,7 @@ CURRENT_WORKING_DIRECTORY = os.getcwd()
 
 @lru_cache(maxsize=None)
 def _load_reana_specification(reana_file_path: str) -> Dict:
-    return load_reana_spec(
+    return load_validate_reana_spec(
         format_filename(reana_file_path),
         access_token=REANA_ACCESS_TOKEN,
         skip_validation=True,
