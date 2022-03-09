@@ -73,6 +73,7 @@ components:
       REANA_WORKFLOW_SCHEDULING_POLICY: "fifo"
       REANA_RATELIMIT_GUEST_USER: "20 per second"
       REANA_RATELIMIT_AUTHENTICATED_USER: "20 per second"
+      REANA_RATELIMIT_SLOW: "1/5 second"
     uwsgi:
       processes: 6
       threads: 4

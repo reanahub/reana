@@ -20,6 +20,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_server.environment.REANA_WORKFLOW_SCHEDULING_POLICY` | Define workflow scheduling strategy. Options are "fifo" for first-in-first-out strategy regardless of users and "balanced" for multi-user-aware scheduling strategy. | "fifo" |
 | `components.reana_server.environment.REANA_RATELIMIT_GUEST_USER` | Set API limiter config for guest users. Users using reana-client will be treated as guests. | "20 per second" |
 | `components.reana_server.environment.REANA_RATELIMIT_AUTHENTICATED_USER` | Set API limiter config for authenticated web UI users. | "20 per second" |
+| `components.reana_server.environment.REANA_RATELIMIT_SLOW` | Set API limiter config for slow endpoints that need to be protected e.g. launch endpoint. | "1/5 second" |
 | `components.reana_server.image`                          | [REANA-Server image](https://hub.docker.com/r/reanahub/reana-server) to use          | `reanahub/reana-server:<chart-release-version>` |
 | `components.reana_server.imagePullPolicy`                | REANA-Server image pull policy                                                       | IfNotPresent                                    |
 | `components.reana_server.uwsgi.processes`                | Number of uWSGI processes                                                            | 6                                               |

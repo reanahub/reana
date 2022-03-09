@@ -7,6 +7,7 @@ Version 0.9.0 (UNRELEASED)
 - Administrators:
     - Adds support for Kubernetes version 1.22 and 1.23 clusters.
     - Removes support for Kubernetes version prior to 1.19.
+    - Adds configuration environment variable ``reana_server.environment.REANA_RATELIMIT_SLOW`` to limit API requests to some protected endpoints e.g launch workflow.
 
 Version 0.8.2 (UNRELEASED)
 --------------------------
