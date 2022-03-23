@@ -5,6 +5,7 @@ components:
       image: reanahub/reana-server
       environment:
         REANA_SCHEDULER_REQUEUE_SLEEP: 2
+        REANA_RATELIMIT_SLOW: "5 per second"
     reana_workflow_controller:
       image: reanahub/reana-workflow-controller
       environment:
