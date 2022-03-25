@@ -86,7 +86,7 @@ components:
     image: reanahub/reana-workflow-controller:0.9.0-alpha.2
     environment:
       SHARED_VOLUME_PATH: /var/reana
-      REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 200
+      REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 10
   reana_workflow_engine_cwl:
     image: reanahub/reana-workflow-engine-cwl:0.9.0-alpha.2
   reana_workflow_engine_yadage:
