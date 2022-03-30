@@ -242,10 +242,14 @@ def run_commands():
     help="Which examples to run? [default=DEMO]",
 )
 @click.option(
-    "--admin-email", required=True, help="Admin user email address",
+    "--admin-email",
+    required=True,
+    help="Admin user email address",
 )
 @click.option(
-    "--admin-password", required=True, help="Admin user password",
+    "--admin-password",
+    required=True,
+    help="Admin user password",
 )
 @click.option(
     "--workflow-engine",
@@ -497,7 +501,8 @@ def run_example(
                     # create workflow:
                     for cmd in [
                         "reana-client create -f {0} -n {1}".format(
-                            reana_yaml_file_path, workflow_name,
+                            reana_yaml_file_path,
+                            workflow_name,
                         ),
                     ]:
                         run_command(cmd, component)

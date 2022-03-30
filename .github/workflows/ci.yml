@@ -33,7 +33,7 @@ jobs:
 
       - name: Check Python code formatting
         run: |
-          pip install black==19.10b0
+          pip install black
           ./run-tests.sh --check-black
 
   lint-flake8:

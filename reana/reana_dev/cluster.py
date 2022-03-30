@@ -249,13 +249,19 @@ def cluster_build(
     help="Which components to exclude from build? [c1,c2,c3]",
 )
 @click.option(
-    "--admin-email", required=True, help="Admin user email address",
+    "--admin-email",
+    required=True,
+    help="Admin user email address",
 )
 @click.option(
-    "--admin-password", required=True, help="Admin user password",
+    "--admin-password",
+    required=True,
+    help="Admin user password",
 )
 @click.option(
-    "--instance-name", default="reana", help="REANA instance name",
+    "--instance-name",
+    default="reana",
+    help="REANA instance name",
 )
 def cluster_deploy(
     namespace,
@@ -320,7 +326,8 @@ def cluster_deploy(
             values_dict["components"]["reana_ui"]["enabled"] = False
 
     helm_install = "cat <<EOF | helm install reana helm/reana -n {namespace} --create-namespace --wait -f -\n{values}\nEOF".format(
-        namespace=namespace, values=values_dict and yaml.dump(values_dict) or "",
+        namespace=namespace,
+        values=values_dict and yaml.dump(values_dict) or "",
     )
     cmds = []
     if mode in ("debug"):

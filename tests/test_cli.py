@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA
-# Copyright (C) 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -91,22 +91,22 @@ def test_select_components():
 
     for (input_value, output_expected) in (
         # regular operation:
-        (["reana-job-controller",], ["reana-job-controller",]),
-        (["reana-job-controller", "reana",], ["reana-job-controller", "reana, "]),
+        (["reana-job-controller"], ["reana-job-controller"]),
+        (["reana-job-controller", "reana"], ["reana-job-controller", "reana, "]),
         # special value: '.'
-        ([".",], [os.path.basename(os.getcwd()),]),
+        (["."], [os.path.basename(os.getcwd())]),
         # special value: 'CLUSTER'
-        (["CLUSTER",], REPO_LIST_CLUSTER),
+        (["CLUSTER"], REPO_LIST_CLUSTER),
         # special value: 'CLIENT'
-        (["CLIENT",], REPO_LIST_CLIENT),
+        (["CLIENT"], REPO_LIST_CLIENT),
         # special value: 'ALL'
-        (["ALL",], REPO_LIST_ALL),
+        (["ALL"], REPO_LIST_ALL),
         # bad values:
-        (["nonsense",], []),
-        (["nonsense", "reana",], ["reana",]),
+        (["nonsense"], []),
+        (["nonsense", "reana"], ["reana"]),
         # output uniqueness:
-        (["ALL", "reana",], REPO_LIST_ALL),
-        (["CLUSTER", "reana",], REPO_LIST_CLUSTER),
+        (["ALL", "reana"], REPO_LIST_ALL),
+        (["CLUSTER", "reana"], REPO_LIST_CLUSTER),
         (["ALL", "CLUSTER", "reana"], REPO_LIST_ALL),
     ):
         output_obtained = select_components(input_value)
@@ -125,14 +125,14 @@ def test_select_workflow_engines():
 
     for (input_value, output_expected) in (
         # regular workflow engines:
-        (["cwl",], ["cwl",]),
-        (["serial",], ["serial",]),
-        (["cwl", "yadage",], ["cwl", "yadage, "]),
+        (["cwl"], ["cwl"]),
+        (["serial"], ["serial"]),
+        (["cwl", "yadage"], ["cwl", "yadage, "]),
         # bad values:
-        (["nonsense",], []),
-        (["nonsense", "cwl",], ["cwl",]),
+        (["nonsense"], []),
+        (["nonsense", "cwl"], ["cwl"]),
         # output uniqueness:
-        (["cwl", "cwl",], ["cwl",]),
+        (["cwl", "cwl"], ["cwl"]),
     ):
         output_obtained = select_workflow_engines(input_value)
         assert output_obtained.sort() == output_expected.sort()

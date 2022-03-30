@@ -284,7 +284,10 @@ def _max_min_mean_median(series: pd.Series) -> Tuple[int, int, int, int]:
 
 
 def _build_histogram_plot(
-    series: pd.Series, bin_size: int, label: str, title: str,
+    series: pd.Series,
+    bin_size: int,
+    label: str,
+    title: str,
 ) -> Figure:
     fig, ax = plt.subplots(figsize=(8, 6), constrained_layout=True)
 

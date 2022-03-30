@@ -211,7 +211,8 @@ def release_helm(ctx, user: str, dry_run: bool) -> None:  # noqa: D301
     is_component_releasable(component, exit_code=True, display=True)
     if not is_chart_releaser_installed:
         click.secho(
-            "Please install chart-releaser to be able to do a Helm release", fg="red",
+            "Please install chart-releaser to be able to do a Helm release",
+            fg="red",
         )
         sys.exit(1)
 

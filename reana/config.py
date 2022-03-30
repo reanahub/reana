@@ -163,7 +163,10 @@ EXAMPLE_LOG_MESSAGES = {
         "fitdata.C",
         "MIGRAD MINIMIZATION HAS CONVERGED",
     ),
-    "reana-demo-worldpopulation": ("Input Notebook", "Output Notebook",),
+    "reana-demo-worldpopulation": (
+        "Input Notebook",
+        "Output Notebook",
+    ),
     "reana-demo-atlas-recast": (
         "MC channel Number",
         "MIGRAD MINIMIZATION HAS CONVERGED",
@@ -197,9 +200,15 @@ DOCKER_PREFETCH_IMAGES = {
         "maildev/maildev:1.1.0",
         "redis:5.0.5",
     ],
-    "reana-demo-helloworld": ["python:2.7-slim",],
-    "reana-demo-worldpopulation": ["reanahub/reana-env-jupyter:2.0.0",],
-    "reana-demo-root6-roofit": ["reanahub/reana-env-root6:6.18.04",],
+    "reana-demo-helloworld": [
+        "python:2.7-slim",
+    ],
+    "reana-demo-worldpopulation": [
+        "reanahub/reana-env-jupyter:2.0.0",
+    ],
+    "reana-demo-root6-roofit": [
+        "reanahub/reana-env-root6:6.18.04",
+    ],
     "reana-demo-atlas-recast": [
         "reanahub/reana-demo-atlas-recast-eventselection:1.0",
         "reanahub/reana-demo-atlas-recast-statanalysis:1.0",

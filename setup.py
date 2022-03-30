@@ -18,13 +18,18 @@ readme = open("README.rst").read()
 history = open("CHANGES.rst").read()
 
 tests_require = [
-    "pytest-reana>=0.9.0a2,<0.10.0",
+    "pytest-reana>=0.9.0a3,<0.10.0",
 ]
 
 extras_require = {
-    "docs": ["Sphinx>=1.4.4",],
+    "docs": [
+        "Sphinx>=1.4.4",
+    ],
     "tests": tests_require,
-    "benchmark": ["pandas>=1.1.5", "matplotlib>=3.3.4",],
+    "benchmark": [
+        "pandas>=1.1.5",
+        "matplotlib>=3.3.4",
+    ],
 }
 
 extras_require["all"] = []

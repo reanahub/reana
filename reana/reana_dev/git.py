@@ -145,7 +145,10 @@ def git_create_release_commit(
 
     if (
         run_command(
-            "git branch --show-current", component, display=False, return_output=True,
+            "git branch --show-current",
+            component,
+            display=False,
+            return_output=True,
         )
         == base
     ):
@@ -184,7 +187,9 @@ def compare_branches(branch_to_compare, current_branch):
 
 
 def is_component_behind_branch(
-    component, branch_to_compare, current_branch=None,
+    component,
+    branch_to_compare,
+    current_branch=None,
 ):
     """Report to stdout the differences between two branches."""
     current_branch = current_branch or get_current_branch(get_srcdir(component))
@@ -250,7 +255,8 @@ def git_push_to_origin(components):
     for component in components:
         branch = run_command("git branch --show-current", component, return_output=True)
         run_command(
-            f"git push --force origin {branch}", component,
+            f"git push --force origin {branch}",
+            component,
         )
 
 
@@ -267,7 +273,9 @@ def git_commands():
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @click.option(
     "--browser", "-b", default="firefox", help="Which browser to use? [firefox]"
@@ -330,7 +338,9 @@ def git_fork(component, exclude_components, browser):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @click.option(
     "--target-directory",
@@ -410,7 +420,9 @@ def git_clone(user, component, exclude_components, target_directory):  # noqa: D
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @click.option(
     "--short",
@@ -476,7 +488,9 @@ def git_status(component, exclude_components, short, base):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-clean")
 def git_clean(component, exclude_components):  # noqa: D301
@@ -589,7 +603,9 @@ def git_submodule(update=False, status=False, delete=False):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-branch")
 def git_branch(component, exclude_components):  # noqa: D301
@@ -622,7 +638,9 @@ def git_branch(component, exclude_components):  # noqa: D301
         run_command(cmd, component)
 
 
-@click.argument("branch",)
+@click.argument(
+    "branch",
+)
 @click.option(
     "--component",
     "-c",
@@ -631,7 +649,9 @@ def git_branch(component, exclude_components):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @click.option("--fetch", is_flag=True, default=False)
 @git_commands.command(name="git-checkout")
@@ -701,7 +721,11 @@ def git_checkout_pr(branch, fetch):  # noqa: D301
     """
     for cpr in branch:
         component, pull_request = cpr
-        component = select_components([component,])[0]
+        component = select_components(
+            [
+                component,
+            ]
+        )[0]
         if component in REPO_LIST_ALL:
             if fetch:
                 cmd = "git fetch upstream"
@@ -741,7 +765,11 @@ def git_merge(branch, base, push):  # noqa: D301
     """
     for cpr in branch:
         component, pull_request = cpr
-        component = select_components([component,])[0]
+        component = select_components(
+            [
+                component,
+            ]
+        )[0]
         if component in REPO_LIST_ALL:
             for cmd in [
                 "git fetch upstream",
@@ -772,7 +800,9 @@ def git_merge(branch, base, push):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-fetch")
 def git_fetch(component, exclude_components):  # noqa: D301
@@ -813,7 +843,9 @@ def git_fetch(component, exclude_components):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-upgrade")
 @click_add_git_base_branch_option
@@ -971,7 +1003,9 @@ def git_log(
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-diff")
 @click_add_git_base_branch_option
@@ -1018,7 +1052,9 @@ def git_diff(component, exclude_components, base):  # noqa: D301
     help="Which components? [name|CLUSTER]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-push")
 @click_add_git_base_branch_option
@@ -1064,7 +1100,9 @@ def git_push(component, exclude_components, base):  # noqa: D301
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @click.option(
     "--use-latest-known-tag",
@@ -1124,7 +1162,8 @@ def git_upgrade_shared_modules(
             if os.path.exists(get_srcdir(c) + os.sep + "requirements.txt"):
                 files_to_commit.append("requirements.txt")
             run_command(
-                f"git add {' '.join(files_to_commit)} && {commit_cmd}", c,
+                f"git add {' '.join(files_to_commit)} && {commit_cmd}",
+                c,
             )
 
     if exclude_components:
@@ -1155,10 +1194,14 @@ def git_upgrade_shared_modules(
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @click.option(
-    "--version", "-v", help="Shall we manually specify component's next version?",
+    "--version",
+    "-v",
+    help="Shall we manually specify component's next version?",
 )
 @git_commands.command(name="git-create-release-commit")
 def git_create_release_commit_command(
@@ -1205,7 +1248,9 @@ def git_create_release_commit_command(
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-create-pr")
 @click_add_git_base_branch_option
@@ -1277,7 +1322,9 @@ def git_create_pr_command(component, exclude_components, base):  # noqa: D301
     help="Which components? [name|CLUSTER]",
 )
 @click.option(
-    "--exclude-components", default="", help="Which components to exclude? [c1,c2,c3]",
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
 )
 @git_commands.command(name="git-tag")
 def git_tag(component, exclude_components):  # noqa: D301

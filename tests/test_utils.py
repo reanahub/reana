@@ -21,7 +21,8 @@ class TestTranslatePep440ToSemver2:
         assert translate_pep440_to_semver2(original) == expected
 
     @pytest.mark.parametrize(
-        "original", ["0.8.0-alpha.2", "1.0.0-dev.1", "1.0.0-rc.1"],
+        "original",
+        ["0.8.0-alpha.2", "1.0.0-dev.1", "1.0.0-rc.1"],
     )
     def test_some_working_semver2_as_input(self, original: str):
         from reana.reana_dev.utils import translate_pep440_to_semver2
@@ -29,7 +30,8 @@ class TestTranslatePep440ToSemver2:
         assert translate_pep440_to_semver2(original) == original
 
     @pytest.mark.parametrize(
-        "original", ["1.0.0-alpha.beta"],
+        "original",
+        ["1.0.0-alpha.beta"],
     )
     def test_some_failing_semver2_as_input(self, original: str):
         from reana.reana_dev.utils import translate_pep440_to_semver2

@@ -73,7 +73,10 @@ def create_build_status_page():
             "simple": True,
             "title": "Authentication",
             "description": "Selected authentication environments.",
-            "packages": {"reana-auth-krb5": {}, "reana-auth-vomsproxy": {},},
+            "packages": {
+                "reana-auth-krb5": {},
+                "reana-auth-vomsproxy": {},
+            },
         },
         "examples": {
             "simple": True,
