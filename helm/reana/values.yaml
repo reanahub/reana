@@ -142,4 +142,4 @@ quota:
   workflow_termination_update_policy: "{{ .Values.quota.termination_update_policy }}"
   # backward compatibility
   disk_update: "0 3 * * *"  # everyday at 3am
-  termination_update_policy: "disk,cpu"
+  termination_update_policy: ""
