@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -189,17 +189,30 @@ def release_pypi(ctx, component, timeout):  # noqa: D301
         click.secho(f"{component} successfully released on PyPI", fg="green")
 
 
-@click.option("--user", "-u", default="reanahub", help="DockerHub user name [reanahub]")
+@click.option(
+    "--user", "-u", default="reanahub", help="DockerHub user name [default=reanahub]"
+)
+@click.option(
+    "--cr-commit",
+    is_flag=True,
+    default=False,
+    help="Specify target commit for release? [default=False]",
+)
 @click.option(
     "--dry-run",
     is_flag=True,
     default=False,
-    help="Display the command without executing it.",
+    help="Display the command without executing it. [default=False]",
 )
 @release_commands.command(name="release-helm")
 @click.pass_context
-def release_helm(ctx, user: str, dry_run: bool) -> None:  # noqa: D301
-    """Release REANA as a Helm chart."""
+def release_helm(ctx, user: str, cr_commit: bool, dry_run: bool) -> None:  # noqa: D301
+    """Release REANA as a Helm chart.
+
+    Note that ``--cr-commit`` command line option should be used for releasing
+    non-master branches such as ``maint-0.9`` or ``next`` to specify the correct
+    target commit.
+    """
     component = "reana"
     version = get_current_component_version_from_source_files(component)
     is_chart_releaser_installed = which("cr")
@@ -223,14 +236,18 @@ def release_helm(ctx, user: str, dry_run: bool) -> None:  # noqa: D301
         )
         sys.exit(1)
 
-    current_commit_sha = get_current_commit(get_srcdir(component)).split(" ")[0]
+    commit = ""
+    if cr_commit:
+        current_commit_sha = get_current_commit(get_srcdir(component)).split(" ")[0]
+        commit = f"--commit {current_commit_sha}"
+
     for cmd in [
         f"rm -rf {package_path}",
         f"mkdir {package_path}",
         f"rm -rf {index_path}",
         f"mkdir {index_path}",
         f"helm package helm/reana --destination {package_path} --dependency-update",
-        f"cr upload -o {user} -r {component} --release-name-template '{{{{ .Version }}}}' --commit {current_commit_sha}",
+        f"cr upload -o {user} -r {component} --release-name-template '{{{{ .Version }}}}' {commit}",
         f"cr index -o {user} -r {component} -c {repository} --release-name-template '{{{{ .Version }}}}'",
     ]:
         run_command(cmd, component, dry_run=dry_run)
