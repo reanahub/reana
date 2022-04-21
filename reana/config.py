@@ -9,22 +9,22 @@
 """``reana-dev`` CLI configuration."""
 
 REPO_LIST_DEMO_RUNNABLE = [
+    "reana-demo-alice-lego-train-test-run",
+    "reana-demo-alice-pt-analysis",
+    "reana-demo-atlas-recast",
+    "reana-demo-bsm-search",
+    "reana-demo-cms-dimuon-mass-spectrum",
+    "reana-demo-cms-h4l",
     "reana-demo-helloworld",
     "reana-demo-root6-roofit",
     "reana-demo-worldpopulation",
-    "reana-demo-atlas-recast",
 ]
 """All git repositories containing REANA runnable demos."""
 
 REANA_LIST_DEMO_ALL = REPO_LIST_DEMO_RUNNABLE + [
-    "reana-demo-alice-lego-train-test-run",
-    "reana-demo-alice-pt-analysis",
-    "reana-demo-bsm-search",
     "reana-demo-cdci-crab-pulsar-integral-verification",
     "reana-demo-cdci-integral-data-reduction",
-    "reana-demo-cms-h4l",
     "reana-demo-cms-reco",
-    "reana-demo-cms-dimuon-mass-spectrum",
     "reana-demo-fcchh-fullsim",
     "reana-demo-lhcb-d2pimumu",
     "reana-demo-lhcb-mc-production",
@@ -41,13 +41,8 @@ REPO_LIST_ALL = [
     "reana-client",
     "reana-commons",
     "reana-db",
-    "reana-demo-alice-lego-train-test-run",
-    "reana-demo-alice-pt-analysis",
-    "reana-demo-bsm-search",
     "reana-demo-cdci-crab-pulsar-integral-verification",
     "reana-demo-cdci-integral-data-reduction",
-    "reana-demo-cms-dimuon-mass-spectrum",
-    "reana-demo-cms-h4l",
     "reana-demo-cms-reco",
     "reana-demo-lhcb-d2pimumu",
     "reana-env-aliphysics",
@@ -140,7 +135,17 @@ EXAMPLE_NON_STANDARD_REANA_YAML_FILENAME = {
             "htcondorcern": "reana-htcondorcern.yaml",
             "kubernetes": "reana.yaml",
         },
-    }
+    },
+    "reana-demo-bsm-search": {
+        "yadage": {
+            "kubernetes": "reana.yaml",
+        }
+    },
+    "reana-demo-cms-h4l": {
+        "snakemake": {
+            "kubernetes": "reana-snakemake.yaml",
+        }
+    },
 }
 """List of non standard REANA demo's reana.yaml file names."""
 
@@ -151,6 +156,7 @@ EXAMPLE_OUTPUT_FILENAMES = {
     "reana-demo-alice-pt-analysis": ("plot_eta.pdf", "plot_pt.pdf"),
     "reana-demo-atlas-recast": ("pre.png", "limit.png", "limit_data.json"),
     "reana-demo-cms-dimuon-mass-spectrum": ("DoubleMu.root",),
+    "reana-demo-cms-h4l": ("results/mass4l_combine_userlvl3.pdf",),
     "*": ("plot.png",),
 }
 """Expected success produced files by REANA demos."""
@@ -171,6 +177,14 @@ EXAMPLE_LOG_MESSAGES = {
         "MC channel Number",
         "MIGRAD MINIMIZATION HAS CONVERGED",
     ),
+    "reana-demo-cms-h4l": ("results/mass4l_combine_userlvl3.pdf has been created",),
+    "reana-demo-alice-pt-analysis": (
+        "pdf file plot_pt.pdf has been created",
+        "pdf file plot_eta.pdf has been created",
+    ),
+    "reana-demo-alice-lego-train-test-run": ("pdf file plot.pdf has been created",),
+    "reana-demo-bsm-search": ("postfit.pdf has been created",),
+    "reana-demo-cms-dimuon-mass-spectrum": ("T---Report end!",),
     "*": ("job:",),
 }
 """Expected success log messages from REANA demos."""
@@ -217,13 +231,25 @@ DOCKER_PREFETCH_IMAGES = {
         "reanahub/reana-demo-bsm-search:1.0.0",
         "reanahub/reana-env-root6:6.18.04",
     ],
+    "reana-demo-cms-h4l": [
+        "cmsopendata/cmssw_5_3_32",
+    ],
+    "reana-demo-cms-dimuon-mass-spectrum": [
+        "cmsopendata/cmssw_5_3_32",
+    ],
+    "reana-demo-alice-pt-analysis": [
+        "reanahub/reana-env-aliphysics:vAN-20180614-1",
+    ],
+    "reana-demo-alice-lego-train-test-run": [
+        "reanahub/reana-env-aliphysics:vAN-20180614-1",
+    ],
 }
 """Images to be prefetched depending on the REANA demo to be executed."""
 
 TIMECHECK = 5
 """Checking frequency in seconds for results when running demo analyses in CI."""
 
-TIMEOUT = 300
+TIMEOUT = 900
 """Maximum timeout to wait for results when running demo analyses in CI."""
 
 HELM_VERSION_FILE = "Chart.yaml"
