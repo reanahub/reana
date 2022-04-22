@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 import time
+from typing import List
 
 import click
 
@@ -411,7 +412,7 @@ def run_ci(
     "--check-only", is_flag=True, help="Wait for previously submitted workflows."
 )
 @run_commands.command(name="run-example")
-def run_example(
+def run_example(  # noqa: C901
     component,
     workflow_engine,
     compute_backend,
@@ -470,18 +471,56 @@ def run_example(
             "[ERROR] Options --submit-only and --check-only are mutually exclusive. Choose only one."
         )
         sys.exit(1)
-    components = select_components(component)
-    workflow_engines = select_workflow_engines(workflow_engine)
-    compute_backends = select_compute_backends(compute_backend)
+    components = sorted(select_components(component))
+    workflow_engines = sorted(select_workflow_engines(workflow_engine))
+    compute_backends = sorted(select_compute_backends(compute_backend))
 
-    display_message(
-        "Running the following matrix:\n"
-        "Demos: {}\n"
-        "Workflow engines: {}\n"
-        "Compute backends: {}".format(
-            ",".join(components), ",".join(workflow_engines), ",".join(compute_backends)
+    def _get_test_matrix_summary() -> str:
+        try:
+            original_command = f"{sys.argv[0].split('/')[-1]} {' '.join(sys.argv[1:])}"
+        except IndexError:
+            original_command = ""
+
+        return (
+            f"{original_command}\n"
+            "Test matrix:\n"
+            f"  - {len(components)} demo example(s): {', '.join(components)}\n"
+            f"  - {len(workflow_engines)} workflow engine(s): {', '.join(workflow_engines)}\n"
+            f"  - {len(compute_backends)} compute backend(s): {', '.join(compute_backends)}"
         )
-    )
+
+    display_message(_get_test_matrix_summary(), component="reana")
+
+    def _verify_log_output(component: str, workflow_name: str) -> bool:
+        for log_message in get_expected_log_messages_for_example(component):
+            cmd = f"reana-client logs -w {workflow_name} | grep '{log_message}' | wc -l"
+            cmd_output = run_command(cmd, component, return_output=True)
+            click.secho(cmd_output)
+            line_count = int(cmd_output)
+
+            if line_count == 0:
+                return False
+        return True
+
+    def _return_missing_output_files(component: str, workflow_name: str) -> List[str]:
+        cmd = f"reana-client ls -w {workflow_name}"
+        listing = run_command(cmd, component, return_output=True)
+        click.secho(listing)
+        expected_files = file or get_expected_output_filenames_for_example(component)
+        missing_files = []
+        for expected_file in expected_files:
+            if expected_file not in listing:
+                missing_files.append(expected_file)
+        return missing_files
+
+    run_statistics = {
+        "queued": [],
+        "pending": [],
+        "failed": [],
+        "passed": [],
+        "running": [],
+    }
+
     for component in components:
         for workflow_engine in workflow_engines:
             for compute_backend in compute_backends:
@@ -497,20 +536,14 @@ def run_example(
                 workflow_name = construct_workflow_name(
                     component, workflow_engine, compute_backend
                 )
+
                 if not check_only:
-                    # create workflow:
-                    for cmd in [
-                        "reana-client create -f {0} -n {1}".format(
-                            reana_yaml_file_path,
-                            workflow_name,
-                        ),
-                    ]:
-                        run_command(cmd, component)
-                    # upload inputs
-                    for cmd in [
-                        "reana-client upload -w {0}".format(workflow_name),
-                    ]:
-                        run_command(cmd, component)
+                    create_workflow_cmd = f"reana-client create -f {reana_yaml_file_path} -n {workflow_name}"
+                    run_command(create_workflow_cmd, component)
+
+                    upload_inputs_cmd = f"reana-client upload -w {workflow_name}"
+                    run_command(upload_inputs_cmd, component)
+
                     # run workflow
                     input_parameters = " ".join(
                         ["-p " + parameter for parameter in parameters]
@@ -518,18 +551,15 @@ def run_example(
                     operational_options = " ".join(
                         ["-o " + option for option in options]
                     )
-                    for cmd in [
-                        "reana-client start -w {0} {1} {2}".format(
-                            workflow_name, input_parameters, operational_options
-                        ),
-                    ]:
-                        run_command(cmd, component)
-                if not submit_only:
+                    run_workflow_cmd = f"reana-client start -w {workflow_name} {input_parameters} {operational_options}"
+                    run_command(run_workflow_cmd, component)
+
+                if not submit_only and not check_only:
                     # verify whether job finished within time limits
                     time_start = time.time()
                     while time.time() - time_start <= timeout:
                         time.sleep(timecheck)
-                        cmd = "reana-client status -w {0}".format(workflow_name)
+                        cmd = f"reana-client status -w {workflow_name}"
                         status = run_command(cmd, component, return_output=True)
                         click.secho(status)
                         if (
@@ -538,28 +568,74 @@ def run_example(
                             or "stopped" in status
                         ):
                             break
-                    # verify logs message presence
-                    for log_message in get_expected_log_messages_for_example(component):
-                        cmd = "reana-client logs -w {0} | grep -c '{1}'".format(
-                            workflow_name, log_message
+
+                # check only is here
+                if not submit_only:
+                    cmd = f"reana-client status -w {workflow_name}"
+                    status = run_command(cmd, component, return_output=True)
+                    click.secho(status)
+
+                    if "pending" in status:
+                        run_statistics["pending"].append(workflow_name)
+                    elif "queued" in status:
+                        run_statistics["queued"].append(workflow_name)
+                    elif "running" in status:
+                        run_statistics["running"].append(workflow_name)
+                    elif "failed" in status:
+                        run_statistics["failed"].append(workflow_name)
+                    elif "finished" in status or "stopped" in status:
+
+                        if not _verify_log_output(component, workflow_name):
+                            run_statistics["failed"].append(workflow_name)
+                            continue
+
+                        missing_files = _return_missing_output_files(
+                            component, workflow_name
                         )
-                        run_command(cmd, component)
-                    # verify output file presence
-                    cmd = "reana-client ls -w {0}".format(workflow_name)
-                    listing = run_command(cmd, component, return_output=True)
-                    click.secho(listing)
-                    expected_files = file or get_expected_output_filenames_for_example(
-                        component
-                    )
-                    for expected_file in expected_files:
-                        if expected_file not in listing:
-                            click.secho(
-                                "[ERROR] Expected output file {0} not found. "
-                                "Exiting.".format(expected_file)
-                            )
-                            sys.exit(1)
-    # report that everything was OK
-    run_command("echo OK", component)
+
+                        if len(missing_files):
+                            run_statistics["failed"].append(workflow_name)
+                        else:
+                            run_statistics["passed"].append(workflow_name)
+                    else:
+                        run_statistics["failed"].append(workflow_name)
+
+    if not submit_only:
+        exit_status = 0
+        exit_message = "OK"
+
+        any_running_left = any(
+            [
+                run_statistics["running"],
+                run_statistics["pending"],
+                run_statistics["queued"],
+            ]
+        )
+        if any_running_left:
+            exit_status = 1
+            exit_message = "RUNNING"
+
+        failed_report_message = ""
+        if run_statistics["failed"]:
+            failed_report_message = f"({', '.join(run_statistics['failed'])})"
+            exit_message = "FAILED"
+            exit_status = 2
+
+        submitted_workflows = sorted(
+            [item for workflows in run_statistics.values() for item in workflows]
+        )
+
+        report_message = (
+            f"{_get_test_matrix_summary()}\n\n"
+            "Test results:\n"
+            f"  - {len(submitted_workflows)} submitted: {', '.join(submitted_workflows)}\n"
+            f"  - {len(run_statistics['running'])} running, {len(run_statistics['pending'])} pending, {len(run_statistics['queued'])} queued\n"
+            f"  - {len(run_statistics['passed'])} passed\n"
+            f"  - {len(run_statistics['failed'])} failed {failed_report_message}\n\n"
+            f"{exit_message}"
+        )
+        display_message(report_message, component="reana")
+        sys.exit(exit_status)
 
 
 run_commands_list = list(run_commands.commands.values())
