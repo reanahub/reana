@@ -11,6 +11,8 @@ Version 0.9.0 (UNRELEASED)
     - Adds configuration environment variable ``reana_server.environment.REANA_WORKFLOW_SCHEDULING_READINESS_CHECK_LEVEL`` to define checks that are performed to assess whether the cluster is ready to start new workflows.
     - Changes default consumer prefetch count to handle 10 messages instead of 200 in order to reduce the probability of 406 PRECONDITION errors on message acknowledgement.
     - Changes configuration option ``quota.workflow_termination_update_policy`` to deactivate workflow termination accounting by default.
+- Developers:
+    - Changes `git-upgrade-shared-modules` to generate the correct upper-bound in `setup.py`.
 
 Version 0.8.2 (UNRELEASED)
 --------------------------

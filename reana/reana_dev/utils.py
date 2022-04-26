@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -480,13 +480,7 @@ def update_module_in_cluster_components(
             sys.exit(1)
 
         new_version_obj = Version(new_version)
-        next_minor_version = ".".join(
-            [
-                str(new_version_obj.major),
-                str(new_version_obj.minor + 1),
-                str(new_version_obj.micro),
-            ]
-        )
+        next_minor_version = f"{new_version_obj.major}.{new_version_obj.minor + 1}.0"
         replace_string(
             file_="setup.py",
             find='>=.*,<.*[^",]',
