@@ -228,7 +228,7 @@ def select_components(components, exclude_components=None):
     if exclude_components:
         output = exclude_components_from_selection(output, exclude_components)
 
-    return list(output)
+    return sorted(output)
 
 
 def exclude_components_from_selection(selection, exclude_components):
