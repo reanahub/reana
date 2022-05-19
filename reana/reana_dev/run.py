@@ -475,6 +475,9 @@ def run_example(  # noqa: C901
     workflow_engines = sorted(select_workflow_engines(workflow_engine))
     compute_backends = sorted(select_compute_backends(compute_backend))
 
+    def _format_report(elements) -> str:
+        return f": {', '.join(elements)}" if elements else ""
+
     def _get_test_matrix_summary() -> str:
         try:
             original_command = f"{sys.argv[0].split('/')[-1]} {' '.join(sys.argv[1:])}"
@@ -484,9 +487,9 @@ def run_example(  # noqa: C901
         return (
             f"{original_command}\n"
             "Test matrix:\n"
-            f"  - {len(components)} demo example(s): {', '.join(components)}\n"
-            f"  - {len(workflow_engines)} workflow engine(s): {', '.join(workflow_engines)}\n"
-            f"  - {len(compute_backends)} compute backend(s): {', '.join(compute_backends)}"
+            f"  - {len(components)} demo example(s){_format_report(components)}\n"
+            f"  - {len(workflow_engines)} workflow engine(s){_format_report(workflow_engines)}\n"
+            f"  - {len(compute_backends)} compute backend(s){_format_report(compute_backends)}"
         )
 
     display_message(_get_test_matrix_summary(), component="reana")
@@ -615,9 +618,7 @@ def run_example(  # noqa: C901
             exit_status = 1
             exit_message = "RUNNING"
 
-        failed_report_message = ""
         if run_statistics["failed"]:
-            failed_report_message = f"({', '.join(run_statistics['failed'])})"
             exit_message = "FAILED"
             exit_status = 2
 
@@ -625,13 +626,20 @@ def run_example(  # noqa: C901
             [item for workflows in run_statistics.values() for item in workflows]
         )
 
+        running_workflows = sorted(run_statistics["running"])
+        pending_workflows = sorted(run_statistics["pending"])
+        queued_workflows = sorted(run_statistics["queued"])
+        failed_workflows = sorted(run_statistics["failed"])
+
         report_message = (
             f"{_get_test_matrix_summary()}\n\n"
             "Test results:\n"
-            f"  - {len(submitted_workflows)} submitted: {', '.join(submitted_workflows)}\n"
-            f"  - {len(run_statistics['running'])} running, {len(run_statistics['pending'])} pending, {len(run_statistics['queued'])} queued\n"
+            f"  - {len(submitted_workflows)} submitted{_format_report(submitted_workflows)}\n"
+            f"  - {len(running_workflows)} running{_format_report(running_workflows)}\n"
+            f"  - {len(pending_workflows)} pending{_format_report(pending_workflows)}\n"
+            f"  - {len(queued_workflows)} queued{_format_report(queued_workflows)}\n"
             f"  - {len(run_statistics['passed'])} passed\n"
-            f"  - {len(run_statistics['failed'])} failed {failed_report_message}\n\n"
+            f"  - {len(failed_workflows)} failed{_format_report(failed_workflows)}\n\n"
             f"{exit_message}"
         )
         display_message(report_message, component="reana")
