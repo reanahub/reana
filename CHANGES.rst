@@ -5,6 +5,7 @@ Version 0.9.0 (UNRELEASED)
 --------------------------
 
 - Administrators:
+    - Adds "infinity" option to ``REANA_SCHEDULER_REQUEUE_COUNT`` to disable requeue count.
     - Adds support for Kubernetes clusters 1.22, 1.23, 1.24.
     - Removes support for Kubernetes version prior to 1.19.
     - Adds configuration environment variable ``reana_server.environment.REANA_RATELIMIT_SLOW`` to limit API requests to some protected endpoints e.g launch workflow.
