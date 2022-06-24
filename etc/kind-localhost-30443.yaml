@@ -12,3 +12,4 @@ nodes:
           kubeletExtraArgs:
             node-labels: "ingress-ready=true"
     role: control-plane
+    image: kindest/node:v1.21.12@sha256:f316b33dd88f8196379f38feb80545ef3ed44d9197dca1bfd48bcb1583210207
