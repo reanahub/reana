@@ -8,6 +8,10 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if .Values.ingress.tls.self_signed_cert }}
+  tls:
+    - secretName: {{ include "reana.prefix" . }}-tls-secret
+  {{- end }}
   rules:
     - http:
         paths:
