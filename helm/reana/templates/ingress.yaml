@@ -8,9 +8,18 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if .Values.ingress.tls.self_signed_cert }}
+  {{- with .Values.ingress.tls }}
+  {{- if and .self_signed_cert .secret_name }}
+    {{- fail "Cannot set `ingress.tls.secret_name` and `ingress.tls.self_signed_cert` at the same time" }}
+  {{- end }}
+  {{- if .self_signed_cert }}
   tls:
-    - secretName: {{ include "reana.prefix" . }}-tls-secret
+    - secretName: {{ include "reana.prefix" $ }}-tls-secret
+  {{- end }}
+  {{- if .secret_name }}
+  tls:
+    - secretName: {{ .secret_name | quote }}
+  {{- end }}
   {{- end }}
   rules:
     - http:

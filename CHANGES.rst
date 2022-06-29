@@ -12,6 +12,7 @@ Version 0.9.0 (UNRELEASED)
     - Adds configuration environment variable ``reana_server.environment.REANA_RATELIMIT_SLOW`` to limit API requests to some protected endpoints e.g launch workflow.
     - Adds configuration environment variable ``reana_server.environment.REANA_WORKFLOW_SCHEDULING_READINESS_CHECK_LEVEL`` to define checks that are performed to assess whether the cluster is ready to start new workflows.
     - Adds new configuration option `ingress.tls.self_signed_cert` to enable the generation of a self-signed TLS certificate.
+    - Adds new configuration option `ingress.tls.secret_name` to specify the name of the Kubernetes secret containing the TLS certificate to be used.
     - Changes default consumer prefetch count to handle 10 messages instead of 200 in order to reduce the probability of 406 PRECONDITION errors on message acknowledgement.
     - Changes configuration option ``quota.workflow_termination_update_policy`` to deactivate workflow termination accounting by default.
 - Developers:
