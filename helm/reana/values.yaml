@@ -12,7 +12,8 @@ eos:
   enabled: false
 
 workspaces:
-  retention_period: 365
+  retention_rules:
+    maximum_period: 365
   paths:
     - /var/reana:/var/reana
 
