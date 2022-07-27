@@ -13,7 +13,7 @@ eos:
 
 workspaces:
   retention_rules:
-    maximum_period: 365
+    maximum_period: forever
     cronjob_schedule: "0 2 * * *"  # everyday at 2am
   paths:
     - /var/reana:/var/reana
