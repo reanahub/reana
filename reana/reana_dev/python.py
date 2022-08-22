@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -125,7 +125,7 @@ def python_unit_tests(component: str, keep_virtual_environment: bool):  # noqa: 
                 run_command(
                     f"docker stop postgres__{component}\n"
                     f"docker run --rm --name postgres__{component} -p 5432:5432 "
-                    "-e POSTGRES_PASSWORD=mysecretpassword -d postgres:12.8"
+                    "-e POSTGRES_PASSWORD=mysecretpassword -d postgres:12.10"
                 )
 
             for cmd in [

@@ -16,6 +16,7 @@ Version 0.9.0 (UNRELEASED)
     - Adds new configuration option `ingress.tls.secret_name` to specify the name of the Kubernetes secret containing the TLS certificate to be used.
     - Changes default consumer prefetch count to handle 10 messages instead of 200 in order to reduce the probability of 406 PRECONDITION errors on message acknowledgement.
     - Changes configuration option ``quota.workflow_termination_update_policy`` to deactivate workflow termination accounting by default.
+    - Changes Helm template to use PostgreSQL 12.10 version.
 - Developers:
     - Changes `git-upgrade-shared-modules` to generate the correct upper-bound in `setup.py`.
 

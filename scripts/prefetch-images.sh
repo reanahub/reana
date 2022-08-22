@@ -9,7 +9,7 @@
 for image in \
         jupyter/scipy-notebook:notebook-6.4.5 \
         maildev/maildev:1.1.0 \
-        postgres:12.8 \
+        postgres:12.10 \
         redis:5.0.5 \
         reanahub/reana-job-controller:0.9.0-alpha.5 \
         reanahub/reana-message-broker:0.9.0-alpha.1 \

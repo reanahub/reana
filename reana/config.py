@@ -210,7 +210,7 @@ COMPONENTS_USING_SHARED_MODULE_DB = [
 
 DOCKER_PREFETCH_IMAGES = {
     "reana": [
-        "postgres:12.8",
+        "postgres:12.10",
         "kozea/wdb:3.2.5",
         "maildev/maildev:1.1.0",
         "redis:5.0.5",

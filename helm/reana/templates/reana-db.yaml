@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: db
-        image: postgres:12.8
+        image: postgres:12.10
         args:
         - -c
         - max_connections=300
