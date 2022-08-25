@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -60,7 +60,7 @@ def reana_dev():  # noqa: D301
         \b
         $ # example (a): fast, CLI mode only, fast example
         $ reana-dev cluster-delete
-        $ reana-dev run-ci -m /var/reana:/var/reana -c r-d-helloworld --exclude-components=r-ui,r-a-vomsproxy
+        $ reana-dev run-ci -m /var/reana:/var/reana -c r-d-helloworld --exclude-components=r-ui,r-a-krb5,r-a-rucio,r-a-vomsproxy
                            --admin-email john.doe@example.org --admin-password mysecretpassword
         $ # example (b): slow, CLI and Web modes, all examples
         $ reana-dev cluster-delete

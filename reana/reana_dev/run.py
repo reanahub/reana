@@ -295,7 +295,7 @@ def run_ci(
                           -m /usr/share/local/mydata:/mydata
                           -j /mydata:/mydata
                           -c r-d-helloworld
-                          --exclude-components=r-ui,r-a-vomsproxy
+                          --exclude-components=r-ui,r-a-krb5,r-a-rucio,r-a-vomsproxy
                           --mode debug
                           --admin-email john.doe@example.org
                           --admin-password mysecretpassword

@@ -37,6 +37,7 @@ REPO_LIST_ALL = [
     "docs.reana.io",
     "reana",
     "reana-auth-krb5",
+    "reana-auth-rucio",
     "reana-auth-vomsproxy",
     "reana-client",
     "reana-client-go",
@@ -103,6 +104,7 @@ REPO_LIST_CLUSTER = (
         "pytest-reana",
         # cluster helpers
         "reana-auth-krb5",
+        "reana-auth-rucio",
         "reana-auth-vomsproxy",
     ]
     + REPO_LIST_SHARED
