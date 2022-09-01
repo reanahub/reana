@@ -1,0 +1,32 @@
+# This file is part of REANA.
+# Copyright (C) 2020, 2022 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
+
+name: Node test
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node version to install"
+        default: "16"
+        required: false
+        type: string
+
+jobs:
+
+  node-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: "⏬ Checkout"
+        uses: actions/checkout@v3
+      - name: "⚡ Setup Node"
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node-version }}
+      - name: "⚡ Install Javascript dependencies"
+        run: yarn
+      - name: "⚙️ Run Javascript tests"
+        run: ./run-tests.sh --check-js-tests
