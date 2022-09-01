@@ -1,0 +1,78 @@
+# This file is part of REANA.
+# Copyright (C) 2020, 2022 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
+
+name: Python lint
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version to install"
+        default: "3.8"
+        required: false
+        type: string
+
+jobs:
+
+  python-lint-black:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: "⏬ Checkout"
+        uses: actions/checkout@v3
+      - name: "🐍 Setup Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: "🔍 Check Python code formatting"
+        run: |
+          pip install --upgrade pip
+          pip install black
+          ./run-tests.sh --check-black
+
+  python-lint-flake8:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: "⏬ Checkout"
+        uses: actions/checkout@v3
+      - name: "🐍 Setup Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: "🔍 Check compliance with pep8, pyflakes and circular complexity"
+        run: |
+          pip install --upgrade pip
+          pip install flake8
+          ./run-tests.sh --check-flake8
+
+  python-lint-pydocstyle:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: "⏬ Checkout"
+        uses: actions/checkout@v3
+      - name: "🐍 Setup Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: "🔍 Check compliance with Python docstring conventions"
+        run: |
+          pip install --upgrade pip
+          pip install pydocstyle
+          ./run-tests.sh --check-pydocstyle
+
+  python-lint-manifest:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: "⏬ Checkout"
+        uses: actions/checkout@v3
+      - name: "🐍 Setup Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: "🔍 Check Python manifest completeness"
+        run: |
+          pip install --upgrade pip
+          pip install check-manifest
+          ./run-tests.sh --check-manifest
