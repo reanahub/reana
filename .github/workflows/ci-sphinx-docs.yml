@@ -1,0 +1,53 @@
+# This file is part of REANA.
+# Copyright (C) 2020, 2022 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
+
+name: Sphinx docs
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version to install"
+        default: "3.8"
+        required: false
+        type: string
+      install-graphviz:
+        description: "Whether to install graph packages"
+        required: true
+        type: boolean
+      install-libcurl:
+        description: "Whether to install curl packages"
+        required: true
+        type: boolean
+
+jobs:
+
+  sphinx-docs:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: "⏬ Checkout"
+        uses: actions/checkout@v3
+      - name: "🐍 Setup Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: "💻 Install system dependencies (graphviz)"
+        if: ${{ inputs.install-graphviz }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install python3-dev graphviz libgraphviz-dev pkg-config
+      - name: "💻 Install system dependencies (libcurl)"
+        if: ${{ inputs.install-libcurl }}
+        run: |
+          sudo apt-get update -y
+          sudo apt install libcurl4-openssl-dev libssl-dev
+          sudo apt-get install libgnutls28-dev
+      - name: "🐍 Install Python dependencies"
+        run: |
+          pip install --upgrade pip setuptools py
+          pip install -r docs/requirements.txt
+      - name: "⚙️ Run Sphinx documentation with doctests"
+        run: ./run-tests.sh --check-sphinx
