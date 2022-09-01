@@ -1,0 +1,22 @@
+# This file is part of REANA.
+# Copyright (C) 2020, 2022 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
+
+name: Shell lint
+
+on:
+  workflow_call:
+
+jobs:
+
+  shell-lint:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: "⏬ Checkout"
+        uses: actions/checkout@v3
+      - name: "⚙️ Runs shell script static analysis"
+        run: |
+          sudo apt-get install shellcheck
+          ./run-tests.sh --check-shellscript
