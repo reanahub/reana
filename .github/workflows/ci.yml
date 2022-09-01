@@ -9,140 +9,26 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  lint-shellcheck:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+  shell-lint:
+    uses: ./.github/workflows/ci-shell-lint.yml@master
 
-      - name: Runs shell script static analysis
-        run: |
-          sudo apt-get install shellcheck
-          ./run-tests.sh --check-shellscript
+  python-lint:
+    uses: ./.github/workflows/ci-python-lint.yml@master
 
-  lint-black:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+  sphinx-docs:
+    uses: ./.github/workflows/ci-sphinx-docs.yml@master
+    with:
+      install-graphviz: true
+      install-libcurl: false
 
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
+  python-test:
+    uses: ./.github/workflows/ci-python-test.yml@master
+    with:
+      python-versions: "['3.6', '3.7', '3.8', '3.9']"
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Check Python code formatting
-        run: |
-          pip install black
-          ./run-tests.sh --check-black
-
-  lint-flake8:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-
-      - name: Check compliance with pep8, pyflakes and circular complexity
-        run: |
-          pip install --upgrade pip
-          pip install flake8
-          ./run-tests.sh --check-flake8
-
-  lint-pydocstyle:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-
-      - name: Check compliance with Python docstring conventions
-        run: |
-          pip install pydocstyle
-          ./run-tests.sh --check-pydocstyle
-
-  lint-check-manifest:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-
-      - name: Check Python manifest completeness
-        run: |
-          pip install check-manifest
-          ./run-tests.sh --check-manifest
-
-  docs-sphinx:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt install libcurl4-openssl-dev libssl-dev
-          sudo apt-get install libgnutls28-dev
-
-      - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip setuptools py
-          pip install -e .[all]
-
-      - name: Run Sphinx documentation with doctests
-        run: ./run-tests.sh --check-sphinx
-
-  python-tests:
-    runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
-    env:
-      VIRTUAL_ENV: "test"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip setuptools py
-          pip install twine wheel
-          pip install -e .[all]
-
-      - name: Run pytest
-        run: ./run-tests.sh --check-pytest
-
-      - name: Codecov Coverage
-        if: matrix.python-version == 3.8
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.xml
-
-  lint-helm:
+  helm-lint:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
