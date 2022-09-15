@@ -6,7 +6,7 @@ Version 0.9.0 (UNRELEASED)
 
 - Administrators:
     - Adds "infinity" option to ``REANA_SCHEDULER_REQUEUE_COUNT`` to disable requeue count.
-    - Adds support for Kubernetes clusters 1.22, 1.23, 1.24.
+    - Adds support for Kubernetes clusters 1.22, 1.23, 1.24, 1.25.
     - Removes support for Kubernetes version prior to 1.19.
     - Adds new configuration option ``workspaces.retention_rules.maximum_period`` to set a default period for workspace retention rules.
     - Adds new configuration option ``workspaces.retention_rules.cronjob_schedule`` to set how often pending retention rules should be applied.
