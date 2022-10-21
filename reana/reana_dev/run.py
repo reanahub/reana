@@ -261,6 +261,11 @@ def run_commands():
         ",".join(WORKFLOW_ENGINE_LIST_ALL)
     ),
 )
+@click.option(
+    "--disable-default-cni",
+    is_flag=True,
+    help="Disable default CNI and use e.g. Calico.",
+)
 @run_commands.command(name="run-ci")
 def run_ci(
     build_arg,
@@ -273,6 +278,7 @@ def run_ci(
     admin_email,
     admin_password,
     workflow_engine,
+    disable_default_cni,
 ):  # noqa: D301
     """Run CI build.
 
@@ -307,6 +313,8 @@ def run_ci(
         cmd = "reana-dev cluster-create --mode {}".format(mode)
         for mount in mounts:
             cmd += " -m {}".format(mount)
+        if disable_default_cni:
+            cmd += " --disable-default-cni"
         run_command(cmd, "reana")
     # prefetch and load images for selected demo examples
     if mode in ("releasepypi", "latest", "debug"):

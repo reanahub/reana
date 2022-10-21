@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -66,8 +66,13 @@ def cluster_commands():
     help="In which mode to run REANA cluster? (releasehelm,releasepypi,latest,debug) [default=latest]",
 )
 @click.option("--worker-nodes", default=0, help="How many worker nodes? [default=0]")
+@click.option(
+    "--disable-default-cni",
+    is_flag=True,
+    help="Disable default CNI and use e.g. Calico.",
+)
 @cluster_commands.command(name="cluster-create")
-def cluster_create(mounts, mode, worker_nodes):  # noqa: D301
+def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D301
     """Create new REANA cluster.
 
     \b
@@ -145,6 +150,12 @@ def cluster_create(mounts, mode, worker_nodes):  # noqa: D301
         "apiVersion": "kind.x-k8s.io/v1alpha4",
         "nodes": nodes,
     }
+
+    if disable_default_cni:
+        cluster_config["networking"] = {
+            "disableDefaultCNI": True,
+            "podSubnet": "192.168.0.0/16",
+        }
 
     cluster_create = "cat <<EOF | kind create cluster --config=-\n{cluster_config}\nEOF"
     cluster_create = cluster_create.format(cluster_config=yaml.dump(cluster_config))
