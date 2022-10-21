@@ -14,6 +14,23 @@ spec:
   selector:
       app: {{ include "reana.prefix" . }}-workflow-controller
 ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "reana.prefix" . }}-workflow-controller
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "reana.prefix" . }}-workflow-controller
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ include "reana.prefix" . }}-server
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
