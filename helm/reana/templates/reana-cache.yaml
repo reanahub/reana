@@ -5,7 +5,7 @@ metadata:
   name: {{ include "reana.prefix" . }}-cache
   namespace: {{ .Release.Namespace }}
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: {{ include "reana.prefix" . }}-cache
   ports:
