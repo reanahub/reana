@@ -72,6 +72,7 @@ REPO_LIST_CLIENT = [
     "reana-db",
     # client
     "reana-client",
+    "reana-client-go",
 ]
 """List of git repositories related to command line clients."""
 
