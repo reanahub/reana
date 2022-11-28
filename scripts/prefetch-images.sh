@@ -11,11 +11,11 @@ for image in \
         maildev/maildev:1.1.0 \
         postgres:12.10 \
         redis:5.0.5 \
-        reanahub/reana-job-controller:0.9.0-alpha.6 \
+        reanahub/reana-job-controller:0.9.0-alpha.7 \
         reanahub/reana-message-broker:0.9.0-alpha.1 \
-        reanahub/reana-server:0.9.0-alpha.6 \
-        reanahub/reana-ui:0.9.0-alpha.6 \
-        reanahub/reana-workflow-controller:0.9.0-alpha.6 \
+        reanahub/reana-server:0.9.0-alpha.7 \
+        reanahub/reana-ui:0.9.0-alpha.7 \
+        reanahub/reana-workflow-controller:0.9.0-alpha.7 \
         reanahub/reana-workflow-engine-cwl:0.9.0-alpha.5 \
         reanahub/reana-workflow-engine-serial:0.9.0-alpha.5 \
         reanahub/reana-workflow-engine-snakemake:0.9.0-alpha.5 \
