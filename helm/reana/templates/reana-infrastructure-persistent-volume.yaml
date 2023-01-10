@@ -1,0 +1,68 @@
+{{- if .Values.infrastructure_storage }}
+{{- if not (eq .Values.infrastructure_storage.backend "hostpath") }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "reana.prefix" . }}-infrastructure-persistent-volume
+  namespace: {{ .Release.Namespace }}
+spec:
+  accessModes:
+  - {{ .Values.infrastructure_storage.access_modes }}
+  resources:
+    requests:
+      storage: {{ .Values.infrastructure_storage.volume_size }}G
+  {{- if and (eq .Values.infrastructure_storage.backend "cephfs") (semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion) }}
+  storageClassName: ""
+  volumeName: {{ include "reana.prefix" . }}-infrastructure-persistent-volume-storage
+  {{- else }}
+  storageClassName: {{ include "reana.prefix" . }}-infrastructure-volume-storage-class
+  {{- end }}
+# Which storage class to create depending on the backend
+{{- if eq .Values.infrastructure_storage.backend "cephfs" }}
+{{- if semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "reana.prefix" . }}-infrastructure-persistent-volume-storage
+  namespace: {{ .Release.Namespace }}
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: {{ .Values.infrastructure_storage.volume_size }}G
+  csi:
+    driver: cephfs.manila.csi.openstack.org
+    volumeHandle: {{ .Values.infrastructure_storage.cephfs.cephfs_os_share_id }}
+    nodeStageSecretRef:
+      name: {{ .Values.infrastructure_storage.cephfs.os_secret_name }}
+      namespace: {{ .Values.infrastructure_storage.cephfs.os_secret_namespace }}
+    nodePublishSecretRef:
+      name: {{ .Values.infrastructure_storage.cephfs.os_secret_name }}
+      namespace: {{ .Values.infrastructure_storage.cephfs.os_secret_namespace }}
+    volumeAttributes:
+      shareID: {{ .Values.infrastructure_storage.cephfs.cephfs_os_share_id }}
+      shareAccessID: {{ .Values.infrastructure_storage.cephfs.cephfs_os_share_access_id }}
+{{- else }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ include "reana.prefix" . }}-infrastructure-volume-storage-class
+  namespace: {{ .Release.Namespace }}
+provisioner: {{ .Values.infrastructure_storage.cephfs.provisioner }}
+parameters:
+  type: {{ .Values.infrastructure_storage.cephfs.type }}
+  zones: {{ .Values.infrastructure_storage.cephfs.availability_zone }}
+  osSecretName: {{ .Values.infrastructure_storage.cephfs.os_secret_name }}
+  osSecretNamespace: {{ .Values.infrastructure_storage.cephfs.os_secret_namespace }}
+  protocol: CEPHFS
+  backend: csi-cephfs
+  csi-driver: cephfs.csi.ceph.com
+  osShareID: {{ .Values.infrastructure_storage.cephfs.cephfs_os_share_id }}
+  osShareAccessID: {{ .Values.infrastructure_storage.cephfs.cephfs_os_share_access_id }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

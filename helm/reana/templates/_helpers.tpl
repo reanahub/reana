@@ -22,3 +22,34 @@ naming spec: `my-reana-batch-yadage-3c640169-d3b7-41ad-9c09-392c903fc1d8`
 {{- define "reana.prefixed_runtime_svaccount_name" -}}
 {{- include "reana.prefix" . -}}-runtime
 {{- end -}}
+
+{{/* Create the specification of the shared volume. */}}
+{{- define "reana.shared_volume" -}}
+{{- if not (eq .Values.shared_storage.backend "hostpath") -}}
+persistentVolumeClaim:
+  claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
+  readOnly: false
+{{- else -}}
+hostPath:
+  path: {{ .Values.shared_storage.hostpath.root_path }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Create the specification of the infrastructure volume used by MQ and database.
+If the infrastructure volume is not defined, the default shared volume is used instead.
+*/}}
+{{- define "reana.infrastructure_volume" -}}
+{{- if .Values.infrastructure_storage -}}
+{{- if not (eq .Values.infrastructure_storage.backend "hostpath") -}}
+persistentVolumeClaim:
+  claimName: {{ include "reana.prefix" . }}-infrastructure-persistent-volume
+  readOnly: false
+{{- else -}}
+hostPath:
+  path: {{ .Values.infrastructure_storage.hostpath.root_path }}
+{{- end -}}
+{{- else -}}
+{{ template "reana.shared_volume" . }}
+{{- end -}}
+{{- end -}}

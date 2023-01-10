@@ -59,6 +59,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `debug.enabled`                                          | Instantiate a [wdb](https://github.com/Kozea/wdb) remote debugger inside the cluster, accessible in port `31984` | false               |
 | `eos.enabled`                                            | **[CERN only]** Enable EOS support inside the cluster                                | false                                           |
 | `fullnameOverride`                                       | Name to override the `reana.prefix`                                                  | None                                            |
+| `infrastructure_storage`                                 | Optional volume used by REANA's infrastructure (i.e. database and message broker). It has the same settings as `shared_storage` | {} |
 | `ingress.annotations.ingress.kubernetes.io/ssl-redirect` | Redirect all traffic to HTTPS                                                        | true                                            |
 | `ingress.annotations.kubernetes.io/ingress.class`        | Type of ingress controller                                                           | traefik                                         |
 | `ingress.annotations.traefik.frontend.entryPoints`       | Entrypoints allowed by the ingress controller                                        | "http,https"                                    |

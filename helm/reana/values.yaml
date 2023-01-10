@@ -37,6 +37,10 @@ shared_storage:
     cephfs_os_share_id: <cephfs-share-id>
     cephfs_os_share_access_id: <cephfs-share-access-id>
 
+# Storage used by REANA's infrastructure (i.e. message broker and database).
+# If not specified, the shared storage containing the workspaces will be used instead.
+infrastructure_storage: {}
+
 secrets:
   database: {}
   gitlab: {}

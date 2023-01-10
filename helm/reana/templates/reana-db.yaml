@@ -62,17 +62,10 @@ spec:
         volumeMounts:
           - mountPath: /var/lib/postgresql/data
             subPath: db
-            name: reana-shared-volume
+            name: reana-infrastructure-volume
       volumes:
-        - name: reana-shared-volume
-          {{- if not (eq .Values.shared_storage.backend "hostpath") }}
-          persistentVolumeClaim:
-            claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
-            readOnly: false
-          {{- else }}
-          hostPath:
-            path: {{ .Values.shared_storage.hostpath.root_path }}
-          {{- end }}
+        - name: reana-infrastructure-volume
+          {{- include "reana.infrastructure_volume" . | nindent 10 }}
       {{- if .Values.node_label_infrastructuredb }}
       {{- $full_label := split "=" .Values.node_label_infrastructuredb }}
       nodeSelector:

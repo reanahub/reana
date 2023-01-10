@@ -53,7 +53,7 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/rabbitmq/mnesia
           subPath: rabbitmq/mnesia
-          name: reana-shared-volume
+          name: reana-infrastructure-volume
       {{- if .Values.node_label_infrastructuremq }}
       {{- $full_label := split "=" .Values.node_label_infrastructuremq }}
       nodeSelector:
@@ -64,12 +64,5 @@ spec:
         {{ $full_label._0 }}: {{ $full_label._1 }}
       {{- end }}
       volumes:
-      - name: reana-shared-volume
-        {{- if not (eq .Values.shared_storage.backend "hostpath") }}
-        persistentVolumeClaim:
-          claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
-          readOnly: false
-        {{- else }}
-        hostPath:
-          path:  {{ .Values.shared_storage.hostpath.root_path }}
-        {{- end }}
+      - name: reana-infrastructure-volume
+        {{- include "reana.infrastructure_volume" . | nindent 8 }}
