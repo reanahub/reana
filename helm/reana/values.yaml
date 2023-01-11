@@ -10,6 +10,8 @@ debug:
   enabled: false
 eos:
   enabled: false
+maintenance:
+  enabled: false
 
 workspaces:
   retention_rules:

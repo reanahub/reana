@@ -27,7 +27,7 @@ metadata:
   name: {{ include "reana.prefix" . }}-mail
   namespace: {{ .Release.Namespace }}
 spec:
-  replicas: 1
+  replicas: {{ if .Values.maintenance.enabled -}} 0 {{- else -}} 1 {{- end }}
   selector:
     matchLabels:
       app: {{ include "reana.prefix" . }}-mail

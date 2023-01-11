@@ -31,7 +31,7 @@ metadata:
   name: {{ include "reana.prefix" . }}-message-broker
   namespace: {{ .Release.Namespace }}
 spec:
-  replicas: 1
+  replicas: {{ if .Values.maintenance.enabled -}} 0 {{- else -}} 1 {{- end }}
   serviceName: {{ include "reana.prefix" . }}-message-broker
   selector:
     matchLabels:

@@ -10,6 +10,9 @@ spec:
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
+  {{- if .Values.maintenance.enabled }}
+  suspend: true
+  {{- end }}
   jobTemplate:
     spec:
       template:
@@ -118,6 +121,9 @@ spec:
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
+  {{- if .Values.maintenance.enabled }}
+  suspend: true
+  {{- end }}
   jobTemplate:
     spec:
       template:
@@ -190,6 +196,9 @@ spec:
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
+  {{- if .Values.maintenance.enabled }}
+  suspend: true
+  {{- end }}
   jobTemplate:
     spec:
       template:
