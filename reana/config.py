@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -213,7 +213,7 @@ COMPONENTS_USING_SHARED_MODULE_DB = [
 
 DOCKER_PREFETCH_IMAGES = {
     "reana": [
-        "postgres:12.10",
+        "postgres:12.13",
         "kozea/wdb:3.2.5",
         "maildev/maildev:1.1.0",
         "redis:5.0.5",
