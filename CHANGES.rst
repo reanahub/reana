@@ -1,13 +1,66 @@
 Changes
 =======
 
-Version 0.9.0 (UNRELEASED)
+Version 0.9.0 (2023-01-26)
 --------------------------
 
+- Users:
+    - Adds support for Rucio authentication for workflow jobs.
+    - Adds support for Kerberos authentication for workflow orchestration.
+    - Adds support for specifying ``slurm_partition`` and ``slurm_time`` for Slurm compute backend jobs.
+    - Adds support for XRootD remote file locations in Snakemake workflow specification definitions.
+    - Adds support for Python 3.11.
+    - Adds Launch on REANA page allowing the submission of workflows via badge-clicking.
+    - Adds notifications to inform users when critical levels of quota usage is reached.
+    - Adds 404 Not Found error page.
+    - Adds tab titles to all the pages.
+    - Adds the ``REANA_WORKSPACE`` environment variable to jupyter notebooks and terminals.
+    - Adds option to sort workflows by most disk and cpu quota usage to the workflow list endpoint.
+    - Adds support for specifying and listing workspace file retention rules.
+    - Adds support for ``.gitignore`` and ``.reanaignore`` to specify files that should not be uploaded to REANA.
+    - Adds ``retention-rules-list`` command to list the retention rules of a workflow.
+    - Changes REANA specification to allow specifying ``retention_days`` for the workflow.
+    - Changes default Slurm partition to ``inf-short``.
+    - Changes GitLab integration to also retrieve user's projects that are in groups and subgroups.
+    - Changes the workflow-details page to show the logs of the workflow engine.
+    - Changes the workflow-details page to show file sizes in a human-readable format.
+    - Changes the workflow-details page to show the workspace's retention rules.
+    - Changes the workflow-details page to show the duration of the workflow's jobs.
+    - Changes the workflow-details page to display a label of the workflow launcher URL remote origin.
+    - Changes the workflow-details page to periodically refresh the content of the page.
+    - Changes the workflow-details page to refresh after the deletion of a workflow.
+    - Changes the workflow-list page to add a way to hide deleted workflows.
+    - Changes the workflow-list page to add new workflows sorting options by most used disk and cpu quota.
+    - Changes the deletion of a workflow to always clean up the workspace and to update the user disk quota usage.
+    - Changes the CWD of jupyter's terminals to the directory of the workflow's workspace.
+    - Changes percentage ranges used to calculate the health status of user resource quota usage.
+    - Changes ``create`` and ``restart`` commands to always upload the REANA specification file.
+    - Changes ``delete`` command to always delete the workflow's workspace.
+    - Changes ``delete_workflow`` Python API function to always delete the workflow's workspace.
+    - Changes ``download`` command to add the possibility to write files to the standard output via ``-o -`` option.
+    - Changes ``list`` command to hide deleted workflows by default.
+    - Changes ``list`` command to allow displaying deleted workflows via ``--all`` and ``--show-deleted-runs`` options.
+    - Changes ``list`` and ``status`` commands to allow displaying the duration of workflows with the ``--include-duration`` option.
+    - Changes ``mv`` command to allow moving files while a workflow is running.
+    - Changes ``upload`` command to prevent uploading symlinks.
+    - Changes ``validation --environment`` command to use Docker registry v2 APIs to check that a Docker image exists in DockerHub.
+    - Fixes ``list`` command to highlight the workflow specified in ``REANA_WORKON`` correctly.
+    - Fixes ``secrets-delete`` command error message when deleting non existing secrets.
+    - Fixes ``start`` command to report failed workflows as errors.
+    - Fixes ``start`` and ``run`` commands to correctly follow the execution of the workflow until termination.
+    - Fixes ``status`` command to respect output format provided by the ``--format`` option.
+    - Fixes ``upload`` command to report when input directories are listed under the ``files`` section in the REANA specification file and vice versa.
+    - Fixes ``validate --environment`` command to detect illegal whitespace characters in Docker image names.
+    - Fixes Kerberos authentication for long-running workflows by renewing the Kerberos ticket periodically.
+    - Fixes status reporting for failed CWL and Snakemake jobs that were incorrectly considered successful.
+    - Fixes redirection chain for non-signed-in CERN SSO users to access the desired target page after sign-in.
+    - Fixes the ordering by size of the files showed in the ``Workspace`` tab of the workflow-details page.
+    - Fixes CERN OIDC authentication to possibly allow eduGAIN and social login users.
+    - Fixes wrong numbering of restarted workflows by limiting the number of times a workflow can be restarted to nine.
 - Administrators:
+    - Adds new configuration environment variable ``reana_server.environment.REANA_SCHEDULER_REQUEUE_COUNT`` to set workflow requeue count in case of scheduling errors or busy cluster situations.
     - Adds "infinity" option to ``REANA_SCHEDULER_REQUEUE_COUNT`` to disable requeue count.
     - Adds support for Kubernetes clusters 1.22, 1.23, 1.24, 1.25.
-    - Removes support for Kubernetes version prior to 1.19.
     - Adds new configuration option ``workspaces.retention_rules.maximum_period`` to set a default period for workspace retention rules.
     - Adds new configuration option ``workspaces.retention_rules.cronjob_schedule`` to set how often pending retention rules should be applied.
     - Adds configuration environment variable ``reana_server.environment.REANA_RATELIMIT_SLOW`` to limit API requests to some protected endpoints e.g launch workflow.
@@ -16,17 +69,57 @@ Version 0.9.0 (UNRELEASED)
     - Adds new configuration option `ingress.tls.secret_name` to specify the name of the Kubernetes secret containing the TLS certificate to be used.
     - Adds support for configuring an additional volume to be used by the database and the message broker.
     - Adds new configuration option `maintenance.enabled` to scale down the cluster for maintenance.
-    - Changes default consumer prefetch count to handle 10 messages instead of 200 in order to reduce the probability of 406 PRECONDITION errors on message acknowledgement.
+    - Adds support for Unicode characters inside email body.
+    - Adds ``queue-consume`` command that can be used by REANA administrators to remove specific messages from the queue.
+    - Adds ``retention-rules-apply`` command that can be used by REANA administrators to apply pending retention rules.
+    - Adds ``retention-rules-extend`` command that can be used by REANA administrators to extend the duration of active retentions rules.
+    - Adds ``check-workflows`` command that can be used by REANA administrators to check for out-of-sync workflows and interactive sessions.
     - Changes configuration option ``quota.workflow_termination_update_policy`` to deactivate workflow termination accounting by default.
     - Changes Helm template to use PostgreSQL 12.13 version.
+    - Changes the base image for most of the components to Ubuntu 20.04 LTS and reduces final Docker image size by removing build-time dependencies.
+    - Changes ``reana-auth-vomsproxy`` sidecar to the latest stable version to support client-side proxy file generation technique and ESCAPE VOMS.
+    - Changes OAuth configuration to enable the new CERN SSO.
+    - Changes job status consumer to improve logging for not-alive workflows.
+    - Changes the deployment of interactive sessions to improve security by not automounting the Kubernetes service account token.
+    - Changes the deployment of job-controller to avoid unnecessarily mounting the database's directory.
+    - Changes the announcements to support limited HTML markup.
+    - Changes REANA specification loading functionality to allow specifying different working directories.
+    - Changes global setting of maximum number of parallel jobs to 300 for Snakemake workflow engine.
+    - Fixes job status consumer by discarding invalid job IDs.
+    - Fixes GitLab integration error reporting in case user exceeds CPU or Disk quota usage limits.
+    - Fixes issue when irregular number formats are passed to ``REANA_SCHEDULER_REQUEUE_COUNT`` configuration environment variable.
+    - Fixes quota updater to reduce memory usage.
+    - Fixes conversion of possibly-negative resource usage values to human-readable formats.
+    - Fixes disk quota updater to prevent setting negative disk quota usage values.
+    - Removes support for Kubernetes version prior to 1.19.
 - Developers:
+    - Adds OpenAPI specification support for ``launch`` endpoint that allows running workflows from remote sources.
+    - Adds OpenAPI specification support for ``get_workflow_retention_rules`` endpoint that allows to retrieve the workspace file retention rules of a workflow.
+    - Adds the remote origin of workflows submitted via Launch-on-REANA (``launcher_url``) to the workflow list endpoint.
+    - Adds common utility functions for managing workspace files to ``reana-commons``.
+    - Changes default consumer prefetch count to handle 10 messages instead of 200 in order to reduce the probability of 406 PRECONDITION errors on message acknowledgement.
     - Changes `git-upgrade-shared-modules` to generate the correct upper-bound in `setup.py`.
-
-Version 0.8.2 (UNRELEASED)
---------------------------
-
-- Administrators:
-    - Adds new configuration environment variable ``reana_server.environment.REANA_SCHEDULER_REQUEUE_COUNT`` to set workflow requeue count in case of scheduling errors or busy cluster situations.
+    - Changes REANA specification loading and validation functionalities by porting some of the logic to ``reana-commons``.
+    - Changes OpenAPI specification to include missing response schema elements.
+    - Changes the Kubernetes Python client to use the ``networking/v1`` API.
+    - Changes the deployment of interactive sessions to use ``networking/v1`` Kubernetes API.
+    - Changes to Flask v2.
+    - Changes ``/api/info`` endpoint to also include the kubernetes maximum memory limit, the kubernetes default memory limit and the maximum workspace retention period.
+    - Changes ``start_workflow`` endpoint to validate the REANA specification of the workflow.
+    - Changes ``create_workflow`` endpoint to populate workspace retention rules for the workflow.
+    - Changes ``start_workflow`` endpoint to disallow restarting a workflow when retention rules are pending.
+    - Changes API rate limiter error messages to be more verbose.
+    - Changes workflow scheduler to allow defining the checks needed to assess whether the cluster can start new workflows.
+    - Changes workflow list endpoint to add the possibility to filter by workflow ID.
+    - Changes the ``move_files`` endpoint to allow moving files while a workflow is running.
+    - Changes the k8s specification of interactive sessions' pods to remove the environment variables used for service discovery.
+    - Changes GitLab integration to use ``reana`` as pipeline name instead of ``default`` when setting status of a commit.
+    - Changes the loading of Snakemake specifications to preserve the current working directory.
+    - Changes the Invenio dependencies to the latest versions.
+    - Fixes the submission of jobs by stripping potential leading and trailing whitespaces in Docker image names.
+    - Fixes ``fetchWorkflow`` action to fetch a specific workflow instead of the entire user workflow list. (reana-ui)
+    - Fixes the download of files by changing the default MIME type to ``application/octet-stream``.
+    - Fixes the workflow list endpoint to correctly parse the boolean parameters ``include_progress``, ``include_workspace_size`` and ``include_retention_rules``.
 
 Version 0.8.1 (2022-02-15)
 --------------------------
