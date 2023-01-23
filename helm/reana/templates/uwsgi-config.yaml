@@ -8,7 +8,7 @@ data:
   uwsgi.ini: |
     [uwsgi]
     stats = /tmp/stats.socket
-    http-socket = 0.0.0.0:5000
+    http = 0.0.0.0:5000
     module = invenio_app.wsgi:application
     master = true
     processes = {{ .Values.components.reana_server.uwsgi.processes }}
@@ -41,3 +41,6 @@ data:
     die-on-term = true
     hook-master-start = unix_signal:2 gracefully_kill_them_all
     hook-master-start = unix_signal:15 gracefully_kill_them_all
+
+    # enable keepalive to avoid 500/502 from traefik
+    http-keepalive = 1
