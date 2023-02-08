@@ -53,6 +53,10 @@ secrets:
   cern:
     sso: {}
   reana: {}
+  login: {}
+
+# Enable and configure SSO authentication via a third-party Keycloak identity provider
+login: []
 
 # External database service configuration
 db_env_config:

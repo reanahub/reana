@@ -12,6 +12,7 @@ Version 0.9.1 (UNRELEASED)
     - Adds new configuration option ``ingress.tls.hosts`` to define hosts that are present in the TLS certificate, in order to support cert-manager's automatic creation of certificates.
     - Changes uWSGI configuration to add vacuuming of generated files and sockets.
     - Fixes uWSGI memory consumption on systems with very high allowed number of open files.
+    - Adds new configuration options ``login`` and ``secrets.login`` for configuring Keycloak SSO login with third-party authentication services.
 
 Version 0.9.0 (2023-01-26)
 --------------------------

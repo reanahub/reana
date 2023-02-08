@@ -11,6 +11,7 @@ The list of contributors in alphabetical order:
 - `Daniel Prelipcean <https://orcid.org/0000-0002-4855-194X>`_
 - `Diego Rodriguez <https://orcid.org/0000-0003-0649-2002>`_
 - `Dinos Kousidis <https://orcid.org/0000-0002-4914-4289>`_
+- `Domenic Gosein <https://orcid.org/0000-0002-1546-0435>`_
 - `Harri Hirvonsalo <https://orcid.org/0000-0002-5503-510X>`_
 - `Jan Okraska <https://orcid.org/0000-0002-1416-3244>`_
 - `Kenyi Hurtado-Anampa <https://orcid.org/0000-0002-9779-3566>`_

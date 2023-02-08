@@ -120,6 +120,15 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-cern-sso-secrets
                 key: CERN_CONSUMER_SECRET
+          {{- if .Values.login }}
+          - name: LOGIN_PROVIDERS_CONFIGS
+            value: {{ .Values.login | toJson | quote }}
+          - name: LOGIN_PROVIDERS_SECRETS
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" $ }}-login-provider-secrets
+                key: PROVIDER_SECRETS
+          {{- end }}
           - name: REANA_GITLAB_OAUTH_APP_ID
             valueFrom:
               secretKeyRef:
@@ -245,6 +254,15 @@ spec:
             secretKeyRef:
               name: {{ include "reana.prefix" . }}-db-secrets
               key: password
+        {{- end }}
+        {{- if .Values.login }}
+        - name: LOGIN_PROVIDERS_CONFIGS
+          value: {{ .Values.login | toJson | quote }}
+        - name: LOGIN_PROVIDERS_SECRETS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" $ }}-login-provider-secrets
+              key: PROVIDER_SECRETS
         {{- end }}
       volumes:
       - name: reana-shared-volume
