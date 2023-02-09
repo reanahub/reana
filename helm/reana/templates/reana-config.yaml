@@ -16,6 +16,11 @@ data:
     cern_ropo: {{ .Values.components.reana_ui.cern_ropo | default false }}
     hide_signup: {{ .Values.components.reana_ui.hide_signup | default false }}
     admin_email: {{ .Values.notifications.email_config.receiver | quote | default "null" }}
+    {{- if not (contains "forever" (.Values.interactive_sessions.maximum_inactivity_period | quote)) }}
+    maximum_interactive_session_inactivity_period: {{ .Values.interactive_sessions.maximum_inactivity_period | quote | default "null" }}
+    {{- else }}
+    maximum_interactive_session_inactivity_period: null
+    {{- end }}
     {{- if or (.Values.components.reana_ui.local_users) (eq (.Values.components.reana_ui.local_users | toString) "<nil>") }}
     local_users: true
     {{- else }}

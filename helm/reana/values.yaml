@@ -20,6 +20,10 @@ workspaces:
   paths:
     - /var/reana:/var/reana
 
+interactive_sessions:
+  cronjob_schedule: "0 3 * * *"  # everyday at 3am
+  maximum_inactivity_period: forever
+
 compute_backends:
   - kubernetes
 

@@ -257,3 +257,82 @@ spec:
           - name: reana-code
             hostPath:
               path: /code/reana-server
+---
+{{- if not (contains "forever" (.Values.interactive_sessions.maximum_inactivity_period | quote)) }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "reana.prefix" . }}-interactive-session-cleanup
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: {{ .Values.interactive_sessions.cronjob_schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  {{- if .Values.maintenance.enabled }}
+  suspend: true
+  {{- end }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
+          containers:
+          - name: {{ include "reana.prefix" . }}-interactive-session-cleanup
+            image: {{ .Values.components.reana_server.image }}
+            command:
+            - '/bin/sh'
+            - '-c'
+            args:
+            - 'flask reana-admin interactive-session-cleanup -d {{ .Values.interactive_sessions.maximum_inactivity_period }}'
+            {{- if .Values.debug.enabled }}
+            tty: true
+            stdin: true
+            {{- end }}
+            env:
+            {{- if .Values.reana_hostname }}
+            - name: REANA_HOSTNAME
+              value: {{ .Values.reana_hostname }}
+            {{- end }}
+            {{- range $key, $value := .Values.db_env_config }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- if .Values.debug.enabled }}
+            - name: FLASK_ENV
+              value:  "development"
+            {{- else }}
+            - name: REANA_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-db-secrets
+                  key: user
+            - name: REANA_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-db-secrets
+                  key: password
+            {{- end }}
+            volumeMounts:
+              {{- if .Values.debug.enabled }}
+              - mountPath: /code/
+                name: reana-code
+              {{- end }}
+              - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
+                name: reana-shared-volume
+            imagePullPolicy: IfNotPresent
+          restartPolicy: Never
+          volumes:
+          - name: reana-shared-volume
+            {{- if not (eq .Values.shared_storage.backend "hostpath") }}
+            persistentVolumeClaim:
+              claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
+              readOnly: false
+            {{- else }}
+            hostPath:
+              path:  {{ .Values.shared_storage.hostpath.root_path }}
+            {{- end }}
+          - name: reana-code
+            hostPath:
+              path: /code/reana-server
+{{- end }}
