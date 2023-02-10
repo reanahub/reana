@@ -595,7 +595,6 @@ def run_example(  # noqa: C901
                     elif "failed" in status:
                         run_statistics["failed"].append(workflow_name)
                     elif "finished" in status or "stopped" in status:
-
                         if not _verify_log_output(component, workflow_name):
                             run_statistics["failed"].append(workflow_name)
                             continue

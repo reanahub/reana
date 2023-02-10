@@ -19,7 +19,7 @@ def test_shorten_component_name():
     """Tests for shorten_component_name()."""
     from reana.reana_dev.utils import shorten_component_name
 
-    for (name_long, name_short) in (
+    for name_long, name_short in (
         ("", ""),
         ("reana", "reana"),
         ("reana-job-controller", "r-j-controller"),
@@ -31,7 +31,7 @@ def test_get_expected_output_filenames_for_example():
     """Tests for get_expected_output_filenames_for_example()."""
     from reana.reana_dev.run import get_expected_output_filenames_for_example
 
-    for (example, output) in (
+    for example, output in (
         ("", ("plot.png",)),
         ("reana-demo-helloworld", ("greetings.txt",)),
         ("reana-demo-root6-roofit", ("plot.png",)),
@@ -44,7 +44,7 @@ def test_get_expected_log_message_for_example():
     """Tests for get_expected_log_messages_for_example()."""
     from reana.reana_dev.run import get_expected_log_messages_for_example
 
-    for (example, output) in (
+    for example, output in (
         ("", ("job:",)),
         ("reana-demo-helloworld", ("Parameters: inputfile=",)),
     ):
@@ -89,7 +89,7 @@ def test_select_components():
         REPO_LIST_CLUSTER,
     )
 
-    for (input_value, output_expected) in (
+    for input_value, output_expected in (
         # regular operation:
         (["reana-job-controller"], ["reana-job-controller"]),
         (["reana-job-controller", "reana"], ["reana-job-controller", "reana, "]),
@@ -123,7 +123,7 @@ def test_select_workflow_engines():
     """Tests for select_workflow_engines()."""
     from reana.reana_dev.run import select_workflow_engines
 
-    for (input_value, output_expected) in (
+    for input_value, output_expected in (
         # regular workflow engines:
         (["cwl"], ["cwl"]),
         (["serial"], ["serial"]),
@@ -142,7 +142,7 @@ def test_find_standard_component_name():
     """Tests for find_standard_component_name()."""
     from reana.reana_dev.utils import find_standard_component_name
 
-    for (input_value, output_expected) in (
+    for input_value, output_expected in (
         ("reana", "reana"),
         ("r-server", "reana-server"),
         ("r-j-controller", "reana-job-controller"),
@@ -169,7 +169,7 @@ def test_construct_workflow_name():
     """Tests for construct_workflow_name()."""
     from reana.reana_dev.run import construct_workflow_name
 
-    for (input_value, output_expected) in (
+    for input_value, output_expected in (
         (("reana", "cwl", "kubernetes"), "reana-cwl-kubernetes"),
         (
             ("reana-demo-root6-roofit", "yadage", "htcondorcern"),
