@@ -1,6 +1,46 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  name: {{ include "reana.prefix" . }}-ingress-http
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: http
+    traefik.ingress.kubernetes.io/router.middlewares: kube-system-redirect-scheme@kubernetescrd
+spec:
+  rules:
+    - http:
+        paths:
+        - path: /api
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ include "reana.prefix" . }}-server
+              port:
+                number: 80
+        - path: /oauth
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ include "reana.prefix" . }}-server
+              port:
+                number: 80
+        {{- if .Values.components.reana_ui.enabled }}
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ include "reana.prefix" . }}-ui
+              port:
+                number: 80
+        {{- end }}
+      {{- if .Values.reana_hostname }}
+      host: {{ .Values.reana_hostname }}
+      {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
   name: {{ include "reana.prefix" . }}-ingress
   namespace: {{ .Release.Namespace }}
   {{- with .Values.ingress.annotations }}
