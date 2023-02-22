@@ -18,13 +18,20 @@ spec:
   {{- if and .self_signed_cert .secret_name }}
     {{- fail "Cannot set `.tls.secret_name` and `.tls.self_signed_cert` at the same time" }}
   {{- end }}
-  {{- if .self_signed_cert }}
+  {{- if or .self_signed_cert .secret_name}}
   tls:
+    {{- if .self_signed_cert }}
     - secretName: {{ include "reana.prefix" $ }}-tls-secret
-  {{- end }}
-  {{- if .secret_name }}
-  tls:
+    {{- end }}
+    {{- if .secret_name }}
     - secretName: {{ .secret_name | quote }}
+    {{- end }}
+      {{- if .hosts }}
+      hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      {{- end }}
   {{- end }}
   {{- end }}
   rules:
