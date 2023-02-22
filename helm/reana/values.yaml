@@ -127,6 +127,7 @@ ingress:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
   tls:
     self_signed_cert: true
+  extra: []
 
 # Permissions
 serviceAccount:
