@@ -7,6 +7,7 @@ Version 0.9.1 (UNRELEASED)
 - Administrators:
     - Adds new configuration option ``interactive_sessions.maximum_inactivity_period`` to set a limit in days for the maximum inactivity period of interactive sessions after which they will be closed.
     - Adds new configuration option ``interactive_sessions.cronjob_schedule`` to set how often interactive session cleanup should be performed.
+    - Adds support for Kubernetes clusters 1.26.
 
 Version 0.9.0 (2023-01-26)
 --------------------------
