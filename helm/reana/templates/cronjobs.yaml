@@ -1,338 +1,67 @@
+{{/* system-status */}}
 {{- if .Values.notifications.enabled }}
 {{- if .Values.notifications.system_status }}
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: {{ include "reana.prefix" . }}-system-status
-  namespace: {{ .Release.Namespace }}
-spec:
-  schedule: "{{ .Values.notifications.system_status }}"
-  concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 1
-  {{- if .Values.maintenance.enabled }}
-  suspend: true
-  {{- end }}
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
-          containers:
-          - name: {{ include "reana.prefix" . }}-system-status
-            image: {{ .Values.components.reana_server.image }}
-            command:
-            - '/bin/sh'
-            - '-c'
-            args:
-            - 'flask reana-admin status-report --email {{ .Values.notifications.email_config.receiver }}'
-            {{- if .Values.debug.enabled }}
-            tty: true
-            stdin: true
-            {{- end }}
-            env:
-            {{- if .Values.reana_hostname }}
-            - name: REANA_HOSTNAME
-              value: {{ .Values.reana_hostname }}
-            {{- end }}
-            {{- range $key, $value := .Values.db_env_config }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-            {{- if .Values.debug.enabled }}
-            - name: FLASK_ENV
-              value:  "development"
-            - name: REANA_EMAIL_SMTP_SERVER
-              value: {{ printf "%s-mail" (include "reana.prefix" .) }}
-            - name: REANA_EMAIL_SMTP_PORT
-              value: "30025"
-            {{- else }}
-            - name: REANA_DB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-db-secrets
-                  key: user
-            - name: REANA_DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-db-secrets
-                  key: password
-            - name: REANA_EMAIL_SMTP_SERVER
-              value: {{ .Values.notifications.email_config.smtp_server }}
-            - name: REANA_EMAIL_SMTP_PORT
-              value: "{{ .Values.notifications.email_config.smtp_port }}"
-            - name: REANA_EMAIL_LOGIN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-mail-notification-sender-password
-                  key: REANA_EMAIL_LOGIN
-            - name: REANA_EMAIL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-mail-notification-sender-password
-                  key: REANA_EMAIL_PASSWORD
-            {{- end }}
-            - name: REANA_COMPONENT_PREFIX
-              value: {{ include "reana.prefix" . }}
-            - name: REANA_EMAIL_SENDER
-              value: {{ .Values.notifications.email_config.sender }}
-            - name: REANA_ADMIN_ACCESS_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-admin-access-token
-                  key: ADMIN_ACCESS_TOKEN
-            - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-              value: {{ .Release.Namespace }}
-            - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-              value: {{ .Values.namespace_runtime | default .Release.Namespace }}
-            volumeMounts:
-              {{- if .Values.debug.enabled }}
-              - mountPath: /code/
-                name: reana-code
-              {{- end }}
-              - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
-                name: reana-shared-volume
-            imagePullPolicy: IfNotPresent
-          restartPolicy: Never
-          volumes:
-          - name: reana-shared-volume
-            {{- if not (eq .Values.shared_storage.backend "hostpath") }}
-            persistentVolumeClaim:
-              claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
-              readOnly: false
-            {{- else }}
-            hostPath:
-              path:  {{ .Values.shared_storage.hostpath.root_path }}
-            {{- end }}
-          - name: reana-code
-            hostPath:
-              path: /code/reana-server
+{{- $cronValues := dict -}}
+{{- $_ := set $cronValues "scope" . -}}
+{{- $_ := set $cronValues "name" "system-status" -}}
+{{- $_ := set $cronValues "schedule" .Values.notifications.system_status -}}
+{{- $_ := set $cronValues "container_args" (list (print "flask reana-admin status-report --email " .Values.notifications.email_config.receiver)) -}}
+{{- $cronEnvs:= dict -}}
+{{- $cronEnvsFromSecret:= dict -}}
+{{- if .Values.reana_hostname }}
+  {{- $_ := set $cronEnvs "REANA_HOSTNAME" .Values.reana_hostname -}}
+{{- end }}
+{{- if .Values.debug.enabled }}
+{{- $_ := set $cronEnvs "REANA_EMAIL_SMTP_SERVER" (printf "%s-mail" (include "reana.prefix" .)) -}}
+{{- $_ := set $cronEnvs "REANA_EMAIL_SMTP_PORT" "30025" -}}
+{{- else }}
+{{- $_ := set $cronEnvs "REANA_EMAIL_SMTP_SERVER" .Values.notifications.email_config.smtp_server -}}
+{{- $_ := set $cronEnvs "REANA_EMAIL_SMTP_PORT" .Values.notifications.email_config.smtp_port -}}
+{{- $_ := set $cronEnvsFromSecret "REANA_EMAIL_LOGIN" (list (printf "%s-mail-notification-sender-password" (include "reana.prefix" . )) "REANA_EMAIL_LOGIN" ) -}}
+{{- $_ := set $cronEnvsFromSecret "REANA_EMAIL_PASSWORD" (list (printf "%s-mail-notification-sender-password" (include "reana.prefix" . )) "REANA_EMAIL_PASSWORD" ) -}}
+{{- end }}
+{{- $_ := set $cronEnvsFromSecret "REANA_ADMIN_ACCESS_TOKEN" (list (printf "%s-admin-access-token" (include "reana.prefix" . )) "ADMIN_ACCESS_TOKEN" ) -}}
+{{- $_ := set $cronEnvs "REANA_COMPONENT_PREFIX" (include "reana.prefix" .) -}}
+{{- $_ := set $cronEnvs "REANA_EMAIL_SENDER" .Values.notifications.email_config.sender -}}
+{{- $_ := set $cronEnvs "REANA_EMAIL_SENDER" .Values.notifications.email_config.sender -}}
+{{- $_ := set $cronEnvs "REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE" .Release.Namespace -}}
+{{- $_ := set $cronEnvs "REANA_RUNTIME_KUBERNETES_NAMESPACE" (.Values.namespace_runtime | default .Release.Namespace) -}}
+{{- $_ := set $cronValues "env_vars" $cronEnvs -}}
+{{- $_ := set $cronValues "env_vars_from_secret" $cronEnvsFromSecret -}}
+{{ template "reana.cronjob_spec" $cronValues }}
 {{- end }}
 {{- end }}
 ---
+{{/* retention-rules-apply */}}
+{{- $cronValues := dict -}}
+{{- $_ := set $cronValues "scope" . -}}
+{{- $_ := set $cronValues "name" "retention-rules-apply" -}}
+{{- $_ := set $cronValues "schedule" .Values.workspaces.retention_rules.cronjob_schedule -}}
+{{- $_ := set $cronValues "container_args" (list "flask reana-admin retention-rules-apply") -}}
+{{ template "reana.cronjob_spec" $cronValues }}
+---
+{{/* resource-quota-update */}}
 {{- if and .Values.quota.enabled (tpl .Values.quota.periodic_update_policy .) }}
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: {{ include "reana.prefix" . }}-resource-quota-update
-  namespace: {{ .Release.Namespace }}
-spec:
-  schedule: "{{ tpl .Values.quota.periodic_update_policy . }}"
-  concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 1
-  {{- if .Values.maintenance.enabled }}
-  suspend: true
-  {{- end }}
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          containers:
-          - name: {{ include "reana.prefix" . }}-resource-quota-update
-            image: {{ .Values.components.reana_server.image }}
-            command:
-            - '/bin/sh'
-            - '-c'
-            args:
-            - 'reana-db quota resource-usage-update'
-            {{- if .Values.debug.enabled }}
-            tty: true
-            stdin: true
-            {{- end }}
-            env:
-            - name: REANA_PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
-              value: "true"
-            {{- range $key, $value := .Values.db_env_config }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-            {{- if .Values.debug.enabled }}
-            - name: FLASK_ENV
-              value:  "development"
-            {{- else }}
-            - name: REANA_DB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-db-secrets
-                  key: user
-            - name: REANA_DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-db-secrets
-                  key: password
-            {{- end }}
-            volumeMounts:
-              {{- if .Values.debug.enabled }}
-              - mountPath: /code/
-                name: reana-code
-              {{- end }}
-              - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
-                name: reana-shared-volume
-            imagePullPolicy: IfNotPresent
-          restartPolicy: Never
-          volumes:
-          - name: reana-shared-volume
-            {{- if not (eq .Values.shared_storage.backend "hostpath") }}
-            persistentVolumeClaim:
-              claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
-              readOnly: false
-            {{- else }}
-            hostPath:
-              path:  {{ .Values.shared_storage.hostpath.root_path }}
-            {{- end }}
-          - name: reana-code
-            hostPath:
-              path: /code/reana-server
+{{- $cronValues := dict -}}
+{{- $_ := set $cronValues "scope" . -}}
+{{- $_ := set $cronValues "name" "resource-quota-update" -}}
+{{- $_ := set $cronValues "schedule" (tpl .Values.quota.periodic_update_policy .) -}}
+{{- $_ := set $cronValues "container_args" (list "reana-db quota resource-usage-update") -}}
+{{- $_ := set $cronValues "env_vars" (dict "REANA_PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY" "true") -}}
+{{ template "reana.cronjob_spec" $cronValues }}
 {{- end }}
 ---
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: {{ include "reana.prefix" . }}-retention-rules-apply
-  namespace: {{ .Release.Namespace }}
-spec:
-  schedule: {{ .Values.workspaces.retention_rules.cronjob_schedule }}
-  concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 1
-  {{- if .Values.maintenance.enabled }}
-  suspend: true
-  {{- end }}
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          containers:
-          - name: {{ include "reana.prefix" . }}-retention-rules-apply
-            image: {{ .Values.components.reana_server.image }}
-            command:
-            - '/bin/sh'
-            - '-c'
-            args:
-            - 'flask reana-admin retention-rules-apply'
-            {{- if .Values.debug.enabled }}
-            tty: true
-            stdin: true
-            {{- end }}
-            env:
-            {{- range $key, $value := .Values.db_env_config }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-            {{- if .Values.debug.enabled }}
-            - name: FLASK_ENV
-              value:  "development"
-            {{- else }}
-            - name: REANA_DB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-db-secrets
-                  key: user
-            - name: REANA_DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-db-secrets
-                  key: password
-            {{- end }}
-            volumeMounts:
-              {{- if .Values.debug.enabled }}
-              - mountPath: /code/
-                name: reana-code
-              {{- end }}
-              - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
-                name: reana-shared-volume
-            imagePullPolicy: IfNotPresent
-          restartPolicy: Never
-          volumes:
-          - name: reana-shared-volume
-            {{- if not (eq .Values.shared_storage.backend "hostpath") }}
-            persistentVolumeClaim:
-              claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
-              readOnly: false
-            {{- else }}
-            hostPath:
-              path:  {{ .Values.shared_storage.hostpath.root_path }}
-            {{- end }}
-          - name: reana-code
-            hostPath:
-              path: /code/reana-server
----
+{{/* interactive-session-cleanup */}}
 {{- if not (contains "forever" (.Values.interactive_sessions.maximum_inactivity_period | quote)) }}
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: {{ include "reana.prefix" . }}-interactive-session-cleanup
-  namespace: {{ .Release.Namespace }}
-spec:
-  schedule: {{ .Values.interactive_sessions.cronjob_schedule | quote }}
-  concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 1
-  {{- if .Values.maintenance.enabled }}
-  suspend: true
-  {{- end }}
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
-          containers:
-          - name: {{ include "reana.prefix" . }}-interactive-session-cleanup
-            image: {{ .Values.components.reana_server.image }}
-            command:
-            - '/bin/sh'
-            - '-c'
-            args:
-            - 'flask reana-admin interactive-session-cleanup -d {{ .Values.interactive_sessions.maximum_inactivity_period }}'
-            {{- if .Values.debug.enabled }}
-            tty: true
-            stdin: true
-            {{- end }}
-            env:
-            {{- if .Values.reana_hostname }}
-            - name: REANA_HOSTNAME
-              value: {{ .Values.reana_hostname }}
-            {{- end }}
-            {{- range $key, $value := .Values.db_env_config }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-            {{- if .Values.debug.enabled }}
-            - name: FLASK_ENV
-              value:  "development"
-            {{- else }}
-            - name: REANA_DB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-db-secrets
-                  key: user
-            - name: REANA_DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-db-secrets
-                  key: password
-            {{- end }}
-            volumeMounts:
-              {{- if .Values.debug.enabled }}
-              - mountPath: /code/
-                name: reana-code
-              {{- end }}
-              - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
-                name: reana-shared-volume
-            imagePullPolicy: IfNotPresent
-          restartPolicy: Never
-          volumes:
-          - name: reana-shared-volume
-            {{- if not (eq .Values.shared_storage.backend "hostpath") }}
-            persistentVolumeClaim:
-              claimName: {{ include "reana.prefix" . }}-shared-persistent-volume
-              readOnly: false
-            {{- else }}
-            hostPath:
-              path:  {{ .Values.shared_storage.hostpath.root_path }}
-            {{- end }}
-          - name: reana-code
-            hostPath:
-              path: /code/reana-server
+{{- $cronValues := dict -}}
+{{- $_ := set $cronValues "scope" . -}}
+{{- $_ := set $cronValues "name" "interactive-session-cleanup" -}}
+{{- $_ := set $cronValues "schedule" .Values.interactive_sessions.cronjob_schedule -}}
+{{- $_ := set $cronValues "container_args" (list (print "flask reana-admin interactive-session-cleanup -d " .Values.interactive_sessions.maximum_inactivity_period)) -}}
+{{- $cronEnvs:= dict -}}
+{{- if .Values.reana_hostname }}
+  {{- $_ := set $cronEnvs "REANA_HOSTNAME" .Values.reana_hostname -}}
+{{- end }}
+{{- $_ := set $cronValues "env_vars" $cronEnvs -}}
+{{ template "reana.cronjob_spec" $cronValues }}
 {{- end }}
