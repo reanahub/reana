@@ -53,3 +53,92 @@ hostPath:
 {{ template "reana.shared_volume" . }}
 {{- end -}}
 {{- end -}}
+
+{{/* Create the specification of cronjob. */}}
+{{- define "reana.cronjob_spec" -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "reana.prefix" .scope }}-{{ .name }}
+  namespace: {{ .scope.Release.Namespace }}
+spec:
+  schedule: {{ .schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  {{- if .scope.Values.maintenance.enabled }}
+  suspend: true
+  {{- end }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" .scope }}
+          containers:
+          - name: {{ include "reana.prefix" .scope }}-{{ .name }}
+            image: {{ .scope.Values.components.reana_server.image }}
+            command:
+            - '/bin/sh'
+            - '-c'
+            args:
+            {{- range .container_args }}
+            - {{ . | quote }}
+            {{- end }}
+            {{- if .scope.Values.debug.enabled }}
+            tty: true
+            stdin: true
+            {{- end }}
+            env:
+            {{- range $key, $value := .env_vars }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $value := .env_vars_from_secret }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ first $value | quote }}
+                  key: {{ last $value }}
+            {{- end }}
+            {{- range $key, $value := .scope.Values.db_env_config }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- if .scope.Values.debug.enabled }}
+            - name: FLASK_ENV
+              value:  "development"
+            {{- else }}
+            - name: REANA_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" .scope }}-db-secrets
+                  key: user
+            - name: REANA_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" .scope }}-db-secrets
+                  key: password
+            {{- end }}
+            volumeMounts:
+              {{- if .scope.Values.debug.enabled }}
+              - mountPath: /code/
+                name: reana-code
+              {{- end }}
+              - mountPath: {{ .scope.Values.shared_storage.shared_volume_mount_path }}
+                name: reana-shared-volume
+            imagePullPolicy: IfNotPresent
+          restartPolicy: Never
+          volumes:
+          - name: reana-shared-volume
+            {{- if not (eq .scope.Values.shared_storage.backend "hostpath") }}
+            persistentVolumeClaim:
+              claimName: {{ include "reana.prefix" .scope }}-shared-persistent-volume
+              readOnly: false
+            {{- else }}
+            hostPath:
+              path:  {{ .scope.Values.shared_storage.hostpath.root_path }}
+            {{- end }}
+          - name: reana-code
+            hostPath:
+              path: /code/reana-server
+{{- end }}
