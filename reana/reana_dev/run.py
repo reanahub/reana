@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -266,6 +266,13 @@ def run_commands():
     is_flag=True,
     help="Disable default CNI and use e.g. Calico.",
 )
+@click.option(
+    "--parallel",
+    "-p",
+    default=1,
+    type=click.IntRange(min=1),
+    help="Number of docker images to build in parallel.",
+)
 @run_commands.command(name="run-ci")
 def run_ci(
     build_arg,
@@ -279,6 +286,7 @@ def run_ci(
     admin_password,
     workflow_engine,
     disable_default_cni,
+    parallel,
 ):  # noqa: D301
     """Run CI build.
 
@@ -339,6 +347,7 @@ def run_ci(
             cmd += " -b {0}".format(arg)
         if no_cache:
             cmd += " --no-cache"
+        cmd += f" --parallel {parallel}"
         run_command(cmd, "reana")
     # deploy cluster
     cmd = (

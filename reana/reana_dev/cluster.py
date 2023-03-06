@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -191,9 +191,16 @@ def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D3
 )
 @click.option("--no-cache", is_flag=True, help="Do not use Docker image layer cache.")
 @click.option("--skip-load", is_flag=True, help="Do not load images into kind node(s).")
+@click.option(
+    "--parallel",
+    "-p",
+    default=1,
+    type=click.IntRange(min=1),
+    help="Number of docker images to build in parallel.",
+)
 @cluster_commands.command(name="cluster-build")
 def cluster_build(
-    build_arg, mode, exclude_components, no_cache, skip_load
+    build_arg, mode, exclude_components, no_cache, skip_load, parallel
 ):  # noqa: D301
     """Build REANA cluster.
 
@@ -218,6 +225,7 @@ def cluster_build(
         cmd += " -b DEBUG=1"
     if no_cache:
         cmd += " --no-cache"
+    cmd += f" --parallel {parallel}"
     cmds.append(cmd)
     if not skip_load and mode in ("releasepypi", "latest", "debug"):
         # load built Docker images into cluster

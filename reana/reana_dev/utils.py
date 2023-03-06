@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -15,7 +15,9 @@ import json
 import os
 import subprocess
 import sys
-from typing import Dict, List, Optional
+from concurrent import futures
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import click
 import semver
@@ -34,9 +36,9 @@ from reana.config import (
     REPO_LIST_ALL,
     REPO_LIST_CLIENT,
     REPO_LIST_CLUSTER,
-    REPO_LIST_DEMO_RUNNABLE,
     REPO_LIST_CLUSTER_INFRASTRUCTURE,
     REPO_LIST_CLUSTER_RUNTIME_BATCH,
+    REPO_LIST_DEMO_RUNNABLE,
 )
 
 INSTANCE_NAME = os.path.basename(os.environ["VIRTUAL_ENV"])
@@ -349,6 +351,75 @@ def run_command(
             click.secho("{0}: ".format(component), bold=True, nl=False, fg="yellow")
             click.secho("{0}".format(err), bold=True, fg="red")
         sys.exit(err.returncode)
+
+
+@dataclass
+class ExecutionProgress:
+    """Progress of the parallel execution of multiple tasks."""
+
+    cancelled: int = 0
+    done: int = 0
+    failed: int = 0
+    remaining: int = 0
+    total: int = 0
+
+
+def execute_parallel(
+    fn_calls: Sequence[Tuple[Callable, Tuple]],
+    processes: Optional[int] = None,
+    progress_callback: Optional[Callable] = None,
+    progress_interval: float = 10,
+):
+    """Execute multiple functions in parallel.
+
+    :param fn_calls: List of function calls to be executed.
+        Each element is a tuple containing the function and its arguments.
+    :param processes: Number of function calls to be executed in parallel.
+    :param progress_callback: Function used to track the progress of the execution.
+        It should accept a single argument of type `ExecutionProgress`.
+    :param progress_interval: Time interval in seconds between calls to `progress_callback`.
+    """
+    if processes == 1:
+        for fn, args in fn_calls:
+            fn(*args)
+        return
+
+    with futures.ProcessPoolExecutor(max_workers=processes) as executor:
+        pending = list(reversed(fn_calls))  # Tasks waiting to be submitted
+        submitted = []  # Tasks already submitted
+        done = []  # Tasks finished (or failed)
+        failed = []  # Tasks failed
+
+        timeout = progress_interval if progress_callback is not None else None
+        while submitted or (pending and not failed):
+            # If there are empty slots and no task has failed yet, submit some new tasks
+            while not failed and pending and len(submitted) < processes:
+                fn, args = pending.pop()
+                submitted.append(executor.submit(fn, *args))
+
+            # Wait for one task to finish (or for the timeout)
+            w = futures.wait(submitted, timeout, futures.FIRST_COMPLETED)
+
+            # Update list of submitted/done/failed tasks
+            submitted = list(w.not_done)
+            done.extend(w.done)
+            failed.extend(t for t in w.done if t.exception() is not None)
+
+            if progress_callback:
+                status = ExecutionProgress(
+                    total=len(fn_calls),
+                    done=len(done),
+                    failed=len(failed),
+                    remaining=len(submitted) + len(pending)
+                    if not failed
+                    else len(submitted),
+                    cancelled=0 if not failed else len(pending),
+                )
+                progress_callback(status)
+
+        for task in failed:
+            # task.result() is called to propagate exceptions
+            task.result()
 
 
 def display_message(msg, component=""):

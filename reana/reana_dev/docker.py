@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -11,11 +11,13 @@
 import click
 
 from reana.config import DOCKER_PREFETCH_IMAGES
+from reana.reana_dev import utils
 from reana.reana_dev.utils import (
     display_message,
     get_docker_tag,
     is_component_dockerised,
     run_command,
+    execute_parallel,
     select_components,
 )
 
@@ -23,6 +25,17 @@ from reana.reana_dev.utils import (
 @click.group()
 def docker_commands():
     """Docker commands group."""
+
+
+def _run_command_prefix_output(cmd, component):
+    """Run given command, showing the component's name before each output line.
+
+    :param cmd: Command to be executed.
+    :param component: Name of the REANA component.
+    """
+    output = run_command(cmd, component, return_output=True)
+    for line in output.splitlines():
+        click.echo(click.style(f"[{component}] ", bold=True) + line)
 
 
 @click.option("--user", "-u", default="reanahub", help="DockerHub user name [reanahub]")
@@ -65,6 +78,13 @@ def docker_commands():
     is_flag=True,
     help="Suppress the build output and print image ID on success",
 )
+@click.option(
+    "--parallel",
+    "-p",
+    default=1,
+    type=click.IntRange(min=1),
+    help="Number of docker images to build in parallel.",
+)
 @docker_commands.command(name="docker-build")
 @click.pass_context
 def docker_build(
@@ -77,6 +97,7 @@ def docker_build(
     output_component_versions,
     quiet,
     exclude_components,
+    parallel,
 ):  # noqa: D301
     """Build REANA component images.
 
@@ -118,6 +139,13 @@ def docker_build(
         exclude_components = exclude_components.split(",")
     components = select_components(component, exclude_components)
     built_components_versions_tags = []
+
+    # show the component's name before each output line of `docker build` if there
+    # are multiple parallel builds at the same time, as in this case build logs
+    # from different components are mixed together
+    _run_command = run_command if parallel == 1 else _run_command_prefix_output
+
+    commands = []
     for component in components:
         component_tag = tag
         if is_component_dockerised(component):
@@ -128,15 +156,25 @@ def docker_build(
                 cmd += " --build-arg {0}".format(arg)
             if no_cache:
                 cmd += " --no-cache"
-            if quiet:
+            if quiet or parallel > 1:
                 cmd += " --quiet"
             component_version_tag = "{0}/{1}:{2}".format(user, component, component_tag)
             cmd += " -t {0} .".format(component_version_tag)
-            run_command(cmd, component)
+            commands.append((_run_command, (cmd, component)))
             built_components_versions_tags.append(component_version_tag)
         else:
             msg = "Ignoring this component that does not contain" " a Dockerfile."
             display_message(msg, component)
+
+    execute_parallel(
+        commands,
+        processes=parallel,
+        progress_callback=lambda status: display_message(
+            f"{status.remaining}/{status.total} images remaining to be built "
+            f"({status.cancelled} cancelled, {status.failed} failed)",
+            component="reana",
+        ),
+    )
 
     if output_component_versions:
         output_component_versions.write(
