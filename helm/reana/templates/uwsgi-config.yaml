@@ -44,3 +44,6 @@ data:
 
     # enable keepalive to avoid 500/502 from traefik
     http-keepalive = 1
+
+    # fix uWSGI memory consumption on systems with very high fs.nr_open limits
+    max-fd = 1048576

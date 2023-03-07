@@ -10,6 +10,7 @@ Version 0.9.1 (UNRELEASED)
     - Adds support for Kubernetes clusters 1.26.
     - Adds new configuration option ``ingress.extra`` to define extra Ingress resources, in order to support redirecting HTTP requests to HTTPS with traefik v2 version.
     - Adds new configuration option ``ingress.tls.hosts`` to define hosts that are present in the TLS certificate, in order to support cert-manager's automatic creation of certificates.
+    - Fixes uWSGI memory consumption on systems with very high allowed number of open files.
 
 Version 0.9.0 (2023-01-26)
 --------------------------
