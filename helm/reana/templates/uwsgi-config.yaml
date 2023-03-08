@@ -13,8 +13,10 @@ data:
     master = true
     processes = {{ .Values.components.reana_server.uwsgi.processes }}
     threads = {{ .Values.components.reana_server.uwsgi.threads }}
+    enable-threads = true
     single-interpreter = true
     need-app = true
+    vacuum = true
     wsgi-disable-file-wrapper = true
 
     auto-procname = true
