@@ -2,16 +2,16 @@ apiVersion: v1
 entries:
   reana:
   - apiVersion: v2
-    created: "2023-01-26T18:02:59.823874347+01:00"
+    created: "2023-03-10T14:07:40.234846+01:00"
     dependencies:
     - condition: traefik.enabled
       name: traefik
       repository: https://helm.traefik.io/traefik
       tags:
       - ingress
-      version: 10.3.4
+      version: 10.6.2
     description: REANA reproducible research data analysis platform
-    digest: 788da5bb7377b287cc528d258bdf97277510d4425d9a708a93bfbee93956738c
+    digest: 3b9ae93d20cbfe31e652b4380e655d2acaad504cc801e58163ed7b826f898d99
     home: www.reana.io
     icon: http://www.reana.io/static/img/logo-reana.svg
     keywords:
@@ -22,7 +22,7 @@ entries:
     - containers
     - cwl
     - reusable-science
-    kubeVersion: '>= 1.19.0-0 < 1.26.0-0'
+    kubeVersion: '>= 1.21.0-0 < 1.27.0-0'
     name: reana
     sources:
     - https://github.com/reanahub/reana
@@ -40,8 +40,8 @@ entries:
     - https://github.com/reanahub/www.reana.io
     type: application
     urls:
-    - https://github.com/reanahub/reana/releases/download/0.9.0/reana-0.9.0.tgz
-    version: 0.9.0
+    - https://github.com/reanahub/reana/releases/download/0.9.1-alpha.1/reana-0.9.1-alpha.1.tgz
+    version: 0.9.1-alpha.1
   - apiVersion: v2
     created: "2022-12-06T18:06:38.849371+01:00"
     dependencies:
@@ -1015,4 +1015,4 @@ entries:
     urls:
     - https://github.com/reanahub/reana/releases/download/0.7.0-alpha.1/0.7.0-alpha.1.tgz
     version: 0.7.0-alpha.1
-generated: "2023-01-26T18:02:59.824107105+01:00"
+generated: "2023-03-10T14:07:40.235107+01:00"
