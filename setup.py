@@ -1,6 +1,6 @@
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -43,7 +43,7 @@ install_requires = [
     "click>=7",
     "colorama>=0.3.9",
     "PyYAML>=5.1,<6.0",
-    "semver>=2.10.2",
+    "semver>=2.10.2,<3.0.0",
     "packaging>=20.4",
 ]
 
