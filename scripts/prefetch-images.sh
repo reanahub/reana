@@ -13,8 +13,8 @@ for image in \
         redis:5.0.5 \
         reanahub/reana-job-controller:0.9.1-alpha.1 \
         reanahub/reana-message-broker:0.9.1-alpha.1 \
-        reanahub/reana-server:0.9.1-alpha.1 \
-        reanahub/reana-ui:0.9.1-alpha.1 \
+        reanahub/reana-server:0.9.1-alpha.2 \
+        reanahub/reana-ui:0.9.1-alpha.2 \
         reanahub/reana-workflow-controller:0.9.1-alpha.1 \
         reanahub/reana-workflow-engine-cwl:0.9.1-alpha.1 \
         reanahub/reana-workflow-engine-serial:0.9.1-alpha.1 \

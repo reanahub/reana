@@ -76,12 +76,12 @@ components:
     docs_url: https://docs.reana.io
     forum_url: https://forum.reana.io
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-ui:0.9.1-alpha.1
+    image: reanahub/reana-ui:0.9.1-alpha.2
   reana_db:
     enabled: true
   reana_server:
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-server:0.9.1-alpha.1
+    image: reanahub/reana-server:0.9.1-alpha.2
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
       REANA_SCHEDULER_REQUEUE_SLEEP: 15
