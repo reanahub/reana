@@ -10,6 +10,8 @@ Version 0.9.1 (UNRELEASED)
     - Adds support for Kubernetes clusters 1.26, 1.27.
     - Adds new configuration option ``ingress.extra`` to define extra Ingress resources, in order to support redirecting HTTP requests to HTTPS with traefik v2 version.
     - Adds new configuration option ``ingress.tls.hosts`` to define hosts that are present in the TLS certificate, in order to support cert-manager's automatic creation of certificates.
+    - Adds new configuration option ``notifications.email_config.smtp_ssl`` to use SSL when connecting to the SMTP email server.
+    - Adds new configuration option ``notifications.email_config.smtp_starttls`` to use the STARTTLS command to enable encryption after connecting to the SMTP email server.
     - Changes uWSGI configuration to add vacuuming of generated files and sockets.
     - Fixes uWSGI memory consumption on systems with very high allowed number of open files.
     - Adds new configuration options ``login`` and ``secrets.login`` for configuring Keycloak SSO login with third-party authentication services.

@@ -42,10 +42,6 @@ spec:
             {{- if .Values.debug.enabled }}
             - name: FLASK_ENV
               value:  "development"
-            - name: REANA_EMAIL_SMTP_SERVER
-              value: {{ printf "%s-mail" (include "reana.prefix" .) }}
-            - name: REANA_EMAIL_SMTP_PORT
-              value: "30025"
             {{- else }}
             - name: REANA_DB_USERNAME
               valueFrom:
@@ -57,10 +53,21 @@ spec:
                 secretKeyRef:
                   name: {{ include "reana.prefix" . }}-db-secrets
                   key: password
+            {{- end }}
+            - name: REANA_EMAIL_SENDER
+              value: {{ .Values.notifications.email_config.sender }}
             - name: REANA_EMAIL_SMTP_SERVER
-              value: {{ .Values.notifications.email_config.smtp_server }}
+              value: {{ .Values.notifications.email_config.smtp_server | default (printf "%s-mail" (include "reana.prefix" .)) }}
             - name: REANA_EMAIL_SMTP_PORT
-              value: "{{ .Values.notifications.email_config.smtp_port }}"
+              value: "{{ .Values.notifications.email_config.smtp_port | default "30025" }}"
+            - name: REANA_EMAIL_SMTP_SSL
+              value: {{ .Values.notifications.email_config.smtp_ssl | default "false" | quote }}
+            {{- if .Values.debug.enabled }}
+            - name: REANA_EMAIL_SMTP_STARTTLS
+              value: "false"
+            {{- else }}
+            - name: REANA_EMAIL_SMTP_STARTTLS
+              value: {{ .Values.notifications.email_config.smtp_starttls | default "true" | quote }}
             - name: REANA_EMAIL_LOGIN
               valueFrom:
                 secretKeyRef:
@@ -74,8 +81,6 @@ spec:
             {{- end }}
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
-            - name: REANA_EMAIL_SENDER
-              value: {{ .Values.notifications.email_config.sender }}
             - name: REANA_ADMIN_ACCESS_TOKEN
               valueFrom:
                 secretKeyRef:

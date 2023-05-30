@@ -186,7 +186,14 @@ spec:
             value: {{ .Values.notifications.email_config.smtp_server | default (printf "%s-mail" (include "reana.prefix" .)) }}
           - name: REANA_EMAIL_SMTP_PORT
             value: "{{ .Values.notifications.email_config.smtp_port | default "30025" }}"
-          {{- if not .Values.debug.enabled }}
+          - name: REANA_EMAIL_SMTP_SSL
+            value: {{ .Values.notifications.email_config.smtp_ssl | default "false" | quote }}
+          {{- if .Values.debug.enabled }}
+          - name: REANA_EMAIL_SMTP_STARTTLS
+            value: "false"
+          {{- else }}
+          - name: REANA_EMAIL_SMTP_STARTTLS
+            value: {{ .Values.notifications.email_config.smtp_starttls | default "true" | quote }}
           - name: REANA_EMAIL_LOGIN
             valueFrom:
               secretKeyRef:

@@ -83,6 +83,8 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `notifications.email_config.receiver`                    | Email address which will be receiving the notifications                              | None                                            |
 | `notifications.email_config.sender`                      | Email address which will be sending the notifications                                | None                                            |
 | `notifications.email_config.smtp_server`                 | SMTP email server host                                                               | None                                            |
+| `notifications.email_config.smtp_ssl`                    | Use SSL to connect to SMTP server                                                    | false                                           |
+| `notifications.email_config.smtp_starttls`               | Use STARTTLS command of SMTP to upgrade to an encrypted connection                   | true                                            |
 | `notifications.email_config.smtp_port`                   | SMTP email server port                                                               | None                                            |
 | `notifications.enabled`                                  | Enable REANA system events notifications                                             | false                                           |
 | `notifications.system_status`                            | Cronjob pattern representing how often the system status notification should be sent. Leave it empty to deactivate it | "0 0 * * *"    |
