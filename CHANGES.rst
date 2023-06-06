@@ -14,6 +14,7 @@ Version 0.9.1 (UNRELEASED)
     - Adds new configuration option ``notifications.email_config.smtp_starttls`` to use the STARTTLS command to enable encryption after connecting to the SMTP email server.
     - Changes uWSGI configuration to add vacuuming of generated files and sockets.
     - Fixes uWSGI memory consumption on systems with very high allowed number of open files.
+    - Fixes cronjob failures due to database connection issues when REANA is deployed with non-default namespace or prefix.
     - Adds new configuration options ``login`` and ``secrets.login`` for configuring Keycloak SSO login with third-party authentication services.
 
 Version 0.9.0 (2023-01-26)

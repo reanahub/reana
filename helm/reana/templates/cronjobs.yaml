@@ -148,6 +148,10 @@ spec:
             env:
             - name: REANA_PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
               value: "true"
+            {{- if .Values.reana_hostname }}
+            - name: REANA_HOSTNAME
+              value: {{ .Values.reana_hostname }}
+            {{- end }}
             {{- range $key, $value := .Values.db_env_config }}
             - name: {{ $key }}
               value: {{ $value | quote }}
@@ -167,6 +171,12 @@ spec:
                   name: {{ include "reana.prefix" . }}-db-secrets
                   key: password
             {{- end }}
+            - name: REANA_COMPONENT_PREFIX
+              value: {{ include "reana.prefix" . }}
+            - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
+              value: {{ .Values.namespace_runtime | default .Release.Namespace }}
             volumeMounts:
               {{- if .Values.debug.enabled }}
               - mountPath: /code/
@@ -221,6 +231,10 @@ spec:
             stdin: true
             {{- end }}
             env:
+            {{- if .Values.reana_hostname }}
+            - name: REANA_HOSTNAME
+              value: {{ .Values.reana_hostname }}
+            {{- end }}
             {{- range $key, $value := .Values.db_env_config }}
             - name: {{ $key }}
               value: {{ $value | quote }}
@@ -240,6 +254,12 @@ spec:
                   name: {{ include "reana.prefix" . }}-db-secrets
                   key: password
             {{- end }}
+            - name: REANA_COMPONENT_PREFIX
+              value: {{ include "reana.prefix" . }}
+            - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
+              value: {{ .Values.namespace_runtime | default .Release.Namespace }}
             volumeMounts:
               {{- if .Values.debug.enabled }}
               - mountPath: /code/
@@ -318,6 +338,12 @@ spec:
                   name: {{ include "reana.prefix" . }}-db-secrets
                   key: password
             {{- end }}
+            - name: REANA_COMPONENT_PREFIX
+              value: {{ include "reana.prefix" . }}
+            - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
+              value: {{ .Values.namespace_runtime | default .Release.Namespace }}
             volumeMounts:
               {{- if .Values.debug.enabled }}
               - mountPath: /code/
