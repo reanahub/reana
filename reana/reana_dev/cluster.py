@@ -344,10 +344,9 @@ def cluster_deploy(
         if "reana-ui" in standard_named_exclude_components:
             values_dict["components"]["reana_ui"]["enabled"] = False
 
-    helm_install = "cat <<EOF | helm install reana helm/reana -n {namespace} --create-namespace --wait -f -\n{values}\nEOF".format(
-        namespace=namespace,
-        values=values_dict and yaml.dump(values_dict) or "",
-    )
+    values_yaml = yaml.dump(values_dict) if values_dict else ""
+    helm_install = f"cat <<EOF | helm install {instance_name} helm/reana -n {namespace} --create-namespace --wait -f -\n{values_yaml}\nEOF"
+
     cmds = []
     if mode in ("debug"):
         cmds.append("reana-dev python-install-eggs")
@@ -356,7 +355,7 @@ def cluster_deploy(
         [
             "helm dep update helm/reana",
             helm_install,
-            "kubectl config set-context --current --namespace={}".format(namespace),
+            f"kubectl config set-context --current --namespace={namespace}",
             os.path.join(
                 get_srcdir("reana"),
                 f"scripts/create-admin-user.sh {namespace} {instance_name} {admin_email} {admin_password}",
@@ -368,13 +367,23 @@ def cluster_deploy(
 
 
 @cluster_commands.command(name="cluster-undeploy")
-def cluster_undeploy():  # noqa: D301
+@click.option(
+    "--namespace", "-n", default="default", help="Kubernetes namespace [default]"
+)
+@click.option(
+    "--instance-name",
+    default="reana",
+    help="REANA instance name",
+)
+def cluster_undeploy(namespace, instance_name):  # noqa: D301
     """Undeploy REANA cluster."""
-    is_deployed = run_command("helm ls", "reana", return_output=True)
-    if "reana" in is_deployed:
+    helm_releases = run_command(
+        f"helm ls --short -n {namespace}", "reana", return_output=True
+    ).splitlines()
+    if instance_name in helm_releases:
         for cmd in [
-            "helm uninstall reana -n default",
-            "kubectl get secrets -o custom-columns=':metadata.name' | grep reana | xargs kubectl delete secret",
+            f"helm uninstall {instance_name} -n {namespace}",
+            f"kubectl get secrets -n {namespace} -o custom-columns=':metadata.name' | grep {instance_name} | xargs kubectl delete secret -n {namespace}",
             "docker exec -i -t kind-control-plane sh -c '/bin/rm -rf /var/reana/*'",
         ]:
             run_command(cmd, "reana")
