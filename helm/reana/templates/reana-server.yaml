@@ -86,6 +86,8 @@ spec:
           {{- end }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_TIMEOUT_LIMIT
             value: !!str {{ .Values.kubernetes_jobs_max_user_timeout_limit | default 1209600 }}  # 1209600 seconds = 14 days
+          - name: REANA_INTERACTIVE_SESSION_MAX_INACTIVITY_PERIOD
+            value: {{ .Values.interactive_sessions.maximum_inactivity_period | default "forever" | quote }}
           - name: REANA_KUBERNETES_JOBS_TIMEOUT_LIMIT
             value: !!str {{ .Values.kubernetes_jobs_timeout_limit | default 604800 }}  # 604800 seconds = 7 days
           - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
