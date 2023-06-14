@@ -18,7 +18,7 @@ Version 0.9.1 (UNRELEASED)
     - Fixes ``ingress.enabled`` option to correctly enable or disable the creation of Ingresses.
     - Adds new configuration options ``login`` and ``secrets.login`` for configuring Keycloak SSO login with third-party authentication services.
 - Developers:
-    - Fixes ``cluster-deploy`` and ``cluster-undeploy`` commands when using custom instance name or kubernetes namespace.
+    - Fixes ``cluster-deploy``, ``cluster-undeploy`` and ``client-setup-environment`` commands when using custom instance name or kubernetes namespace.
 
 Version 0.9.0 (2023-01-26)
 --------------------------

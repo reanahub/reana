@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2022 CERN.
+# Copyright (C) 2020, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -47,7 +47,13 @@ def client_uninstall():  # noqa: D301
 @client_commands.command(name="client-setup-environment")
 @click.option("--server-hostname", help="Set customized REANA Server hostname.")
 @click.option("--insecure-url", is_flag=True, help="REANA Server URL with HTTP.")
-def client_setup_environment(server_hostname, insecure_url):  # noqa: D301
+@click.option(
+    "--namespace", "-n", default="default", help="Kubernetes namespace [default]"
+)
+@click.option("--instance-name", default="reana", help="REANA instance name")
+def client_setup_environment(
+    server_hostname, insecure_url, namespace, instance_name
+):  # noqa: D301
     """Display commands to set up shell environment for local cluster.
 
     Display commands how to set up REANA_SERVER_URL and REANA_ACCESS_TOKEN
@@ -63,7 +69,7 @@ def client_setup_environment(server_hostname, insecure_url):  # noqa: D301
                 env_var_value=server_hostname or "https://localhost:30443",
             )
         )
-        get_access_token_cmd = "kubectl get secret -o json reana-admin-access-token"
+        get_access_token_cmd = f"kubectl get secret -n {namespace} -o json {instance_name}-admin-access-token"
         secret_json = json.loads(
             subprocess.check_output(get_access_token_cmd, shell=True).decode()
         )
