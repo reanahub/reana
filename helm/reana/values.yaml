@@ -76,12 +76,12 @@ components:
     docs_url: https://docs.reana.io
     forum_url: https://forum.reana.io
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-ui:0.9.1-alpha.2
+    image: reanahub/reana-ui:0.9.1-alpha.3
   reana_db:
     enabled: true
   reana_server:
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-server:0.9.1-alpha.2
+    image: reanahub/reana-server:0.9.1-alpha.3
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
       REANA_SCHEDULER_REQUEUE_SLEEP: 15
@@ -100,7 +100,7 @@ components:
       log_5xx: true
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
-    image: reanahub/reana-workflow-controller:0.9.1-alpha.1
+    image: reanahub/reana-workflow-controller:0.9.1-alpha.2
     environment:
       SHARED_VOLUME_PATH: /var/reana
       REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 10
@@ -113,7 +113,7 @@ components:
   reana_workflow_engine_snakemake:
     image: reanahub/reana-workflow-engine-snakemake:0.9.1-alpha.1
   reana_job_controller:
-    image: reanahub/reana-job-controller:0.9.1-alpha.1
+    image: reanahub/reana-job-controller:0.9.1-alpha.2
   reana_message_broker:
     imagePullPolicy: IfNotPresent
     image: reanahub/reana-message-broker:0.9.1-alpha.1
