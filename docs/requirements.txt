@@ -5,4 +5,3 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 
 -e .[all]
-urllib3<2.0.0

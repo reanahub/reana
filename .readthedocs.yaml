@@ -1,0 +1,19 @@
+# This file is part of REANA.
+# Copyright (C) 2023 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
+
+version: 2
+
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.8"
+
+sphinx:
+  configuration: docs/conf.py
+
+python:
+  install:
+    - requirements: docs/requirements.txt
