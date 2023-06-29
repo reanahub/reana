@@ -86,6 +86,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "reana.prefix" . }}-admin-access-token
                   key: ADMIN_ACCESS_TOKEN
+            - name: REANA_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-secrets
+                  key: REANA_SECRET_KEY
             - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
               value: {{ .Release.Namespace }}
             - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
@@ -256,6 +261,16 @@ spec:
             {{- end }}
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
+            - name: REANA_ADMIN_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-admin-access-token
+                  key: ADMIN_ACCESS_TOKEN
+            - name: REANA_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-secrets
+                  key: REANA_SECRET_KEY
             - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
               value: {{ .Release.Namespace }}
             - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
@@ -340,6 +355,16 @@ spec:
             {{- end }}
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
+            - name: REANA_ADMIN_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-admin-access-token
+                  key: ADMIN_ACCESS_TOKEN
+            - name: REANA_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-secrets
+                  key: REANA_SECRET_KEY
             - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
               value: {{ .Release.Namespace }}
             - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
