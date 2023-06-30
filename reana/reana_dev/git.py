@@ -322,9 +322,22 @@ def git_commands():
 @click.option(
     "--browser", "-b", default="firefox", help="Which browser to use? [firefox]"
 )
+@click.option(
+    "--automatic",
+    is_flag=True,
+    default=False,
+    help="Use GitHub CLI for automatic forking.",
+)
 @git_commands.command(name="git-fork")
-def git_fork(component, exclude_components, browser):  # noqa: D301
-    """Display commands to fork REANA source code repositories on GitHub.
+def git_fork(component, exclude_components, browser, automatic):  # noqa: D301
+    """Display the commands to fork REANA source code repositories.
+
+    By default, the command will display the commands to fork the selected REANA
+    components, and prompt you to complete the process in the browser.
+    You can also use the ``--automatic`` flag to use GitHub CLI for automatic
+    forking, skipping the browser step.
+    Note that this command does not clone the forked repositories: to do that,
+    use the ``reana-dev git-clone`` command.
 
     \b
     :param components: The option ``component`` can be repeated. The value may
@@ -344,14 +357,17 @@ def git_fork(component, exclude_components, browser):  # noqa: D301
                                all REANA repositories.
     :param exclude_components: List of components to exclude.
     :param browser: The web browser to use. [default=firefox]
+    :param automatic: Use GitHub CLI for automatic forking. [default=False]
     :type component: str
     :type exclude_components: str
     :type browser: str
+    :type automatic: bool
     """
     if exclude_components:
         exclude_components = exclude_components.split(",")
     components = select_components(component, exclude_components)
-    if components:
+
+    if components and not automatic:
         click.echo("# Fork REANA repositories on GitHub using your browser.")
         click.echo(
             "# Run the following eval and then complete the fork"
@@ -363,12 +379,27 @@ def git_fork(component, exclude_components, browser):  # noqa: D301
                 browser, "".join([" -c {0}".format(c) for c in component])
             )
         )
+
     for component in components:
-        cmd = "{0} https://github.com/reanahub/{1}/fork;".format(browser, component)
-        click.echo(cmd)
-    click.echo(
-        'echo "Please continue the fork process in the opened' ' browser windows."'
-    )
+        if automatic:
+            cmd = f"gh repo fork reanahub/{component} --clone=false"
+            run_command(cmd)
+            display_message(
+                f"Repository {component} forked successfully using GitHub CLI.",
+                component,
+            )
+        else:
+            click.echo(f"{browser} https://github.com/reanahub/{component}/fork;")
+
+    if components:
+        if not automatic:
+            click.echo(
+                'echo "Please continue the fork process in the opened browser windows."'
+            )
+        else:
+            click.echo(
+                "All repositories forked successfully. You can clone them locally with reana-dev git-clone."
+            )
 
 
 @click.option("--user", "-u", default="anonymous", help="GitHub user name [anonymous]")
@@ -754,7 +785,7 @@ def git_checkout_pr(branch, fetch):  # noqa: D301
     \b
     :param branch: The option ``branch`` can be repeated. The value consist of
                    two strings specifying the component name and the pull
-                   request number. For example, ``-b reana-workflow-controler
+                   request number. For example, ``-b reana-workflow-controller
                    72`` will create a local branch called ``pr-72`` in the
                    reana-workflow-controller source code directory.
     :param fetch: Should we fetch latest upstream first? [default=False]
@@ -796,7 +827,7 @@ def git_merge(branch, base, push):  # noqa: D301
     \b
     :param branch: The option ``branch`` can be repeated. The value consist of
                    two strings specifying the component name and the pull
-                   request number. For example, ``-b reana-workflow-controler
+                   request number. For example, ``-b reana-workflow-controller
                    72`` will merge a local branch called ``pr-72`` from the
                    reana-workflow-controller to the base branch.
     :param base: Against which git base branch are we working on? [default=master]
@@ -1404,9 +1435,23 @@ def git_create_release_commit_command(
     default="",
     help="Which components to exclude? [c1,c2,c3]",
 )
+@click.option(
+    "--fill",
+    "-f",
+    is_flag=True,
+    default=False,
+    help="Do not prompt for title/body but use commit info",
+)
+@click.option(
+    "--web",
+    "-w",
+    is_flag=True,
+    default=False,
+    help="Open the web browser to create a pull request",
+)
 @git_commands.command(name="git-create-pr")
 @click_add_git_base_branch_option
-def git_create_pr_command(component, exclude_components, base):  # noqa: D301
+def git_create_pr_command(component, exclude_components, base, fill, web):  # noqa: D301
     """Create a GitHub pull request for each selected component.
 
     \b
@@ -1427,17 +1472,26 @@ def git_create_pr_command(component, exclude_components, base):  # noqa: D301
                                all REANA repositories.
     :param exclude_components: List of components to exclude.
     :param base: Against which git base branch are we working on? [default=master]
+    :param fill: Whether to use commit info as title/body or prompt for it
+    :param web: Whether to open the web browser to create a pull request
     :type component: str
     :type exclude_components: str
     :type base: str
+    :type fill: bool
+    :type web: bool
     """
 
-    def _git_create_pr(comp):
+    def _git_create_pr(comp, fill, web):
         """Create a pull request for the provided component."""
+        extra_args = ""
+        if fill:
+            extra_args += " --fill"
+        if web:
+            extra_args += " --web"
         for cmd in [
-            "git push origin HEAD",
-            "hub pull-request -p --no-edit",
-            "hub pr list -L 1",
+            "git push --set-upstream origin HEAD",
+            "gh pr create -R reanahub/{} --base {} {}".format(comp, base, extra_args),
+            "gh pr list",
         ]:
             run_command(cmd, component)
 
@@ -1445,7 +1499,9 @@ def git_create_pr_command(component, exclude_components, base):  # noqa: D301
         exclude_components = exclude_components.split(",")
     components = select_components(component, exclude_components)
     for component in components:
-        if not is_feature_branch(component):  # replace with is_feature_branch from #371
+        if not is_feature_branch(
+            component, base
+        ):  # replace with is_feature_branch from #371
             display_message(
                 "You are trying to create PR but the current branch is base branch {}, please "
                 "switch to the wanted feature branch.".format(base),
@@ -1463,7 +1519,7 @@ def git_create_pr_command(component, exclude_components, base):  # noqa: D301
                 )
                 sys.exit(1)
 
-            _git_create_pr(component)
+            _git_create_pr(component, fill, web)
 
 
 @click.option(
