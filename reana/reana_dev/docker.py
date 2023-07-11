@@ -158,7 +158,9 @@ def docker_build(
                 cmd += " --no-cache"
             if quiet or parallel > 1:
                 cmd += " --quiet"
-            component_version_tag = "{0}/{1}:{2}".format(user, component, component_tag)
+            component_version_tag = "docker.io/{0}/{1}:{2}".format(
+                user, component, component_tag
+            )
             cmd += " -t {0} .".format(component_version_tag)
             commands.append((_run_command, (cmd, component)))
             built_components_versions_tags.append(component_version_tag)

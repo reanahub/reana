@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
       - name: wdb
-        image: kozea/wdb:3.2.5
+        image: docker.io/kozea/wdb:3.2.5
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 1984

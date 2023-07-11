@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -79,7 +79,7 @@ def kind_load_docker_image(user, component, node, exclude_components):  # noqa: 
                     cmd = f"{cmd} --nodes {','.join(node)}"
                 run_command(cmd, component)
         elif is_component_dockerised(component):
-            cmd = "kind load docker-image {0}/{1}".format(user, component)
+            cmd = "kind load docker-image docker.io/{0}/{1}".format(user, component)
             if node:
                 cmd = f"{cmd} --nodes {','.join(node)}"
             run_command(cmd, component)

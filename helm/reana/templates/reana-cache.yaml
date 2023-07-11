@@ -30,7 +30,7 @@ spec:
     spec:
       containers:
       - name: cache
-        image: redis:5.0.5
+        image: docker.io/library/redis:5.0.5
         ports:
         - containerPort: 6379
       {{- if .Values.node_label_infrastructure }}

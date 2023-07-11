@@ -157,10 +157,17 @@ def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D3
             "podSubnet": "192.168.0.0/16",
         }
 
-    cluster_create = "cat <<EOF | kind create cluster --config=-\n{cluster_config}\nEOF"
-    cluster_create = cluster_create.format(cluster_config=yaml.dump(cluster_config))
+    # detect user container technology (Docker vs Podman)
+    kind_provider = ""
+    docker_version_output = run_command("docker version", return_output=True)
+    if docker_version_output and "Podman Engine" in docker_version_output:
+        kind_provider = "KIND_EXPERIMENTAL_PROVIDER=podman"
 
     # create cluster
+    cluster_create = "cat <<EOF | {kind_provider} kind create cluster --config=-\n{cluster_config}\nEOF"
+    cluster_create = cluster_create.format(
+        kind_provider=kind_provider, cluster_config=yaml.dump(cluster_config)
+    )
     run_command(cluster_create, "reana")
 
     # pull Docker images

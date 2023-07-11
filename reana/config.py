@@ -213,39 +213,39 @@ COMPONENTS_USING_SHARED_MODULE_DB = [
 
 DOCKER_PREFETCH_IMAGES = {
     "reana": [
-        "postgres:12.13",
-        "kozea/wdb:3.2.5",
-        "maildev/maildev:1.1.0",
-        "redis:5.0.5",
+        "docker.io/library/postgres:12.13",
+        "docker.io/kozea/wdb:3.2.5",
+        "docker.io/maildev/maildev:1.1.0",
+        "docker.io/library/redis:5.0.5",
     ],
     "reana-demo-helloworld": [
-        "python:2.7-slim",
+        "docker.io/library/python:2.7-slim",
     ],
     "reana-demo-worldpopulation": [
-        "reanahub/reana-env-jupyter:2.0.0",
+        "docker.io/reanahub/reana-env-jupyter:2.0.0",
     ],
     "reana-demo-root6-roofit": [
-        "reanahub/reana-env-root6:6.18.04",
+        "docker.io/reanahub/reana-env-root6:6.18.04",
     ],
     "reana-demo-atlas-recast": [
-        "reanahub/reana-demo-atlas-recast-eventselection:1.0",
-        "reanahub/reana-demo-atlas-recast-statanalysis:1.0",
+        "docker.io/reanahub/reana-demo-atlas-recast-eventselection:1.0",
+        "docker.io/reanahub/reana-demo-atlas-recast-statanalysis:1.0",
     ],
     "reana-demo-bsm-search": [
-        "reanahub/reana-demo-bsm-search:1.0.0",
-        "reanahub/reana-env-root6:6.18.04",
+        "docker.io/reanahub/reana-demo-bsm-search:1.0.0",
+        "docker.io/reanahub/reana-env-root6:6.18.04",
     ],
     "reana-demo-cms-h4l": [
-        "cmsopendata/cmssw_5_3_32",
+        "docker.io/cmsopendata/cmssw_5_3_32",
     ],
     "reana-demo-cms-dimuon-mass-spectrum": [
-        "cmsopendata/cmssw_5_3_32",
+        "docker.io/cmsopendata/cmssw_5_3_32",
     ],
     "reana-demo-alice-pt-analysis": [
-        "reanahub/reana-env-aliphysics:vAN-20180614-1",
+        "docker.io/reanahub/reana-env-aliphysics:vAN-20180614-1",
     ],
     "reana-demo-alice-lego-train-test-run": [
-        "reanahub/reana-env-aliphysics:vAN-20180614-1",
+        "docker.io/reanahub/reana-env-aliphysics:vAN-20180614-1",
     ],
 }
 """Images to be prefetched depending on the REANA demo to be executed."""
