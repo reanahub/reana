@@ -42,7 +42,7 @@ for key, reqs in extras_require.items():
 install_requires = [
     "click>=7",
     "colorama>=0.3.9",
-    "PyYAML>=5.1,<6.0",
+    "PyYAML>=5.1,<7.0",
     "semver>=2.10.2,<3.0.0",
     "packaging>=20.4",
 ]
