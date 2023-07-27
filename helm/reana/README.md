@@ -31,6 +31,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_server.uwsgi.log_5xx`                  | Log only error HTTP requests with status code 5xx. To make this configuration effective `components.reana_server.uwsgi.log_all` must be false. | true |
 | `components.reana_ui.announcement`                       | Announcement message displayed in site top banner                                    | None                                            |
 | `components.reana_ui.enabled`                            | Instantiate the [REANA-UI](https://github.com/reanahub/reana-ui)                     | true                                            |
+| `components.reana_ui.file_preview_size_limit`            | Maximum file size (in bytes) that can be previewed in the web interface. Default value: 5242880 bytes = 5 MiB | 5242880                |
 | `components.reana_ui.image`                              | [REANA-UI image](https://hub.docker.com/r/reanahub/reana-ui) to use                  | `docker.io/reanahub/reana-ui:<chart-release-version>`     |
 | `components.reana_ui.imagePullPolicy`                    | REANA-UI image pull policy                                                           | IfNotPresent                                    |
 | `components.reana_ui.polling_secs`                       | Frequency of workflow list page reload in seconds                                    | 15                                              |

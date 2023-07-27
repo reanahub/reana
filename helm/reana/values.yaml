@@ -75,6 +75,7 @@ components:
     enabled: true
     docs_url: https://docs.reana.io
     forum_url: https://forum.reana.io
+    file_preview_size_limit: 5242880  # 5 * 1024**2 = 5 MiB
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-ui:0.9.1-alpha.3
   reana_db:

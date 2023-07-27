@@ -12,6 +12,7 @@ Version 0.9.1 (UNRELEASED)
     - Adds new configuration option ``ingress.tls.hosts`` to define hosts that are present in the TLS certificate, in order to support cert-manager's automatic creation of certificates.
     - Adds new configuration option ``notifications.email_config.smtp_ssl`` to use SSL when connecting to the SMTP email server.
     - Adds new configuration option ``notifications.email_config.smtp_starttls`` to use the STARTTLS command to enable encryption after connecting to the SMTP email server.
+    - Adds new configuration option ``components.reana_ui.file_preview_size_limit`` to set the maximum file size that can be previewed in the web interface.
     - Changes uWSGI configuration to add vacuuming of generated files and sockets.
     - Fixes uWSGI memory consumption on systems with very high allowed number of open files.
     - Fixes cronjob failures due to database connection issues when REANA is deployed with non-default namespace or prefix.

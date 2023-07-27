@@ -33,3 +33,4 @@ data:
     user_confirmation: false
     {{- end }}
     quota_enabled: {{ .Values.quota.enabled }}
+    file_preview_size_limit: {{ int .Values.components.reana_ui.file_preview_size_limit }}
