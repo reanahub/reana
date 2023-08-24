@@ -181,6 +181,8 @@ spec:
                 name: {{ include "reana.prefix" . }}-db-secrets
                 key: password
           {{- end }}
+          - name: REANA_NOTIFICATIONS_ENABLED
+            value: "{{ .Values.notifications.enabled }}"
           {{- if .Values.notifications.enabled }}
           - name: REANA_EMAIL_SENDER
             value: {{ .Values.notifications.email_config.sender }}

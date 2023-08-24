@@ -87,7 +87,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `notifications.email_config.smtp_ssl`                    | Use SSL to connect to SMTP server                                                    | false                                           |
 | `notifications.email_config.smtp_starttls`               | Use STARTTLS command of SMTP to upgrade to an encrypted connection                   | true                                            |
 | `notifications.email_config.smtp_port`                   | SMTP email server port                                                               | None                                            |
-| `notifications.enabled`                                  | Enable REANA system events notifications                                             | false                                           |
+| `notifications.enabled`                                  | Enable REANA system events notifications. For more information, visit the [documentation page](https://docs.reana.io/administration/configuration/configuring-access/) on user sign up. | false |
 | `notifications.system_status`                            | Cronjob pattern representing how often the system status notification should be sent. Leave it empty to deactivate it | "0 0 * * *"    |
 | `reana_hostname`                                         | REANA hostname (e.g. reana.example.org)                                              | None                                            |
 | `namespace_runtime`                                      | Namespace in which the REANA runtime pods (workflow engines, jobs etc...) will run   | `.Release.Namespace`                            |
