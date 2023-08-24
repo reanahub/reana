@@ -147,7 +147,7 @@ EXAMPLE_NON_STANDARD_REANA_YAML_FILENAME = {
     },
     "reana-demo-cms-h4l": {
         "snakemake": {
-            "kubernetes": "reana-snakemake.yaml",
+            "kubernetes": "reana.yaml",
         }
     },
 }
