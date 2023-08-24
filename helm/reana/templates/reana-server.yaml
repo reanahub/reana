@@ -184,6 +184,8 @@ spec:
           - name: REANA_NOTIFICATIONS_ENABLED
             value: "{{ .Values.notifications.enabled }}"
           {{- if .Values.notifications.enabled }}
+          - name: REANA_EMAIL_RECEIVER
+            value: {{ .Values.notifications.email_config.receiver }}
           - name: REANA_EMAIL_SENDER
             value: {{ .Values.notifications.email_config.sender }}
           - name: REANA_EMAIL_SMTP_SERVER
