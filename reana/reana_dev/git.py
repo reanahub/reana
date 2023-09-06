@@ -1361,7 +1361,7 @@ def git_tag(component, exclude_components):  # noqa: D301
             sys.exit(1)
 
         current_version = get_current_component_version_from_source_files(component)
-        run_command(f"git tag {current_version}")
+        run_command(f"git tag {current_version}", component=component)
 
 
 git_commands_list = list(git_commands.commands.values())
