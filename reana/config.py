@@ -114,6 +114,16 @@ REPO_LIST_CLUSTER = (
 )
 """List of git repositories related to cluster components."""
 
+REPO_LIST_PYTHON_REQUIREMENTS = [
+    "reana-server",
+    "reana-workflow-controller",
+    "reana-job-controller",
+    "reana-workflow-engine-cwl",
+    "reana-workflow-engine-serial",
+    "reana-workflow-engine-yadage",
+    "reana-workflow-engine-snakemake",
+]
+"""List of cluster components that have a Python requirements file."""
 
 WORKFLOW_ENGINE_LIST_ALL = ["cwl", "serial", "yadage", "snakemake"]
 """List of supported workflow engines."""
@@ -268,6 +278,9 @@ JAVASCRIPT_VERSION_FILE = "package.json"
 PYTHON_VERSION_FILE = "version.py"
 """Python package version file."""
 
+PYTHON_REQUIREMENTS_FILE = "requirements.txt"
+"""Python requirements file."""
+
 GIT_DEFAULT_BASE_BRANCH = "master"
 """Default git base branch we shall be working against."""
 
@@ -279,3 +292,6 @@ GITHUB_REANAHUB_URL = "https://github.com/reanahub"
 
 CODECOV_REANAHUB_URL = "https://codecov.io/gh/reanahub"
 """REANA Hub organisation Codecov URL."""
+
+PYTHON_DOCKER_IMAGE = "docker.io/library/python:3.8"
+"""Python docker image with same version as cluster components."""

@@ -19,7 +19,9 @@ from reana.config import (
     COMPONENTS_USING_SHARED_MODULE_COMMONS,
     COMPONENTS_USING_SHARED_MODULE_DB,
     GIT_DEFAULT_BASE_BRANCH,
+    PYTHON_REQUIREMENTS_FILE,
     REPO_LIST_ALL,
+    REPO_LIST_PYTHON_REQUIREMENTS,
     REPO_LIST_SHARED,
 )
 from reana.reana_dev.utils import (
@@ -33,6 +35,7 @@ from reana.reana_dev.utils import (
     run_command,
     select_components,
     update_module_in_cluster_components,
+    upgrade_requirements,
     validate_directory,
 )
 
@@ -1184,6 +1187,63 @@ def git_upgrade_shared_modules(
     ctx.invoke(git_diff, component=component)
     if push:
         git_push_to_origin(components)
+
+
+@git_commands.command(name="git-upgrade-requirements")
+@click.option(
+    "--component",
+    "-c",
+    multiple=True,
+    default=["CLUSTER"],
+    help="Which components? [shortname|name|.|CLUSTER|ALL]",
+)
+@click.option(
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
+)
+@click.pass_context
+def git_upgrade_requirements(ctx, component, exclude_components):  # noqa: D301
+    """Upgrade Python dependencies for selected components.
+
+    \b
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :param exclude_components: List of components to exclude.
+    :type component: str
+    :type exclude_components: str
+    """
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    components = select_components(component, exclude_components)
+    components = sorted(set(components).intersection(REPO_LIST_PYTHON_REQUIREMENTS))
+
+    for component in components:
+        if not is_feature_branch(component):
+            display_message(
+                f"Current branch is {GIT_DEFAULT_BASE_BRANCH}. "
+                "Please switch to a feature branch.",
+                component,
+            )
+            sys.exit(1)
+        if upgrade_requirements(component):
+            run_command(f"git add {PYTHON_REQUIREMENTS_FILE}", component)
+            run_command(
+                'git commit -m "installation: bump all dependencies"', component
+            )
 
 
 @click.option(

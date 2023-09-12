@@ -32,6 +32,8 @@ from reana.config import (
     HELM_VERSION_FILE,
     JAVASCRIPT_VERSION_FILE,
     OPENAPI_VERSION_FILE,
+    PYTHON_DOCKER_IMAGE,
+    PYTHON_REQUIREMENTS_FILE,
     PYTHON_VERSION_FILE,
     REPO_LIST_ALL,
     REPO_LIST_CLIENT,
@@ -576,6 +578,43 @@ def update_module_in_cluster_components(
             bold=True,
             fg="green",
         )
+
+
+def upgrade_requirements(component: str) -> bool:
+    """Update the Python requirements file using pip-compile."""
+    requirements_path = os.path.join(get_srcdir(component), PYTHON_REQUIREMENTS_FILE)
+    if not os.path.exists(requirements_path):
+        display_message(f"File {PYTHON_REQUIREMENTS_FILE} not found.", component)
+        return False
+
+    pip_compile_cmd = None
+    with open(requirements_path) as requirements_file:
+        # find pip-compile command contained in requirements.txt
+        for line in requirements_file:
+            stripped_line = line.lstrip("#").strip()
+            if stripped_line.startswith("pip-compile"):
+                pip_compile_cmd = stripped_line
+                break
+
+    if not pip_compile_cmd:
+        display_message(
+            f"File {PYTHON_REQUIREMENTS_FILE} does not contain a valid pip-compile command.",
+            component,
+        )
+        return False
+
+    executable, *options = pip_compile_cmd.split()
+    if "annotation-style" not in pip_compile_cmd:
+        options = ["--annotation-style=line"] + options
+    options.append("-U")
+    pip_compile_cmd = " ".join([executable] + options)
+
+    docker_cmd = (
+        f"docker run --rm -it -v {get_srcdir(component)}:/code:z {PYTHON_DOCKER_IMAGE} "
+        f"bash -c 'cd /code && pip install --upgrade pip-tools setuptools pip && {pip_compile_cmd}'"
+    )
+    run_command(docker_cmd, component)
+    return True
 
 
 def get_component_version_files(component, abs_path=False) -> Dict[str, str]:
