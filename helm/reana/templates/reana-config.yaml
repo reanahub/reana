@@ -34,3 +34,11 @@ data:
     {{- end }}
     quota_enabled: {{ .Values.quota.enabled }}
     file_preview_size_limit: {{ int .Values.components.reana_ui.file_preview_size_limit }}
+    launcher_examples:
+    {{- range .Values.components.reana_ui.launcher_examples | default (list) }}
+    - name: {{ .name | quote }}
+      description: {{ .description | quote }}
+      url: {{ .url | quote }}
+      image_url: {{ .image_url | quote }}
+      specification: {{ .specification | quote }}
+    {{- end }}
