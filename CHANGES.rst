@@ -17,6 +17,7 @@ Version 0.9.1 (UNRELEASED)
     - Fixes uWSGI memory consumption on systems with very high allowed number of open files.
     - Fixes cronjob failures due to database connection issues when REANA is deployed with non-default namespace or prefix.
     - Fixes ``ingress.enabled`` option to correctly enable or disable the creation of Ingresses.
+    - Fixes graceful shutdown for reana-server and reana-workflow-controller.
     - Adds new configuration options ``login`` and ``secrets.login`` for configuring Keycloak SSO login with third-party authentication services.
 - Developers:
     - Fixes ``cluster-deploy``, ``cluster-undeploy`` and ``client-setup-environment`` commands when using custom instance name or kubernetes namespace.

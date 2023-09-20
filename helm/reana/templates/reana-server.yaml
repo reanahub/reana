@@ -43,8 +43,8 @@ spec:
         tty: true
         stdin: true
         {{- else }}
-        command: ["/bin/sh", "-c"]
-        args: ["uwsgi --ini /var/reana/uwsgi/uwsgi.ini"]
+        # do not use "/bin/sh -c" here as that breaks signal propagation
+        command: ["uwsgi", "--ini", "/var/reana/uwsgi/uwsgi.ini"]
         {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
