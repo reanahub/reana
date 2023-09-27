@@ -1,27 +1,91 @@
 Changes
 =======
 
-Version 0.9.1 (UNRELEASED)
+Version 0.9.1 (2023-09-27)
 --------------------------
 
+- Users:
+    - Adds support for Python 3.12.
+    - Adds support for previewing PDF files present in a workflow's workspace.
+    - Adds support for previewing ROOT files present in a workflow's workspace.
+    - Adds support for signing-in with a custom third-party Keycloak instance.
+    - Adds a new menu item to the workflow actions popup to allow stopping running workflows.
+    - Adds ``prune`` command to delete all intermediate files of a given workflow. Use with care.
+    - Changes the deletion of a workflow to automatically delete an open interactive session attached to its workspace.
+    - Changes the workflow deletion message to clarify that attached interactive sessions are also closed when a workflow is deleted.
+    - Changes the workflow progress bar to always display it as completed for finished workflows.
+    - Changes the interactive session notification to also report that the session will be closed after a specified number of days of inactivity.
+    - Changes the workflow-details page to make it possible to scroll through the list of workflow steps in the job logs section.
+    - Changes the workflow-details page to not automatically refresh the selected job when viewing the related logs, but keeping the user-selected one active.
+    - Changes the page titles to conform to the same sentence case style.
+    - Changes the launcher page to show warnings when validating the REANA specification file of the workflow to be launched.
+    - Changes ``open`` command to inform user about the auto-closure of interactive sessions after a certain inactivity timeout.
+    - Changes ``validate`` command to display non-critical validation warnings when checking the REANA specification file.
+    - Changes Rucio authentication helper to allow users to override the Rucio server and authentication hosts independently of VO name.
+    - Fixes job status inconsistency when stopping a workflow by setting the job statuses to ``stopped`` for any running jobs.
+    - Fixes calculation of workflow runtime durations for stopped workflows.
+    - Fixes ``list`` command to correctly list workflows when sorting them by their run number or by the size of their workspace.
+    - Fixes ``du`` command help message typo.
+    - Fixes ``validation --environments`` command to correctly handle fully-qualified image names.
+    - Fixes deletion of failed jobs not being performed when Kerberos is enabled.
+    - Fixes job monitoring to consider OOM-killed jobs as failed.
+    - Fixes detection of default Rucio server and authentication host for ATLAS VO.
+    - Fixes the reported total number of jobs for restarted workflows by excluding cached jobs that were simply reused from previous runs in the workspace and not really executed by Snakemake.
+    - Fixes an issue where Snakemake workflows could get stuck waiting for already-finished jobs.
 - Administrators:
+    - Adds support for Kubernetes clusters 1.26, 1.27, 1.28.
     - Adds new configuration option ``components.reana_ui.launcher_examples`` to customise the demo examples that are shown in the launch page in the REANA UI.
     - Adds new configuration option ``interactive_sessions.maximum_inactivity_period`` to set a limit in days for the maximum inactivity period of interactive sessions after which they will be closed.
     - Adds new configuration option ``interactive_sessions.cronjob_schedule`` to set how often interactive session cleanup should be performed.
-    - Adds support for Kubernetes clusters 1.26, 1.27, 1.28.
     - Adds new configuration option ``ingress.extra`` to define extra Ingress resources, in order to support redirecting HTTP requests to HTTPS with traefik v2 version.
     - Adds new configuration option ``ingress.tls.hosts`` to define hosts that are present in the TLS certificate, in order to support cert-manager's automatic creation of certificates.
     - Adds new configuration option ``notifications.email_config.smtp_ssl`` to use SSL when connecting to the SMTP email server.
     - Adds new configuration option ``notifications.email_config.smtp_starttls`` to use the STARTTLS command to enable encryption after connecting to the SMTP email server.
     - Adds new configuration option ``components.reana_ui.file_preview_size_limit`` to set the maximum file size that can be previewed in the web interface.
-    - Changes uWSGI configuration to add vacuuming of generated files and sockets.
+    - Adds new configuration options ``login`` and ``secrets.login`` for configuring Keycloak SSO login with third-party authentication services.
+    - Adds new ``interactive-session-cleanup`` command that can be used by REANA administrators to close interactive sessions that are inactive for more than the specified number of days.
+    - Adds progress meter to the logs of the periodic quota updater.
+    - Adds the content of the ``secrets.gitlab.REANA_GITLAB_HOST`` configuration option to the list of GitLab instances from which it is possible to launch a workflow.
+    - Changes uWSGI configuration to increase buffer size, add vacuum option, etc.
+    - Changes CPU and disk quota calculations to improve the performance of periodic quota updater.
+    - Changes the system status report to simplify and clarify the disk usage summary.
+    - Changes ``check-workflows`` command to also check the presence of workspaces on the shared volume.
+    - Changes ``check-workflows`` command to not show in-sync runs by default. If needed, they can be shown using the new ``--show-all`` option.
+    - Changes ``reana-admin`` command options to require the passing of ``--admin-access-token`` argument more globally.
+    - Changes the k8s specification for interactive session pods to include labels for improved subset selection of objects.
+    - Changes the k8s specification for interactive session ingress resource to include annotations.
+    - Changes nginx configuration to save bandwidth by serving gzip-compressed static files.
+    - Changes HTCondor to version 9.0.17 (LTS).
     - Fixes uWSGI memory consumption on systems with very high allowed number of open files.
     - Fixes cronjob failures due to database connection issues when REANA is deployed with non-default namespace or prefix.
     - Fixes ``ingress.enabled`` option to correctly enable or disable the creation of Ingresses.
     - Fixes graceful shutdown for reana-server and reana-workflow-controller.
-    - Adds new configuration options ``login`` and ``secrets.login`` for configuring Keycloak SSO login with third-party authentication services.
+    - Fixes the workflow priority calculation to avoid workflows stuck in the ``queued`` status when the number of allowed concurrent workflow is set to zero.
+    - Fixes GitLab integration to automatically redirect the user to the correct URL when the access request is accepted.
+    - Fixes authentication flow to correctly deny access to past revoked tokens in case the same user has also other new active tokens.
+    - Fixes email templates to show the correct ``kubectl`` commands when REANA is deployed inside a non-default namespace or with a custom component name prefix.
+    - Fixes email sender for system emails to ``notifications.email_config.sender`` Helm value.
+    - Fixes email receiver for token request emails to use ``notifications.email_config.receiver`` Helm value.
+    - Fixes ``quota-set-default-limits`` command to propagate default quota limits to all users without custom quota limit values.
+    - Fixes job status consumer to correctly rollback the database transaction when an error occurs.
+    - Fixes intermittent Slurm connection issues by DNS-resolving the Slurm head node IPv4 address before establishing connections.
+    - Fixes Slurm command generation issues when using fully-qualified image names.
+    - Fixes high memory usage of RabbitMQ by limiting the maximum number of open file descriptors.
+    - Removes support for Kubernetes version prior to 1.21.
 - Developers:
+    - Adds new ``prune_workspace`` endpoint to allow users to delete all the files of a workflow, specifying whether to also delete the inputs and/or the outputs.
+    - Adds the timestamp of when the workflow was stopped (``run_stopped_at``) to the workflow list and the workflow status endpoints.
+    - Adds unique error messages to Kubernetes job monitor to more easily identify source of problems.
+    - Adds new ``--parallel`` option to ``docker-build``, ``cluster-build`` and ``run-ci`` to build multiple docker images in parallel.
+    - Changes ``launch`` endpoint to also include the warnings of the validation of the workflow specification.
+    - Changes OpenAPI specification of the ``info`` endpoint to return the maximum inactivity time before automatic closure of interactive sessions.
+    - Changes ``apispec`` dependency version in order to be compatible with ``PyYAML`` v6.
+    - Changes Paramiko to version 3.0.0.
+    - Changes remote storage file support for Snakemake workflows to use XRootD 5.6.0.
     - Fixes ``cluster-deploy``, ``cluster-undeploy`` and ``client-setup-environment`` commands when using custom instance name or kubernetes namespace.
+    - Fixes the ``git-tag`` command to display the component name.
+    - Fixes container image names to be Podman-compatible.
+    - Fixes location of HTCondor build dependencies.
 
 Version 0.9.0 (2023-01-26)
 --------------------------

@@ -11,15 +11,15 @@ for image in \
     docker.io/maildev/maildev:1.1.0 \
     docker.io/library/postgres:12.13 \
     docker.io/library/redis:5.0.5 \
-    docker.io/reanahub/reana-job-controller:0.9.1-alpha.3 \
-    docker.io/reanahub/reana-message-broker:0.9.1-alpha.1 \
-    docker.io/reanahub/reana-server:0.9.1-alpha.4 \
-    docker.io/reanahub/reana-ui:0.9.1-alpha.4 \
-    docker.io/reanahub/reana-workflow-controller:0.9.1-alpha.3 \
-    docker.io/reanahub/reana-workflow-engine-cwl:0.9.1-alpha.2 \
-    docker.io/reanahub/reana-workflow-engine-serial:0.9.1-alpha.2 \
-    docker.io/reanahub/reana-workflow-engine-snakemake:0.9.1-alpha.2 \
-    docker.io/reanahub/reana-workflow-engine-yadage:0.9.1-alpha.2 \
+    docker.io/reanahub/reana-job-controller:0.9.1 \
+    docker.io/reanahub/reana-message-broker:0.9.1 \
+    docker.io/reanahub/reana-server:0.9.1 \
+    docker.io/reanahub/reana-ui:0.9.1 \
+    docker.io/reanahub/reana-workflow-controller:0.9.1 \
+    docker.io/reanahub/reana-workflow-engine-cwl:0.9.1 \
+    docker.io/reanahub/reana-workflow-engine-serial:0.9.1 \
+    docker.io/reanahub/reana-workflow-engine-snakemake:0.9.1 \
+    docker.io/reanahub/reana-workflow-engine-yadage:0.9.1 \
     ; do
         docker pull $image
         kind load docker-image $image
