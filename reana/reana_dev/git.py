@@ -19,21 +19,30 @@ from reana.config import (
     COMPONENTS_USING_SHARED_MODULE_COMMONS,
     COMPONENTS_USING_SHARED_MODULE_DB,
     GIT_DEFAULT_BASE_BRANCH,
+    HELM_VERSION_FILE,
+    JAVASCRIPT_VERSION_FILE,
+    OPENAPI_VERSION_FILE,
     PYTHON_REQUIREMENTS_FILE,
+    PYTHON_VERSION_FILE,
     REPO_LIST_ALL,
     REPO_LIST_PYTHON_REQUIREMENTS,
     REPO_LIST_SHARED,
 )
 from reana.reana_dev.utils import (
     bump_component_version,
+    bump_pep440_version,
+    bump_semver2_version,
     click_add_git_base_branch_option,
     display_message,
     fetch_latest_pypi_version,
+    get_component_version_files,
     get_current_component_version_from_source_files,
     get_srcdir,
     is_feature_branch,
+    parse_pep440_version,
     run_command,
     select_components,
+    translate_pep440_to_semver2,
     update_module_in_cluster_components,
     upgrade_requirements,
     validate_directory,
@@ -116,6 +125,36 @@ def git_is_current_version_tagged(component):
         )
     )
     return bool(is_version_tagged)
+
+
+def git_create_release_branch(component: str, next_version: Optional[str]):
+    """Create a feature branch for a new release."""
+    version_files = get_component_version_files(component)
+    if not next_version:
+        # bump current version depending on whether it is semver2 or pep440
+        current_version = get_current_component_version_from_source_files(component)
+        if HELM_VERSION_FILE in version_files:
+            next_version = bump_semver2_version(current_version)
+        elif PYTHON_VERSION_FILE in version_files:
+            next_version = bump_pep440_version(current_version)
+        elif JAVASCRIPT_VERSION_FILE in version_files:
+            next_version = bump_semver2_version(current_version)
+        elif OPENAPI_VERSION_FILE in version_files:
+            next_version = bump_pep440_version(current_version)
+    else:
+        # provided next_version is always in pep440 version
+        if (
+            HELM_VERSION_FILE in version_files
+            or JAVASCRIPT_VERSION_FILE in version_files
+        ):
+            next_version = translate_pep440_to_semver2(next_version)
+        else:
+            next_version = str(parse_pep440_version(next_version))
+    if not next_version:
+        display_message("Could not generate next version.", component)
+        sys.exit(1)
+    run_command(f"git checkout -b release-{next_version}", component)
+    display_message(f"Release branch 'release-{next_version}' created.", component)
 
 
 def git_create_release_commit(
@@ -1092,6 +1131,59 @@ def git_push(component, exclude_components, base):  # noqa: D301
     for component in components:
         for cmd in ["git push origin {}".format(base)]:
             run_command(cmd, component)
+
+
+@click.option(
+    "--component",
+    "-c",
+    required=True,
+    multiple=True,
+    help="Which components? [shortname|name|.|CLUSTER|ALL]",
+)
+@click.option(
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
+)
+@click.option(
+    "--version",
+    "-v",
+    help="Shall we manually specify component's next version?",
+)
+@git_commands.command(name="git-create-release-branch")
+def git_create_release_branch_command(
+    component, exclude_components, version
+):  # noqa: D301
+    """Create a release branch for the specified components.
+
+    \b
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :param exclude_components: List of components to exclude.
+    :param version: Manually specifies the version for the component. If not provided,
+        the last version will be auto-incremented.
+    :type component: str
+    :type exclude_components: str
+    :type version: str
+    """
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    components = select_components(component, exclude_components)
+    for component in components:
+        git_create_release_branch(component, next_version=version)
 
 
 @git_commands.command(name="git-upgrade-shared-modules")
