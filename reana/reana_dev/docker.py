@@ -257,12 +257,18 @@ def docker_rmi(user, tag, component):  # noqa: D301
     default=["CLUSTER"],
     help="Which components? [name|CLUSTER]",
 )
+@click.option(
+    "--registry",
+    "-r",
+    default="docker.io",
+    help="Registry to use in the image tag [default=docker.io]",
+)
 @docker_commands.command(name="docker-push")
-def docker_push(user, tag, component):  # noqa: D301
-    """Push REANA component images to DockerHub.
+def docker_push(user, tag, component, registry):  # noqa: D301
+    """Push REANA component images to a Docker image registry.
 
     \b
-    :param components: The option ``component`` can be repeated. The value may
+    :param component: The option ``component`` can be repeated. The value may
                        consist of:
                          * (1) standard component name such as
                                'reana-workflow-controller';
@@ -280,10 +286,11 @@ def docker_push(user, tag, component):  # noqa: D301
     :param user: DockerHub organisation or user name. [default=reanahub]
     :param tag: Docker image tag to push. Default 'latest'.  Use 'auto' to
         push git-tag-based value such as '0.7.0-alpha.3'.
-    :param tag: Docker tag to use. [default=latest]
+    :param registry: Registry to use in the image tag. [default=docker.io]
     :type component: str
     :type user: str
     :type tag: str
+    :type registry: str
     """
     components = select_components(component)
     for component in components:
@@ -291,7 +298,7 @@ def docker_push(user, tag, component):  # noqa: D301
         if is_component_dockerised(component):
             if tag == "auto":
                 component_tag = get_docker_tag(component)
-            cmd = "docker push {0}/{1}:{2}".format(user, component, component_tag)
+            cmd = f"docker push {registry}/{user}/{component}:{component_tag}"
             run_command(cmd, component)
         else:
             msg = "Ignoring this component that does not contain" " a Dockerfile."
