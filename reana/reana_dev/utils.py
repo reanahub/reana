@@ -43,8 +43,6 @@ from reana.config import (
     REPO_LIST_DEMO_RUNNABLE,
 )
 
-INSTANCE_NAME = os.path.basename(os.environ["VIRTUAL_ENV"])
-
 
 def shorten_component_name(component):
     """Return canonical short version of the component name.
@@ -436,16 +434,6 @@ def display_message(msg, component=""):
     click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
     click.secho("{0}: ".format(component), bold=True, nl=False, fg="yellow")
     click.secho("{0}".format(msg), bold=True)
-
-
-def get_prefixed_component_name(component):
-    """Get prefixed component name.
-
-    :param component: String representing the component name.
-
-    :return: Prefixed name.
-    """
-    return "-".join([INSTANCE_NAME, component])
 
 
 def fetch_latest_pypi_version(package):
