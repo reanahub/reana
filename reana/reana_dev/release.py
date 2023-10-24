@@ -84,10 +84,16 @@ def release_commands():
 )
 @click.option("--user", "-u", default="reanahub", help="DockerHub user name [reanahub]")
 @click.option("--image-name", help="Should the component have a custom image name?")
+@click.option(
+    "--registry",
+    "-r",
+    default="docker.io",
+    help="Registry to use in the image tag [default=docker.io]",
+)
 @release_commands.command(name="release-docker")
 @click.pass_context
-def release_docker(ctx, component, user, image_name):  # noqa: D301
-    """Release a component on Docker Hub.
+def release_docker(ctx, component, user, image_name, registry):  # noqa: D301
+    """Release a component on a Docker image registry.
 
     \b
     :param components: The option ``component`` can be repeated. The value may
@@ -105,21 +111,41 @@ def release_docker(ctx, component, user, image_name):  # noqa: D301
                                to include several runable REANA demo examples;
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
+    :param user: Organisation or user name. [default=reanahub]
+    :param image_name: Custom name of the local Docker image.
+    :param registry: Registry to use in the image tag. [default=docker.io]
     :type component: str
+    :type user: str
+    :type image_name: str
+    :type registry: str
     """
     components = select_components(component)
+
+    if image_name and len(components) > 1:
+        click.secho("Cannot use custom image name with multiple components.", fg="red")
+        sys.exit(1)
+
     cannot_release_on_dockerhub = []
     for component_ in components:
         if not is_component_dockerised(component_):
             cannot_release_on_dockerhub.append(component_)
         is_component_releasable(component_, exit_code=True, display=True)
-        full_image_name = f"{user}/{image_name or component_}"
+        # source_image_name is the name used by docker-build
+        source_image_name = f"docker.io/{user}/{component_}"
+        target_image_name = f"{registry}/{user}/{image_name or component_}"
         docker_tag = get_docker_tag(component_)
         run_command(
-            f"docker tag {full_image_name}:latest {full_image_name}:{docker_tag}",
+            f"docker tag {source_image_name}:latest {target_image_name}:{docker_tag}",
             component_,
         )
-        ctx.invoke(docker_push, component=[component_], tag=docker_tag, user=user)
+        ctx.invoke(
+            docker_push,
+            component=[component_],
+            registry=registry,
+            user=user,
+            image_name=image_name,
+            tag=docker_tag,
+        )
 
     if cannot_release_on_dockerhub:
         click.secho(
