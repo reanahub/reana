@@ -8,6 +8,7 @@
 
 """`reana-dev`'s Docker commands."""
 
+import sys
 import click
 
 from reana.config import DOCKER_PREFETCH_IMAGES
@@ -263,8 +264,9 @@ def docker_rmi(user, tag, component):  # noqa: D301
     default="docker.io",
     help="Registry to use in the image tag [default=docker.io]",
 )
+@click.option("--image-name", help="Does the local image have a custom name?")
 @docker_commands.command(name="docker-push")
-def docker_push(user, tag, component, registry):  # noqa: D301
+def docker_push(user, tag, component, registry, image_name):  # noqa: D301
     """Push REANA component images to a Docker image registry.
 
     \b
@@ -287,18 +289,25 @@ def docker_push(user, tag, component, registry):  # noqa: D301
     :param tag: Docker image tag to push. Default 'latest'.  Use 'auto' to
         push git-tag-based value such as '0.7.0-alpha.3'.
     :param registry: Registry to use in the image tag. [default=docker.io]
+    :param image_name: Custom name of the local Docker image.
     :type component: str
     :type user: str
     :type tag: str
     :type registry: str
+    :type image_name: str
     """
     components = select_components(component)
+
+    if image_name and len(components) > 1:
+        click.secho("Cannot use custom image name with multiple components.", fg="red")
+        sys.exit(1)
+
     for component in components:
         component_tag = tag
         if is_component_dockerised(component):
             if tag == "auto":
                 component_tag = get_docker_tag(component)
-            cmd = f"docker push {registry}/{user}/{component}:{component_tag}"
+            cmd = f"docker push {registry}/{user}/{image_name or component}:{component_tag}"
             run_command(cmd, component)
         else:
             msg = "Ignoring this component that does not contain" " a Dockerfile."
