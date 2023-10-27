@@ -12,7 +12,11 @@ import platform
 
 import click
 
-from reana.config import COMPONENTS_USING_SHARED_MODULE_DB, REPO_LIST_CLUSTER
+from reana.config import (
+    COMPONENTS_USING_SHARED_MODULE_DB,
+    REPO_LIST_CLUSTER,
+    PYTHON_EXECUTABLE_NAME,
+)
 from reana.reana_dev.utils import (
     display_message,
     get_srcdir,
@@ -77,12 +81,19 @@ def python_install_eggs():
     help="Which components? [shortname|name|.|CLUSTER|ALL]",
 )
 @click.option(
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
+)
+@click.option(
     "--keep-virtual-environment",
     "-k",
     is_flag=True,
     help="Whether to keep or not virtual environment after tests are finished",
 )
-def python_unit_tests(component: str, keep_virtual_environment: bool):  # noqa: D301
+def python_unit_tests(
+    component: str, exclude_components: str, keep_virtual_environment: bool
+):  # noqa: D301
     """Run Python unit tests in independent environments.
 
     For each component, create a dedicated throw-away virtual environment,
@@ -107,11 +118,15 @@ def python_unit_tests(component: str, keep_virtual_environment: bool):  # noqa: 
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :type component: str
+    :param exclude_components: List of components to exclude from command.
+    :type exclude_components: str
     :param keep_virtual_environment: flag, whether to keep or not virtual environment
                                     after tests are finished
     :type keep_virtual_environment: bool
     """
-    components = select_components(component)
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    components = select_components(component, exclude_components)
     for component in components:
         if component == "reana-job-controller" and platform.system() == "Darwin":
             msg = (
@@ -128,9 +143,18 @@ def python_unit_tests(component: str, keep_virtual_environment: bool):  # noqa: 
                     "-e POSTGRES_PASSWORD=mysecretpassword -d docker.io/library/postgres:12.13"
                 )
 
+            env_pytestarg = ""
+            if os.getenv("PYTEST_ADDOPTS", ""):
+                env_pytestarg = 'PYTEST_ADDOPTS="{}"'.format(
+                    os.getenv("PYTEST_ADDOPTS", "")
+                )
+
             for cmd in [
-                "virtualenv ~/.virtualenvs/_{}".format(component),
+                "virtualenv ~/.virtualenvs/_{} -p {}".format(
+                    component, PYTHON_EXECUTABLE_NAME
+                ),
                 "{} && which python".format(cmd_activate_venv),
+                "{} && pip install pip --upgrade".format(cmd_activate_venv),
                 "{} && cd ../pytest-reana && "
                 " pip install . --upgrade".format(cmd_activate_venv),
                 "{} && cd ../reana-commons && "
@@ -138,12 +162,23 @@ def python_unit_tests(component: str, keep_virtual_environment: bool):  # noqa: 
                 "{} && cd ../reana-db && "
                 " pip install . --upgrade".format(cmd_activate_venv),
                 "git clean -d -ff -x",
+                # Fix installation of r-w-e-snakemake test dependencies for macOS/brew
+                '{} && GRAPHVIZ_DIR="$(brew --prefix graphviz)" pip install pygraphviz==1.7 --global-option=build_ext --global-option="-I$GRAPHVIZ_DIR/include" --global-option="-L$GRAPHVIZ_DIR/lib"'.format(
+                    cmd_activate_venv
+                )
+                if component == "reana-workflow-engine-snakemake"
+                and platform.system() == "Darwin"
+                else "",
+                # Fix installation of r-commons test dependencies
+                '{} && pip install ".[cwl,snakemake,yadage]" --upgrade'.format(
+                    cmd_activate_venv
+                )
+                if component == "reana-commons"
+                else "",
+                # Now we can call installing regular test dependencies
                 '{} && pip install ".[tests]" --upgrade'.format(cmd_activate_venv),
-                "{} && {} python setup.py test".format(
-                    cmd_activate_venv,
-                    "REANA_SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://postgres:mysecretpassword@localhost/postgres"
-                    if does_component_need_db(component)
-                    else "",
+                "{} && {} ./run-tests.sh --check-pytest".format(
+                    cmd_activate_venv, env_pytestarg
                 ),
             ]:
                 run_command(cmd, component)
@@ -151,8 +186,6 @@ def python_unit_tests(component: str, keep_virtual_environment: bool):  # noqa: 
             if not keep_virtual_environment:
                 run_command(f"rm -rf ~/.virtualenvs/_{component}")
 
-            if does_component_need_db(component):
-                run_command(f"docker stop postgres__{component}")
         else:
             msg = (
                 "Ignoring this component that does not contain"

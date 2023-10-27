@@ -1,6 +1,14 @@
 Changes
 =======
 
+Version 0.9.2 (UNRELEASED)
+--------------------------
+
+- Developers:
+    - Changes `python-run-tests` command to allow execution of selected pytests only by passing over `PYTEST_ADDOPTS` environment variable.
+    - Changes `python-run-tests` command to allow excluding certain Python components.
+    - Fixes `python-run-tests` command to create Python-3.8 based virtual environments to use the same version as container images.
+
 Version 0.9.1 (2023-09-27)
 --------------------------
 

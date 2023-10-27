@@ -293,5 +293,8 @@ GITHUB_REANAHUB_URL = "https://github.com/reanahub"
 CODECOV_REANAHUB_URL = "https://codecov.io/gh/reanahub"
 """REANA Hub organisation Codecov URL."""
 
+PYTHON_EXECUTABLE_NAME = "python3.8"
+"""Python executable name with the same version as cluster components."""
+
 PYTHON_DOCKER_IMAGE = "docker.io/library/python:3.8"
-"""Python docker image with same version as cluster components."""
+"""Python docker image with the same version as cluster components."""
