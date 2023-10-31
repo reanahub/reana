@@ -86,6 +86,11 @@ def _run_command_prefix_output(cmd, component):
     type=click.IntRange(min=1),
     help="Number of docker images to build in parallel.",
 )
+@click.option(
+    "--platform",
+    multiple=True,
+    help="Platforms for multi-arch images [default=current architecture]",
+)
 @docker_commands.command(name="docker-build")
 @click.pass_context
 def docker_build(
@@ -99,6 +104,7 @@ def docker_build(
     quiet,
     exclude_components,
     parallel,
+    platform,
 ):  # noqa: D301
     """Build REANA component images.
 
@@ -127,6 +133,8 @@ def docker_build(
     :param output_component_versions: File where to write the built images
         tags. Useful when using `--tag auto` since every REANA component
         will have a different tag.
+    :param parallel: Number of docker images to build in parallel.
+    :param platform: Platforms for multi-arch images. [default=current architecture]
     :type component: str
     :type exclude_components: str
     :type user: str
@@ -135,10 +143,18 @@ def docker_build(
     :type no_cache: bool
     :type output_component_versions: File
     :type quiet: bool
+    :type parallel: int
+    :type platform: list
     """
     if exclude_components:
         exclude_components = exclude_components.split(",")
     components = select_components(component, exclude_components)
+
+    is_multi_arch = len(platform) > 1
+    if is_multi_arch:
+        # check whether podman is installed
+        run_command("podman version", display=False, return_output=True)
+
     built_components_versions_tags = []
 
     # show the component's name before each output line of `docker build` if there
@@ -148,21 +164,39 @@ def docker_build(
 
     commands = []
     for component in components:
-        component_tag = tag
         if is_component_dockerised(component):
-            cmd = "docker build"
-            if tag == "auto":
-                component_tag = get_docker_tag(component)
+            component_tag = get_docker_tag(component) if tag == "auto" else tag
+            component_version_tag = "docker.io/{0}/{1}:{2}".format(
+                user, component, component_tag
+            )
+            if is_multi_arch:
+                # remove the image with the same name, if it exists, as otherwise
+                # podman is not able to create the manifest
+                run_command(
+                    f"podman image rm {component_version_tag} || true", component
+                )
+                # remove the manifest if it already exists, as otherwise podman will add
+                # the built images to the existing manifest instead of creating a new one
+                run_command(
+                    f"podman manifest rm {component_version_tag} || true", component
+                )
+                cmd = "podman build"
+            else:
+                cmd = "docker build"
             for arg in build_arg:
                 cmd += " --build-arg {0}".format(arg)
             if no_cache:
                 cmd += " --no-cache"
             if quiet or parallel > 1:
                 cmd += " --quiet"
-            component_version_tag = "docker.io/{0}/{1}:{2}".format(
-                user, component, component_tag
-            )
-            cmd += " -t {0} .".format(component_version_tag)
+            if platform:
+                cmd += f" --platform {','.join(platform)}"
+
+            if is_multi_arch:
+                cmd += f" --manifest {component_version_tag} ."
+            else:
+                cmd += " -t {0} .".format(component_version_tag)
+
             commands.append((_run_command, (cmd, component)))
             built_components_versions_tags.append(component_version_tag)
         else:
