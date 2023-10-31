@@ -8,6 +8,7 @@
 
 """`reana-dev`'s release commands."""
 
+import json
 import os
 import sys
 import tempfile
@@ -90,9 +91,14 @@ def release_commands():
     default="docker.io",
     help="Registry to use in the image tag [default=docker.io]",
 )
+@click.option(
+    "--platform",
+    multiple=True,
+    help="Platforms for multi-arch images [default=current architecture]",
+)
 @release_commands.command(name="release-docker")
 @click.pass_context
-def release_docker(ctx, component, user, image_name, registry):  # noqa: D301
+def release_docker(ctx, component, user, image_name, registry, platform):  # noqa: D301
     """Release a component on a Docker image registry.
 
     \b
@@ -114,16 +120,25 @@ def release_docker(ctx, component, user, image_name, registry):  # noqa: D301
     :param user: Organisation or user name. [default=reanahub]
     :param image_name: Custom name of the local Docker image.
     :param registry: Registry to use in the image tag. [default=docker.io]
+    :param platform: Platforms for multi-arch images. [default=current architecture]
     :type component: str
     :type user: str
     :type image_name: str
     :type registry: str
+    :type platform: list
     """
     components = select_components(component)
 
     if image_name and len(components) > 1:
         click.secho("Cannot use custom image name with multiple components.", fg="red")
         sys.exit(1)
+
+    is_multi_arch = len(platform) > 1
+    if is_multi_arch:
+        # check whether podman is installed
+        run_command("podman version", display=False, return_output=True)
+    # platforms are in the format OS/ARCH[/VARIANT], we are only interested in ARCH
+    expected_arch = sorted([p.split("/")[1] for p in platform])
 
     cannot_release_on_dockerhub = []
     for component_ in components:
@@ -134,18 +149,47 @@ def release_docker(ctx, component, user, image_name, registry):  # noqa: D301
         source_image_name = f"docker.io/{user}/{component_}"
         target_image_name = f"{registry}/{user}/{image_name or component_}"
         docker_tag = get_docker_tag(component_)
-        run_command(
-            f"docker tag {source_image_name}:latest {target_image_name}:{docker_tag}",
-            component_,
-        )
-        ctx.invoke(
-            docker_push,
-            component=[component_],
-            registry=registry,
-            user=user,
-            image_name=image_name,
-            tag=docker_tag,
-        )
+
+        if is_multi_arch:
+            manifest = json.loads(
+                run_command(
+                    f"podman manifest inspect {source_image_name}:latest",
+                    component=component_,
+                    return_output=True,
+                )
+            )
+            manifest_arch = sorted(
+                [m["platform"]["architecture"] for m in manifest["manifests"]]
+            )
+            if manifest_arch != expected_arch:
+                display_message(
+                    f"Expected multi-arch image {source_image_name} with {expected_arch} variants, "
+                    f"found {manifest_arch}.",
+                    component=component_,
+                )
+                sys.exit(1)
+            run_command(
+                f"podman tag {source_image_name}:latest {target_image_name}:{docker_tag}",
+                component_,
+            )
+            run_command(
+                f"podman manifest push --all {target_image_name}:{docker_tag} "
+                f"docker://{target_image_name}:{docker_tag}",
+                component_,
+            )
+        else:
+            run_command(
+                f"docker tag {source_image_name}:latest {target_image_name}:{docker_tag}",
+                component_,
+            )
+            ctx.invoke(
+                docker_push,
+                component=[component_],
+                registry=registry,
+                user=user,
+                image_name=image_name,
+                tag=docker_tag,
+            )
 
     if cannot_release_on_dockerhub:
         click.secho(

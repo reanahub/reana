@@ -166,13 +166,14 @@ def reana_dev():  # noqa: D301
     .. code-block:: console
 
         \b
-        $ reana-dev git-clean
-        $ reana-dev docker-build --no-cache
-        $ # we should now run one more test with non-cached ``latest``
-        $ # once it works, we can tag and push
-        $ reana-dev docker-build -t 0.3.0.dev20180625
-        $ reana-dev docker-push -t 0.3.0.dev20180625
-        $ # we should now publish stable helm charts for tag via chartpress
+        $ # Clean the environment
+        $ cd ~/mysrc/reana-server
+        $ reana-dev git-clean -c .
+        $ # Build the docker image
+        $ reana-dev docker-build --platform linux/amd64 --platform linux/arm64 -c .
+        $ # Tag and release the image
+        $ reana-dev git-tag -c .
+        $ reana-dev release-docker --platform linux/amd64 --platform linux/arm64 -c .
 
     """
     pass
