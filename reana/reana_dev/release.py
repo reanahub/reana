@@ -96,9 +96,12 @@ def release_commands():
     multiple=True,
     help="Platforms for multi-arch images [default=current architecture]",
 )
+@click.option("--tags-only", is_flag=True, help="Only print the Docker image tags")
 @release_commands.command(name="release-docker")
 @click.pass_context
-def release_docker(ctx, component, user, image_name, registry, platform):  # noqa: D301
+def release_docker(
+    ctx, component, user, image_name, registry, platform, tags_only
+):  # noqa: D301
     """Release a component on a Docker image registry.
 
     \b
@@ -121,11 +124,13 @@ def release_docker(ctx, component, user, image_name, registry, platform):  # noq
     :param image_name: Custom name of the local Docker image.
     :param registry: Registry to use in the image tag. [default=docker.io]
     :param platform: Platforms for multi-arch images. [default=current architecture]
+    :param tags_only: Only print the Docker image tags.
     :type component: str
     :type user: str
     :type image_name: str
     :type registry: str
     :type platform: list
+    :type tags_only: bool
     """
     components = select_components(component)
 
@@ -134,7 +139,7 @@ def release_docker(ctx, component, user, image_name, registry, platform):  # noq
         sys.exit(1)
 
     is_multi_arch = len(platform) > 1
-    if is_multi_arch:
+    if is_multi_arch and not tags_only:
         # check whether podman is installed
         run_command("podman version", display=False, return_output=True)
     # platforms are in the format OS/ARCH[/VARIANT], we are only interested in ARCH
@@ -149,6 +154,10 @@ def release_docker(ctx, component, user, image_name, registry, platform):  # noq
         source_image_name = f"docker.io/{user}/{component_}"
         target_image_name = f"{registry}/{user}/{image_name or component_}"
         docker_tag = get_docker_tag(component_)
+
+        if tags_only:
+            click.echo(f"{target_image_name}:{docker_tag}")
+            continue
 
         if is_multi_arch:
             manifest = json.loads(

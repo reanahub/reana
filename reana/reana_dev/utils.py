@@ -900,7 +900,7 @@ def get_git_tag(component):
     :type component: str
     """
     cmd = "git describe --tags --abbrev=0"
-    return run_command(cmd, component, return_output=True, display=True)
+    return run_command(cmd, component, return_output=True, display=False)
 
 
 def validate_mode_option(ctx, param, value):
