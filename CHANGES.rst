@@ -4,6 +4,8 @@ Changes
 Version 0.9.2 (UNRELEASED)
 --------------------------
 
+- Administrators:
+    - Changes CVMFS support to allow users to automatically mount any available repository, thanks to CVMFS CSI v2.
 - Developers:
     - Changes `python-run-tests` command to allow execution of selected pytests only by passing over `PYTEST_ADDOPTS` environment variable.
     - Changes `python-run-tests` command to allow excluding certain Python components.
