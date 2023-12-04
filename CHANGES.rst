@@ -1,15 +1,51 @@
 Changes
 =======
 
-Version 0.9.2 (UNRELEASED)
+Version 0.9.2 (2023-12-19)
 --------------------------
 
+- Users:
+    - Adds web interface form allowing to generate launcher URL for any user-provided public analysis, as well as the Markdown snippet for the corresponding Launch-on-REANA badge.
+    - Adds web interface option to delete all the runs of a workflow.
+    - Changes the Launch-on-REANA web interface page to improve how workflow parameters are shown by displaying them inside a table.
+    - Changes CVMFS support to allow users to automatically mount any available repository.
+    - Changes the REANA specification schema to use the ``draft-07`` version of the JSON Schema specification.
+    - Changes ``reana-client validate`` command to show detailed errors when the specification file is not a valid YAML file.
+    - Changes validation of REANA specification to make the ``environment`` property mandatory for the steps of serial workflows.
+    - Changes validation of REANA specification to raise a warning for unexpected properties for the steps of serial workflows.
+    - Changes validation of REANA specification to report improved validation warnings which also indicate where unexpected properties are located in the file.
+    - Changes workflow restarts to allow for more than nine restarts of the same workflows.
+    - Changes workflow scheduler logging behaviour to also report the main reason behind scheduling errors to the users.
+    - Fixes ``reana-client list`` command to accept case-insensitive column names when sorting the returned workflow runs via the ``--sort`` option.
+    - Fixes ``reana-client run`` wrapper command for workflows that do not contain ``inputs`` clause in their specification.
+    - Fixes ``reana-client``'s ``create_workflow_from_json`` API function to always load and send the workflow specification to the server.
+    - Fixes creation of image thumbnails for output files in Snakemake HTML execution reports.
 - Administrators:
+    - Changes several database index definitions in order to improve performance of most common database queries.
+    - Changes the names of database table, column, index and key constraints in order to follow the SQLAlchemy upstream naming conventions everywhere.
+    - Changes the ``Workflow`` table to replace the ``run_number`` column with two new columns ``run_number_major`` and ``run_number_minor`` in order to allow for more than nine restarts of user workflows.
     - Changes CVMFS support to allow users to automatically mount any available repository, thanks to CVMFS CSI v2.
+    - Fixes the mounting of CVMFS volumes for the REANA deployments that use non-default Kubernetes namespace.
+    - Fixes container image building of cluster components for the arm64 architecture.
+    - Fixes job monitoring in cases when job creation fails, for example when it is not possible to successfully mount volumes.
+    - Fixes job status consumer exception while attempting to fetch workflow engine logs for workflows that could not have been successfully scheduled.
+    - Fixes the creation of Kubernetes jobs by retrying in case of error and by correctly handling the error after reaching the retry limit.
 - Developers:
-    - Changes `python-run-tests` command to allow execution of selected pytests only by passing over `PYTEST_ADDOPTS` environment variable.
-    - Changes `python-run-tests` command to allow excluding certain Python components.
-    - Fixes `python-run-tests` command to create Python-3.8 based virtual environments to use the same version as container images.
+    - Adds automated multi-platform container image building of cluster components for amd64 and arm64 architectures.
+    - Adds new ``--image-name`` option to the ``reana-dev docker-push`` command to customise the name of the docker image to publish.
+    - Adds new ``--platform`` option to the ``reana-dev docker-build`` and ``reana-dev release-docker`` commands to build and publish multi-platform images.
+    - Adds new ``--registry`` option to the ``reana-dev docker-push`` and ``reana-dev release-docker`` commands to specify the registry where the built docker images should be pushed to.
+    - Adds new ``--tags-only`` option to the ``reana-dev release-docker`` command to only print the final docker image names, without pushing the images to the registry.
+    - Adds new ``reana-dev git-create-release-branch`` command to create a new Git branch for a new release.
+    - Adds new ``reana-dev git-upgrade-requirements`` command to upgrade the ``requirements.txt`` file before a new release.
+    - Changes ``reana-dev git-fork`` and ``reana-dev git-create-pr`` to use the ``gh`` CLI client instead of ``hub``.
+    - Changes ``reana-dev python-run-tests`` command to allow excluding certain Python components.
+    - Changes ``reana-dev python-run-tests`` command to allow execution of selected pytests only by passing over `PYTEST_ADDOPTS` environment variable.
+    - Changes validation of REANA specification to expose functions for loading workflow input parameters and workflow specifications.
+    - Changes version of ``reana-ui`` Node.js Docker image from 16 to 18.
+    - Changes the workflow deletion endpoint to return a different and more appropriate message when deleting all the runs of a workflow.
+    - Changes the workflow list endpoint on how pagination is performed in order to avoid counting twice the total number of records.
+    - Fixes ``reana-dev python-run-tests`` command to create Python-3.8 based virtual environments to use the same version as container images.
 
 Version 0.9.1 (2023-09-27)
 --------------------------
