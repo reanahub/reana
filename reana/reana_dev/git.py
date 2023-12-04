@@ -133,13 +133,13 @@ def git_create_release_branch(component: str, next_version: Optional[str]):
     if not next_version:
         # bump current version depending on whether it is semver2 or pep440
         current_version = get_current_component_version_from_source_files(component)
-        if HELM_VERSION_FILE in version_files:
+        if version_files.get(HELM_VERSION_FILE):
             next_version = bump_semver2_version(current_version)
-        elif PYTHON_VERSION_FILE in version_files:
+        elif version_files.get(PYTHON_VERSION_FILE):
             next_version = bump_pep440_version(current_version)
-        elif JAVASCRIPT_VERSION_FILE in version_files:
+        elif version_files.get(JAVASCRIPT_VERSION_FILE):
             next_version = bump_semver2_version(current_version)
-        elif OPENAPI_VERSION_FILE in version_files:
+        elif version_files.get(OPENAPI_VERSION_FILE):
             next_version = bump_pep440_version(current_version)
     else:
         # provided next_version is always in pep440 version
