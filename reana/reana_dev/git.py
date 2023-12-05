@@ -633,12 +633,12 @@ def git_submodule(update=False, status=False, delete=False):  # noqa: D301
     if update:
         for component in COMPONENTS_USING_SHARED_MODULE_COMMONS:
             for cmd in [
-                "rsync -az ../reana-commons modules",
+                "rsync -az --delete ../reana-commons modules",
             ]:
                 run_command(cmd, component)
         for component in COMPONENTS_USING_SHARED_MODULE_DB:
             for cmd in [
-                "rsync -az ../reana-db modules",
+                "rsync -az --delete ../reana-db modules",
             ]:
                 run_command(cmd, component)
     elif delete:
