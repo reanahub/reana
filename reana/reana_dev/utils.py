@@ -13,6 +13,7 @@ import functools
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from concurrent import futures
@@ -28,6 +29,7 @@ from reana.config import (
     CLUSTER_DEPLOYMENT_MODES,
     COMPONENTS_USING_SHARED_MODULE_COMMONS,
     COMPONENTS_USING_SHARED_MODULE_DB,
+    DOCKER_VERSION_FILE,
     GIT_DEFAULT_BASE_BRANCH,
     HELM_VERSION_FILE,
     JAVASCRIPT_VERSION_FILE,
@@ -613,6 +615,7 @@ def get_component_version_files(component, abs_path=False) -> Dict[str, str]:
     """Get a dictionary with all component's version files."""
     version_files = {}
     for file_ in [
+        DOCKER_VERSION_FILE,
         HELM_VERSION_FILE,
         OPENAPI_VERSION_FILE,
         JAVASCRIPT_VERSION_FILE,
@@ -651,7 +654,17 @@ def get_current_component_version_from_source_files(
         all_version_files = {version_file: all_version_files[version_file]}
 
     version = ""
-    if all_version_files.get(HELM_VERSION_FILE):
+    if all_version_files.get(DOCKER_VERSION_FILE):
+        with open(all_version_files.get(DOCKER_VERSION_FILE)) as f:
+            for line in f.readlines():
+                match = re.match(
+                    r'LABEL org.opencontainers.image.version="(.*?)"', line
+                )
+                if match:
+                    version = match.groups(1)[0]
+                    break
+
+    elif all_version_files.get(HELM_VERSION_FILE):
         with open(all_version_files.get(HELM_VERSION_FILE)) as f:
             chart_yaml = yaml.safe_load(f.read())
             version = chart_yaml["version"]
@@ -864,7 +877,11 @@ def bump_component_version(
             component, version_file=file_type
         )
 
-        if file_type in [HELM_VERSION_FILE, JAVASCRIPT_VERSION_FILE]:
+        if file_type in [
+            DOCKER_VERSION_FILE,
+            HELM_VERSION_FILE,
+            JAVASCRIPT_VERSION_FILE,
+        ]:
             new_version = (
                 translate_pep440_to_semver2(next_version)
                 if next_version
@@ -889,7 +906,9 @@ def bump_component_version(
         next_version_per_file_type[file_type] = new_version
 
     # depending on a component, return proper component version
-    if HELM_VERSION_FILE in next_version_per_file_type.keys():
+    if DOCKER_VERSION_FILE in next_version_per_file_type.keys():
+        return next_version_per_file_type[DOCKER_VERSION_FILE], updated_files
+    elif HELM_VERSION_FILE in next_version_per_file_type.keys():
         return next_version_per_file_type[HELM_VERSION_FILE], updated_files
     elif JAVASCRIPT_VERSION_FILE in next_version_per_file_type:
         return next_version_per_file_type[JAVASCRIPT_VERSION_FILE], updated_files

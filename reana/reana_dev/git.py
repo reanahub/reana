@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2023, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -18,6 +18,7 @@ import click
 from reana.config import (
     COMPONENTS_USING_SHARED_MODULE_COMMONS,
     COMPONENTS_USING_SHARED_MODULE_DB,
+    DOCKER_VERSION_FILE,
     GIT_DEFAULT_BASE_BRANCH,
     HELM_VERSION_FILE,
     JAVASCRIPT_VERSION_FILE,
@@ -135,7 +136,9 @@ def git_create_release_branch(component: str, next_version: Optional[str]):
     if not next_version:
         # bump current version depending on whether it is semver2 or pep440
         current_version = get_current_component_version_from_source_files(component)
-        if version_files.get(HELM_VERSION_FILE):
+        if version_files.get(DOCKER_VERSION_FILE):
+            next_version = bump_semver2_version(current_version)
+        elif version_files.get(HELM_VERSION_FILE):
             next_version = bump_semver2_version(current_version)
         elif version_files.get(PYTHON_VERSION_FILE):
             next_version = bump_pep440_version(current_version)
@@ -146,7 +149,8 @@ def git_create_release_branch(component: str, next_version: Optional[str]):
     else:
         # provided next_version is always in pep440 version
         if (
-            HELM_VERSION_FILE in version_files
+            DOCKER_VERSION_FILE in version_files
+            or HELM_VERSION_FILE in version_files
             or JAVASCRIPT_VERSION_FILE in version_files
         ):
             next_version = translate_pep440_to_semver2(next_version)

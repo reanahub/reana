@@ -269,6 +269,9 @@ TIMECHECK = 5
 TIMEOUT = 900
 """Maximum timeout to wait for results when running demo analyses in CI."""
 
+DOCKER_VERSION_FILE = "Dockerfile"
+"""Docker version file."""
+
 HELM_VERSION_FILE = "Chart.yaml"
 """Helm package version file."""
 
