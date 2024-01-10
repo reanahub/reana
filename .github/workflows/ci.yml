@@ -1,5 +1,5 @@
 # This file is part of REANA.
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -9,6 +9,32 @@ name: CI
 on: [push, pull_request]
 
 jobs:
+  lint-commitlint:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+
+      - name: Install commitlint
+        run: |
+          npm install conventional-changelog-conventionalcommits
+          npm install commitlint@latest
+
+      - name: Check commit message compliance of the recently pushed commit
+        if: github.event_name == 'push'
+        run: |
+          ./run-tests.sh --check-commitlint HEAD~1 HEAD
+
+      - name: Check commit message compliance of the pull request
+        if: github.event_name == 'pull_request'
+        run: |
+          ./run-tests.sh --check-commitlint ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} ${{ github.event.pull_request.head.sha }}
+
   lint-shellcheck:
     runs-on: ubuntu-20.04
     steps:
@@ -18,7 +44,7 @@ jobs:
       - name: Runs shell script static analysis
         run: |
           sudo apt-get install shellcheck
-          ./run-tests.sh --check-shellscript
+          ./run-tests.sh --check-shellcheck
 
   lint-black:
     runs-on: ubuntu-20.04
