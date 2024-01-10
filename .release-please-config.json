@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "include-v-in-tag": false,
+  "packages": {
+    ".": {
+      "changelog-sections": [
+        { "type": "build", "section": "Build", "hidden": false },
+        { "type": "feat", "section": "Features", "hidden": false  },
+        { "type": "fix", "section": "Bug fixes", "hidden": false },
+        { "type": "perf", "section": "Performance improvements", "hidden": false },
+        { "type": "refactor", "section": "Code refactoring", "hidden": false },
+        { "type": "style", "section": "Code style", "hidden": false },
+        { "type": "test", "section": "Test suite", "hidden": false },
+        { "type": "ci", "section": "Continuous integration", "hidden": false },
+        { "type": "docs", "section": "Documentation", "hidden": false },
+        { "type": "chore", "section": "Chores", "hidden": true }
+      ],
+      "versioning": "always-bump-patch"
+    }
+  },
+  "pull-request-footer": " ",
+  "pull-request-header": " ",
+  "release-type": "python"
+}
