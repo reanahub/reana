@@ -15,6 +15,7 @@
         { "type": "docs", "section": "Documentation", "hidden": false },
         { "type": "chore", "section": "Chores", "hidden": true }
       ],
+      "extra-files": ["helm/reana/Chart.yaml"],
       "versioning": "always-bump-patch"
     }
   },
