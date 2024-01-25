@@ -12,13 +12,14 @@ set -o nounset
 check_commitlint () {
     from=${2:-master}
     to=${3:-HEAD}
+    pr=${4:-[0-9]+}
     npx commitlint --from="$from" --to="$to"
     found=0
     while IFS= read -r line; do
-        if echo "$line" | grep -qP "\(\#[0-9]+\)$"; then
+        if echo "$line" | grep -qP "\(\#$pr\)$"; then
             true
         else
-            echo "✖   PR number missing in $line"
+            echo "✖   Headline does not end by '(#$pr)' PR number: $line"
             found=1
         fi
     done < <(git log "$from..$to" --format="%s")
