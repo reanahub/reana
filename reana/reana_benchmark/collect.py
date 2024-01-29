@@ -60,9 +60,9 @@ def _clean_results(df: pd.DataFrame) -> pd.DataFrame:
     df.loc[df["status"] == "created", "started"] = None
     df.loc[df["status"] == "created", "ended"] = None
     df["asked_to_start_date"] = df.apply(
-        lambda row: None
-        if pd.isna(row["asked_to_start_date"])
-        else row["asked_to_start_date"],
+        lambda row: (
+            None if pd.isna(row["asked_to_start_date"]) else row["asked_to_start_date"]
+        ),
         axis=1,
     )
 

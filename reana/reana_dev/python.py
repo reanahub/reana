@@ -163,18 +163,22 @@ def python_unit_tests(
                 " pip install . --upgrade".format(cmd_activate_venv),
                 "git clean -d -ff -x",
                 # Fix installation of r-w-e-snakemake test dependencies for macOS/brew
-                '{} && GRAPHVIZ_DIR="$(brew --prefix graphviz)" pip install pygraphviz==1.7 --global-option=build_ext --global-option="-I$GRAPHVIZ_DIR/include" --global-option="-L$GRAPHVIZ_DIR/lib"'.format(
-                    cmd_activate_venv
-                )
-                if component == "reana-workflow-engine-snakemake"
-                and platform.system() == "Darwin"
-                else "",
+                (
+                    '{} && GRAPHVIZ_DIR="$(brew --prefix graphviz)" pip install pygraphviz==1.7 --global-option=build_ext --global-option="-I$GRAPHVIZ_DIR/include" --global-option="-L$GRAPHVIZ_DIR/lib"'.format(
+                        cmd_activate_venv
+                    )
+                    if component == "reana-workflow-engine-snakemake"
+                    and platform.system() == "Darwin"
+                    else ""
+                ),
                 # Fix installation of r-commons test dependencies
-                '{} && pip install ".[cwl,snakemake,yadage]" --upgrade'.format(
-                    cmd_activate_venv
-                )
-                if component == "reana-commons"
-                else "",
+                (
+                    '{} && pip install ".[cwl,snakemake,yadage]" --upgrade'.format(
+                        cmd_activate_venv
+                    )
+                    if component == "reana-commons"
+                    else ""
+                ),
                 # Now we can call installing regular test dependencies
                 '{} && pip install ".[tests]" --upgrade'.format(cmd_activate_venv),
                 "{} && {} ./run-tests.sh --check-pytest".format(

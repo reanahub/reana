@@ -174,12 +174,12 @@ def get_example_reana_yaml_file_path(example, workflow_engine, compute_backend):
     )
     if not reana_yaml_filename:
         reana_yaml_filename = "reana{workflow_engine}{compute_backend}.yaml".format(
-            workflow_engine=""
-            if workflow_engine == "serial"
-            else "-{}".format(workflow_engine),
-            compute_backend=""
-            if compute_backend == "kubernetes"
-            else "-{}".format(compute_backend),
+            workflow_engine=(
+                "" if workflow_engine == "serial" else "-{}".format(workflow_engine)
+            ),
+            compute_backend=(
+                "" if compute_backend == "kubernetes" else "-{}".format(compute_backend)
+            ),
         )
     reana_yaml_filename_path = get_srcdir(example) + os.sep + reana_yaml_filename
     try:

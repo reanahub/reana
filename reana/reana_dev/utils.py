@@ -410,9 +410,9 @@ def execute_parallel(
                     total=len(fn_calls),
                     done=len(done),
                     failed=len(failed),
-                    remaining=len(submitted) + len(pending)
-                    if not failed
-                    else len(submitted),
+                    remaining=(
+                        len(submitted) + len(pending) if not failed else len(submitted)
+                    ),
                     cancelled=0 if not failed else len(pending),
                 )
                 progress_callback(status)
