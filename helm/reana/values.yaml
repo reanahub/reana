@@ -80,6 +80,7 @@ components:
     image: docker.io/reanahub/reana-ui:0.9.3
   reana_db:
     enabled: true
+    image: docker.io/library/postgres:12.13
   reana_server:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-server:0.9.2
