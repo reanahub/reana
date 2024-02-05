@@ -1,6 +1,8 @@
 # REANA components pointing to `latest`, locally built master branch
 
 components:
+    reana_db:
+      image: docker.io/library/postgres:14.10
     reana_server:
       image: docker.io/reanahub/reana-server
       environment:

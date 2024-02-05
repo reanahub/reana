@@ -140,7 +140,7 @@ def python_unit_tests(
                 run_command(
                     f"docker stop postgres__{component}\n"
                     f"docker run --rm --name postgres__{component} -p 5432:5432 "
-                    "-e POSTGRES_PASSWORD=mysecretpassword -d docker.io/library/postgres:12.13"
+                    "-e POSTGRES_PASSWORD=mysecretpassword -d docker.io/library/postgres:14.10"
                 )
 
             env_pytestarg = ""
