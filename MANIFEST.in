@@ -7,7 +7,6 @@
 include *.html
 include *.json
 include *.md
-include *.rst
 include *.sh
 include *.yaml
 include *.yml
@@ -19,7 +18,7 @@ prune docs/_build
 recursive-include reana *.py
 recursive-include docs *.py
 recursive-include docs *.png
-recursive-include docs *.rst
+recursive-include docs *.md
 recursive-include docs *.txt
 recursive-include tests *.py
 recursive-include helm *.yaml
