@@ -968,3 +968,32 @@ def validate_directory(ctx, param, target_directory):
         click.echo(click.style(message, fg="red"), err=True)
         ctx.exit(1)
     return target_directory
+
+
+def get_next_available_issue_pr_number(component):
+    """Get the next available number for issues/PRs."""
+    last_used = 0
+    for type_ in ("pr", "issue"):
+        res = json.loads(
+            run_command(
+                f"gh {type_} list --state all --limit 1 --json number",
+                component=component,
+                display=False,
+                return_output=True,
+            )
+        )
+        if res:
+            last_used = max(last_used, res[0]["number"])
+
+    return last_used + 1
+
+
+def get_commit_pr_suffix(component):
+    """Get the commit message suffix containing the expected PR number."""
+    pr_number_suffix = ""
+    try:
+        pr_number = get_next_available_issue_pr_number(component)
+        pr_number_suffix = f" (#{pr_number})"
+    except Exception as e:
+        display_message(f"Could not find next available PR number: {e}", component)
+    return pr_number_suffix

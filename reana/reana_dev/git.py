@@ -24,6 +24,7 @@ from reana.config import (
     OPENAPI_VERSION_FILE,
     PYTHON_REQUIREMENTS_FILE,
     PYTHON_VERSION_FILE,
+    RELEASE_COMMIT_REGEX,
     REPO_LIST_ALL,
     REPO_LIST_PYTHON_REQUIREMENTS,
     REPO_LIST_SHARED,
@@ -46,6 +47,7 @@ from reana.reana_dev.utils import (
     update_module_in_cluster_components,
     upgrade_requirements,
     validate_directory,
+    get_commit_pr_suffix,
 )
 
 
@@ -163,7 +165,7 @@ def git_create_release_commit(
     next_version: Optional[str] = None,
 ) -> bool:
     """Create a release commit for the given component."""
-    if "release:" in get_current_commit(get_srcdir(component)):
+    if is_last_commit_release_commit(component):
         display_message("Nothing to do, last commit is a release commit.", component)
         return False
 
@@ -199,8 +201,11 @@ def git_create_release_commit(
     if modified_files:
         run_command(f"git add {' '.join(modified_files)}", component)
 
+    commit_msg = (
+        f"chore({base}): release {next_version}{get_commit_pr_suffix(component)}"
+    )
     run_command(
-        f"git commit -m 'release: {next_version}' {'--allow-empty' if not modified_files else ''}",
+        f"git commit -m '{commit_msg}' {'--allow-empty' if not modified_files else ''}",
         component,
     )
     return True
@@ -289,7 +294,8 @@ def print_branch_difference_report(
 def is_last_commit_release_commit(package):
     """Check whether the last commit is a release commit."""
     current_commit = get_current_commit(get_srcdir(package))
-    return current_commit.split()[1] == "release:"
+    commit_msg = current_commit.split(maxsplit=1)[1]
+    return RELEASE_COMMIT_REGEX.match(commit_msg)
 
 
 def git_push_to_origin(components):
@@ -1280,7 +1286,7 @@ def git_upgrade_shared_modules(
 
     def _create_commit_or_amend(components):
         for c in components:
-            commit_cmd = 'git commit -m "installation: bump shared modules"'
+            commit_cmd = f'git commit -m "build(python): bump shared modules{get_commit_pr_suffix(component)}"'
             if amend:
                 commit_cmd = "git commit --amend --no-edit"
 
@@ -1365,7 +1371,8 @@ def git_upgrade_requirements(ctx, component, exclude_components):  # noqa: D301
         if upgrade_requirements(component):
             run_command(f"git add {PYTHON_REQUIREMENTS_FILE}", component)
             run_command(
-                'git commit -m "installation: bump all dependencies"', component
+                f'git commit -m "build(python): bump all dependencies{get_commit_pr_suffix(component)}"',
+                component,
             )
 
 

@@ -8,6 +8,9 @@
 
 """``reana-dev`` CLI configuration."""
 
+import re
+
+
 REPO_LIST_DEMO_RUNNABLE = [
     "reana-demo-alice-lego-train-test-run",
     "reana-demo-alice-pt-analysis",
@@ -298,3 +301,6 @@ PYTHON_EXECUTABLE_NAME = "python3.8"
 
 PYTHON_DOCKER_IMAGE = "docker.io/library/python:3.8"
 """Python docker image with the same version as cluster components."""
+
+RELEASE_COMMIT_REGEX = re.compile("^(release:|chore.*: release)")
+"""Regex to find out if commit message refers to a new release."""
