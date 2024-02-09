@@ -36,11 +36,11 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_ui.imagePullPolicy`                    | REANA-UI image pull policy                                                           | IfNotPresent                                    |
 | `components.reana_ui.polling_secs`                       | Frequency of workflow list page reload in seconds                                    | 15                                              |
 | `components.reana_ui.client_pyvenv`                      | REANA-Client python environment to source in the welcome example.                    | None                                            |
-| `components.reana_ui.docs_url`                           | URL of documentation site (footer icon)                                              | None                                            |
-| `components.reana_ui.forum_url`                          | URL of forum site (footer icon)                                                      | None                                            |
+| `components.reana_ui.docs_url`                           | URL of documentation site (footer icon)                                              | https://docs.reana.io                           |
+| `components.reana_ui.forum_url`                          | URL of forum site (footer icon)                                                      | https://forum.reana.io                          |
 | `components.reana_ui.chat_url`                           | URL of chat channel (footer icon)                                                    | None                                            |
+| `components.reana_ui.privacy_notice_url`                 | URL of the privacy notice (footer icon)                                              | None                                            |
 | `components.reana_ui.cern_sso`                           | Enable CERN SSO sign in                                                              | false                                           |
-| `components.reana_ui.cern_ropo`                          | Display CERN RoPO privacy policy page                                                | false                                           |
 | `components.reana_ui.local_users`                        | Enable local users sign in/up                                                        | true                                            |
 | `components.reana_ui.hide_signup`                        | Hide users sign up form                                                              | false                                           |
 | `components.reana_workflow_controller.environment`       | REANA-Workflow-Controller environment variables                                      | `{SHARED_VOLUME_PATH: /var/reana}`              |
