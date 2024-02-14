@@ -128,7 +128,7 @@ REPO_LIST_PYTHON_REQUIREMENTS = [
 WORKFLOW_ENGINE_LIST_ALL = ["cwl", "serial", "yadage", "snakemake"]
 """List of supported workflow engines."""
 
-COMPUTE_BACKEND_LIST_ALL = ["kubernetes", "htcondorcern", "slurmcern"]
+COMPUTE_BACKEND_LIST_ALL = ["kubernetes", "htcondorcern", "slurmcern", "compute4punch"]
 """List of supported compute backends."""
 
 CLUSTER_DEPLOYMENT_MODES = ["releasehelm", "releasepypi", "latest", "debug"]
