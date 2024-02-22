@@ -146,6 +146,15 @@ spec:
             value: {{ .Values.components.reana_workflow_engine_serial.image }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_SNAKEMAKE
             value: {{ .Values.components.reana_workflow_engine_snakemake.image }}
+          # Environment variables for workflow engines
+          - name: REANA_WORKFLOW_ENGINE_CWL_ENV_VARS
+            value: {{ .Values.components.reana_workflow_engine_cwl.environment | toJson | quote }}
+          - name: REANA_WORKFLOW_ENGINE_SERIAL_ENV_VARS
+            value: {{ .Values.components.reana_workflow_engine_serial.environment | toJson | quote }}
+          - name: REANA_WORKFLOW_ENGINE_SNAKEMAKE_ENV_VARS
+            value: {{ .Values.components.reana_workflow_engine_snakemake.environment | toJson | quote }}
+          - name: REANA_WORKFLOW_ENGINE_YADAGE_ENV_VARS
+            value: {{ .Values.components.reana_workflow_engine_yadage.environment | toJson | quote }}
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
             value: {{ .Values.reana_hostname }}

@@ -108,12 +108,16 @@ components:
       REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 10
   reana_workflow_engine_cwl:
     image: docker.io/reanahub/reana-workflow-engine-cwl:0.9.2
+    environment: {}
   reana_workflow_engine_yadage:
     image: docker.io/reanahub/reana-workflow-engine-yadage:0.9.3
+    environment: {}
   reana_workflow_engine_serial:
     image: docker.io/reanahub/reana-workflow-engine-serial:0.9.2
+    environment: {}
   reana_workflow_engine_snakemake:
     image: docker.io/reanahub/reana-workflow-engine-snakemake:0.9.2
+    environment: {}
   reana_job_controller:
     image: docker.io/reanahub/reana-job-controller:0.9.2
   reana_message_broker:
