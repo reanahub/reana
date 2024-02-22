@@ -10,6 +10,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 |----------------------------------------------------------|--------------------------------------------------------------------------------------|-------------------------------------------------|
 | `components.reana_db.enabled`                            | Instantiate a PostgreSQL database inside the cluster                                 | true                                            |
 | `components.reana_db.image`                              | [PostgreSQL image](https://hub.docker.com/_/postgres) to use                         | `docker.io/library/postgres:12.13`              |
+| `components.reana_job_controller.environment`            | [REANA-Job-Controller](https://github.com/reanahub/reana-job-controller) environment variables | `{}`                                  |
 | `components.reana_job_controller.image`                  | [REANA-Job-Controller image](https://hub.docker.com/r/reanahub/reana-job-controller) to use  | `docker.io/reanahub/reana-job-controller:<chart-release-version>` |
 | `components.reana_message_broker.image`                  | [REANA-Message-Broker image](https://hub.docker.com/r/reanahub/reana-message-broker) to use | `docker.io/reanahub/reana-message-broker:<chart-release-version>` |
 | `components.reana_message_broker.imagePullPolicy`        | REANA-Message-Broker image pull policy                                               | IfNotPresent                                    |

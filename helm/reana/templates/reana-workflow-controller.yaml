@@ -155,6 +155,9 @@ spec:
             value: {{ .Values.components.reana_workflow_engine_snakemake.environment | toJson | quote }}
           - name: REANA_WORKFLOW_ENGINE_YADAGE_ENV_VARS
             value: {{ .Values.components.reana_workflow_engine_yadage.environment | toJson | quote }}
+          # Environment variables for job controller
+          - name: REANA_JOB_CONTROLLER_ENV_VARS
+            value: {{ .Values.components.reana_job_controller.environment | toJson | quote }}
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
             value: {{ .Values.reana_hostname }}

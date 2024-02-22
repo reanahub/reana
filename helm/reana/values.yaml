@@ -120,6 +120,7 @@ components:
     environment: {}
   reana_job_controller:
     image: docker.io/reanahub/reana-job-controller:0.9.2
+    environment: {}
   reana_message_broker:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-message-broker:0.9.2
