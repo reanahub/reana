@@ -1286,7 +1286,7 @@ def git_upgrade_shared_modules(
 
     def _create_commit_or_amend(components):
         for c in components:
-            commit_cmd = f'git commit -m "build(python): bump shared modules{get_commit_pr_suffix(component)}"'
+            commit_cmd = f'git commit -m "build(python): bump shared modules{get_commit_pr_suffix(c)}"'
             if amend:
                 commit_cmd = "git commit --amend --no-edit"
 
