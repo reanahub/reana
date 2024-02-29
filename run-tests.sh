@@ -18,6 +18,8 @@ check_commitlint () {
     while IFS= read -r line; do
         if echo "$line" | grep -qP "\(\#$pr\)$"; then
             true
+        elif echo "$line" | grep -qP "^chore\(.*\): release"; then
+            true
         else
             echo "✖   Headline does not end by '(#$pr)' PR number: $line"
             found=1
