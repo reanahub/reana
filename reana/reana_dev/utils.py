@@ -310,6 +310,7 @@ def run_command(
     return_output: bool = False,
     directory: str = None,
     dry_run: bool = False,
+    exit_on_error: bool = True,
 ) -> Optional[str]:
     """Run given command in the given component source directory.
 
@@ -350,7 +351,10 @@ def run_command(
             click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
             click.secho("{0}: ".format(component), bold=True, nl=False, fg="yellow")
             click.secho("{0}".format(err), bold=True, fg="red")
-        sys.exit(err.returncode)
+        if exit_on_error:
+            sys.exit(err.returncode)
+        else:
+            raise
 
 
 @dataclass
@@ -970,6 +974,25 @@ def validate_directory(ctx, param, target_directory):
     return target_directory
 
 
+def get_current_pr_number(component):
+    """Get the PR number of the current branch."""
+    try:
+        output = run_command(
+            "gh pr view --json number",
+            component=component,
+            display=False,
+            return_output=True,
+            exit_on_error=False,
+        )
+    except subprocess.CalledProcessError as e:
+        if e.returncode == 1:
+            # no PR associated to the branch
+            return None
+        raise
+    res = json.loads(output)
+    return res["number"]
+
+
 def get_next_available_issue_pr_number(component):
     """Get the next available number for issues/PRs."""
     last_used = 0
@@ -990,6 +1013,10 @@ def get_next_available_issue_pr_number(component):
 
 def get_commit_pr_suffix(component):
     """Get the commit message suffix containing the expected PR number."""
+    current_pr = get_current_pr_number(component)
+    if current_pr:
+        return f" (#{current_pr})"
+
     pr_number_suffix = ""
     try:
         pr_number = get_next_available_issue_pr_number(component)
