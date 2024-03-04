@@ -8,6 +8,7 @@
 
 """`reana-dev`'s git commands."""
 
+import datetime
 import os
 import subprocess
 import sys
@@ -1289,8 +1290,9 @@ def git_upgrade_shared_modules(
     """
 
     def _create_commit_or_amend(components):
+        today = datetime.date.today().isoformat()
         for c in components:
-            commit_cmd = f'git commit -m "build(python): bump shared modules{get_commit_pr_suffix(c)}"'
+            commit_cmd = f'git commit -m "build(python): bump shared REANA packages as of {today}{get_commit_pr_suffix(c)}"'
             if amend:
                 commit_cmd = "git commit --amend --no-edit"
 
@@ -1374,8 +1376,9 @@ def git_upgrade_requirements(ctx, component, exclude_components):  # noqa: D301
             sys.exit(1)
         if upgrade_requirements(component):
             run_command(f"git add {PYTHON_REQUIREMENTS_FILE}", component)
+            today = datetime.date.today().isoformat()
             run_command(
-                f'git commit -m "build(python): bump all dependencies{get_commit_pr_suffix(component)}"',
+                f'git commit -m "build(python): bump all required packages as of {today}{get_commit_pr_suffix(component)}"',
                 component,
             )
 
