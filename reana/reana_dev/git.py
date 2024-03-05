@@ -10,11 +10,13 @@
 
 import datetime
 import os
+import re
 import subprocess
 import sys
 from typing import Optional
 
 import click
+import yaml
 
 from reana.config import (
     COMPONENTS_USING_SHARED_MODULE_COMMONS,
@@ -28,6 +30,8 @@ from reana.config import (
     PYTHON_VERSION_FILE,
     RELEASE_COMMIT_REGEX,
     REPO_LIST_ALL,
+    REPO_LIST_CLUSTER_INFRASTRUCTURE,
+    REPO_LIST_CLUSTER_RUNTIME_BATCH,
     REPO_LIST_PYTHON_REQUIREMENTS,
     REPO_LIST_SHARED,
 )
@@ -1584,6 +1588,256 @@ def git_tag(component, exclude_components):  # noqa: D301
 
         current_version = get_current_component_version_from_source_files(component)
         run_command(f"git tag {current_version}", component=component)
+
+
+def get_previous_versions(components, override={}):
+    """Get the version of each component at the time of the previous REANA release."""
+    helm_values = yaml.safe_load(
+        run_command(
+            "git show HEAD~1:helm/reana/values.yaml",
+            component="reana",
+            return_output=True,
+        )
+    )
+
+    prev_versions = dict(override)
+    prev_server = helm_values["components"]["reana_server"]["image"].split(":")[1]
+    for component in components:
+        if component in override:
+            continue
+
+        if (
+            component
+            in REPO_LIST_CLUSTER_INFRASTRUCTURE + REPO_LIST_CLUSTER_RUNTIME_BATCH
+        ):
+            # cluster components: get version from docker image in
+            # Helm values of previous REANA release
+            image = helm_values["components"][component.replace("-", "_")]["image"]
+            prev_version = image.split(":")[1]
+        elif component in REPO_LIST_SHARED:
+            # shared components: read version from requirements.txt of reana-server
+            # of previous REANA release
+            requirement = run_command(
+                f"git show {prev_server}:requirements.txt | grep '^{component}'",
+                component="reana-server",
+                return_output=True,
+            )
+            prev_version = re.search("==([a-zA-Z0-9.-_]+)", requirement).group(1)
+        elif component == "reana":
+            # reana helm chart: get version from manifest of previous commit
+            chart_manifest = yaml.safe_load(
+                run_command(
+                    "git show HEAD~1:helm/reana/Chart.yaml",
+                    component="reana",
+                    return_output=True,
+                )
+            )
+            prev_version = chart_manifest["version"]
+        else:
+            raise ValueError(f"Not able to find previous version of {component}")
+        prev_versions[component] = prev_version
+
+    return prev_versions
+
+
+def get_formatted_changelog_lines(component, versions):
+    """Read and format the changelog lines of given component and versions.
+
+    The changelog will be reformatted so that:
+    - commit types do not create subsections (e.g. `### Build`)
+    - the commit type is prepended to each commit message
+    - all sections are moved one level down in the hierarchy
+
+    Example:
+    ```
+    ## [0.9.8](https://github.com/reanahub/reana-commons/compare/0.9.7...0.9.8) (2024-03-01)
+
+
+    ### Build
+
+    * **python:** change extra names to comply with PEP 685 [...]
+    ```
+
+    becomes
+
+    ```
+    #### reana-commons [0.9.8](https://github.com/reanahub/reana-commons/compare/0.9.7...0.9.8) (2024-03-01)
+
+    * [Build] **python:** change extra names to comply with PEP 685 [...]
+    ```
+    """
+    changelog_path = os.path.join(get_srcdir(component), "CHANGELOG.md")
+    with open(changelog_path) as f:
+        changelog_lines = f.readlines()
+
+    formatted_lines = []
+    is_version_to_add = False
+    current_section = ""
+    for line in changelog_lines:
+        # check if release in header is part of releases we are interested in
+        matches = re.match(r"##\s+\[?([\d.]+)", line)
+        if matches:
+            is_version_to_add = matches.group(1) in versions
+        if not is_version_to_add:
+            continue
+
+        if line.startswith("### "):
+            # commit type (e.g. fix, feat, ...)
+            current_section = line[len("### ") :].strip()
+        elif line.startswith("## "):
+            # release header
+            line = f"#### {component}" + line[len("##") :]
+            if formatted_lines:
+                # add empty line before previous release changelog
+                formatted_lines.append("\n")
+            formatted_lines.append(line)
+            formatted_lines.append("\n")
+        elif line.startswith("*"):
+            # release please format, bullet points with '*'
+            formatted_lines.append(f"* [{current_section}]" + line[1:])
+        elif line.startswith("-"):
+            # old changelog format, bullet points with '-'
+            formatted_lines.append("*" + line[1:])
+
+    return formatted_lines
+
+
+def substitute_version_changelog(component, version, new_lines):
+    """Substitute the changelog of the provided version."""
+    changelog_path = os.path.join(get_srcdir(component), "CHANGELOG.md")
+    with open(changelog_path) as changelog_file:
+        changelog_lines = changelog_file.readlines()
+
+    # find the idx of the given release
+    idx_begin = None
+    for i, line in enumerate(changelog_lines):
+        if line.startswith("## ") and version in line:
+            idx_begin = i
+            break
+
+    if idx_begin is None:
+        raise ValueError(f"Could not find changelog of {component} {version}")
+
+    idx_end = idx_begin + 1
+    while idx_end < len(changelog_lines):
+        if changelog_lines[idx_end].startswith("## "):
+            break
+        idx_end += 1
+
+    new_changelog = (
+        changelog_lines[: idx_begin + 2]  # let's keep header and blank line
+        + new_lines
+        + changelog_lines[idx_end:]
+    )
+
+    with open(changelog_path, "w") as changelog_file:
+        changelog_file.writelines(new_changelog)
+
+
+def append_after_version_changelog(component, version, new_lines):
+    """Append the given lines after the changelog of the provided version."""
+    changelog_path = os.path.join(get_srcdir(component), "CHANGELOG.md")
+    with open(changelog_path) as changelog_file:
+        changelog_lines = changelog_file.readlines()
+
+    # find the idx of the release that follows the given one
+    idx_insert = None
+    found_given_version = False
+    for i, line in enumerate(changelog_lines):
+        if line.startswith("## "):
+            if version in line:
+                found_given_version = True
+            elif found_given_version:
+                idx_insert = i
+                break
+
+    if idx_insert is None:
+        raise ValueError(f"Could not find changelog of {component} {version}")
+
+    new_changelog = (
+        changelog_lines[:idx_insert] + new_lines + changelog_lines[idx_insert:]
+    )
+
+    with open(changelog_path, "w") as changelog_file:
+        changelog_file.writelines(new_changelog)
+
+
+@git_commands.command(name="git-aggregate-changelog")
+@click.option(
+    "--previous-reana-client",
+    help="Which is the version of reana-client that was released "
+    "for the last REANA release?",
+    required=True,
+)
+def get_aggregate_changelog(previous_reana_client):  # noqa: D301
+    """Aggregate the changelog of all REANA components.
+
+    Aggregate the changelog of all REANA components and append it to the main changelog of REANA.
+    This is useful for creating the changelog of a new REANA release.
+
+    All the repositories of the cluster components, shared components, `reana-client` and
+    `reana` must be checked out at the respective release commits.
+
+    :param previous_reana_client: The version of reana-client that was part of the previous REANA release.
+    :type previous_reana_client: str
+    """
+    # all the components whose changelogs will be aggregated
+    changelog_components = ["reana"] + sorted(
+        ["reana-client"]
+        + REPO_LIST_SHARED
+        + REPO_LIST_CLUSTER_INFRASTRUCTURE
+        + REPO_LIST_CLUSTER_RUNTIME_BATCH
+    )
+    for component in changelog_components:
+        if not is_last_commit_release_commit(component):
+            click.secho(
+                f"The last commit of {component} is not a release commit. "
+                "Please make sure you have the release commit checked out.",
+                fg="red",
+            )
+            sys.exit(1)
+
+    # get all the versions of the components as they were when the previous REANA version was released
+    prev_versions = get_previous_versions(
+        changelog_components, {"reana-client": previous_reana_client}
+    )
+
+    aggregated_changelog_lines = []
+    for component in changelog_components:
+        prev_version = prev_versions[component]
+
+        # get all tags reachable from latest release but not part of previous REANA release
+        versions_to_add = set(
+            run_command(
+                f"git tag --no-merged {prev_version} --merged",
+                component,
+                return_output=True,
+            ).splitlines()
+        )
+
+        # also add current version, as it might not be tagged yet
+        versions_to_add.add(get_current_component_version_from_source_files(component))
+
+        aggregated_changelog_lines += get_formatted_changelog_lines(
+            component, versions_to_add
+        )
+        aggregated_changelog_lines += ["\n"]
+
+    current_reana_version = get_current_component_version_from_source_files("reana")
+
+    # add headers
+    aggregated_changelog_lines = [
+        f"### :sparkles: What's new in REANA {current_reana_version}\n",
+        "\n",
+        "TODO: copy here the blog post introduction + link to blog post\n",
+        "\n",
+        f"### :zap: Detailed changelog for REANA {current_reana_version} components\n",
+        "\n",
+    ] + aggregated_changelog_lines
+
+    substitute_version_changelog(
+        "reana", current_reana_version, aggregated_changelog_lines
+    )
 
 
 git_commands_list = list(git_commands.commands.values())
