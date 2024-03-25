@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022 CERN.
+# Copyright (C) 2020, 2021, 2022, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -14,7 +14,7 @@ from reana.config import (
     CODECOV_REANAHUB_URL,
     GIT_SUPPORTED_MAINT_BRANCHES,
     GITHUB_REANAHUB_URL,
-    REANA_LIST_DEMO_ALL,
+    REPO_LIST_DEMO_ALL,
 )
 
 
@@ -83,7 +83,7 @@ def create_build_status_page():
             "simple": True,
             "title": "Examples",
             "description": "Selected reusable analysis examples.",
-            "packages": {demo: {} for demo in sorted(REANA_LIST_DEMO_ALL)},
+            "packages": {demo: {} for demo in sorted(REPO_LIST_DEMO_ALL)},
         },
     }
 
