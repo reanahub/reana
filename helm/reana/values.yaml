@@ -135,8 +135,8 @@ notifications:
 # Accessing the cluster from outside world
 ingress:
   enabled: true
+  ingress_class_name: null
   annotations:
-    kubernetes.io/ingress.class: traefik
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
   tls:
     self_signed_cert: true
@@ -163,6 +163,9 @@ traefik:
     enabled: true
   service:
     type: NodePort
+  ingressClass:
+    enabled: true
+    isDefaultClass: true
 
 # Quota
 quota:
