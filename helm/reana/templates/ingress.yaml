@@ -15,6 +15,9 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if .ingress_class_name }}
+  ingressClassName: {{ .ingress_class_name | quote }}
+  {{- end }}
   {{- with .tls }}
   {{- if and .self_signed_cert .secret_name }}
     {{- fail "Cannot set `.tls.secret_name` and `.tls.self_signed_cert` at the same time" }}
