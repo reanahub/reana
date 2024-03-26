@@ -86,6 +86,10 @@ spec:
             value: {{ .Values.namespace_runtime | default .Release.Namespace }}
           - name: REANA_INGRESS_ANNOTATIONS
             value: {{ .Values.ingress.annotations | toJson | quote }}
+          {{- if .Values.ingress.ingress_class_name }}
+          - name: REANA_INGRESS_CLASS_NAME
+            value: {{ .Values.ingress.ingress_class_name | quote }}
+          {{- end }}
           - name: REANA_DEFAULT_QUOTA_CPU_LIMIT
             value: {{ .Values.quota.default_cpu_limit | default 0 | quote }}
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT

@@ -67,10 +67,10 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `eos.enabled`                                            | **[CERN only]** Enable EOS support inside the cluster                                | false                                           |
 | `fullnameOverride`                                       | Name to override the `reana.prefix`                                                  | None                                            |
 | `infrastructure_storage`                                 | Optional volume used by REANA's infrastructure (i.e. database and message broker). It has the same settings as `shared_storage` | {}   |
-| `ingress.annotations.kubernetes.io/ingress.class`        | Type of ingress controller                                                           | traefik                                         |
 | `ingress.annotations.traefik.ingress.kubernetes.io/router.entrypoints` | Entrypoints allowed by the ingress controller                          | "web,websecure"                                 |
 | `ingress.enabled`                                        | Create an ingress resource to access the REANA instance from outside the cluster     | true                                            |
 | `ingress.extra`                                          | An array of extra ingress resources. They can be configured in the same way as the default ingress, with the addition of `ingress.extra[].name`. | [] |
+| `ingress.ingress_class_name`                             | Name of the Ingress class to use. Default value (`null`) will use the cluster's default Ingress class. | null                          |
 | `ingress.tls.hosts`                                      | List of hosts included in the TLS certificate, needed by cert-manager                | []                                              |
 | `ingress.tls.secret_name`                                | Name of the Kubernetes secret containing the TLS certificate to be used              | None                                            |
 | `ingress.tls.self_signed_cert`                           | Enable the generation of a self-signed TLS certificate                               | true                                            |
