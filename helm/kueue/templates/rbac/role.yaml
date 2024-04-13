@@ -1,0 +1,550 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+  {{- include "kueue.labels" . | nindent 4 }}
+  name: '{{ include "kueue.fullname" . }}-manager-role'
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - limitranges
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods/finalizers
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - pods/status
+    verbs:
+      - get
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - podtemplates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - mutatingwebhookconfigurations
+    verbs:
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - validatingwebhookconfigurations
+    verbs:
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - autoscaling.x-k8s.io
+    resources:
+      - provisioningrequests
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - autoscaling.x-k8s.io
+    resources:
+      - provisioningrequests/status
+    verbs:
+      - get
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - jobs/finalizers
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - batch
+    resources:
+      - jobs/status
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - flowcontrol.apiserver.k8s.io
+    resources:
+      - flowschemas
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - flowcontrol.apiserver.k8s.io
+    resources:
+      - flowschemas/status
+    verbs:
+      - patch
+  - apiGroups:
+      - flowcontrol.apiserver.k8s.io
+    resources:
+      - prioritylevelconfigurations
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - jobset.x-k8s.io
+    resources:
+      - jobsets
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - jobset.x-k8s.io
+    resources:
+      - jobsets/finalizers
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - jobset.x-k8s.io
+    resources:
+      - jobsets/status
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - mpijobs
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - mpijobs/finalizers
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - mpijobs/status
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - mxjobs
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - mxjobs/finalizers
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - mxjobs/status
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - paddlejobs
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - paddlejobs/finalizers
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - paddlejobs/status
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - pytorchjobs
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - pytorchjobs/finalizers
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - pytorchjobs/status
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - tfjobs
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - tfjobs/finalizers
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - tfjobs/status
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - xgboostjobs
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - xgboostjobs/finalizers
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kubeflow.org
+    resources:
+      - xgboostjobs/status
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - admissionchecks
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - admissionchecks/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - admissionchecks/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - clusterqueues
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - clusterqueues/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - clusterqueues/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - localqueues
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - localqueues/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - localqueues/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - multikueueclusters
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - multikueueclusters/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - multikueueconfigs
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - provisioningrequestconfigs
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - resourceflavors
+    verbs:
+      - delete
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - resourceflavors/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - workloadpriorityclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - workloads
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - workloads/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - kueue.x-k8s.io
+    resources:
+      - workloads/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - node.k8s.io
+    resources:
+      - runtimeclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ray.io
+    resources:
+      - rayclusters
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ray.io
+    resources:
+      - rayclusters/finalizers
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ray.io
+    resources:
+      - rayclusters/status
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ray.io
+    resources:
+      - rayjobs
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ray.io
+    resources:
+      - rayjobs/finalizers
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ray.io
+    resources:
+      - rayjobs/status
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - scheduling.k8s.io
+    resources:
+      - priorityclasses
+    verbs:
+      - get
+      - list
+      - watch

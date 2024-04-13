@@ -76,3 +76,6 @@ helm/reana/Chart.lock
 # Helm releases
 .cr-release-packages
 .cr-index
+helm/.DS_Store
+helm/reana/.DS_Store
+helm/reana/charts/.DS_Store

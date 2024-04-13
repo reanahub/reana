@@ -360,6 +360,7 @@ def cluster_deploy(
         cmds.append("reana-dev git-submodule --update")
     cmds.extend(
         [
+            "helm install kueue helm/kueue --create-namespace --namespace kueue-system",
             "helm dep update helm/reana",
             helm_install,
             f"kubectl config set-context --current --namespace={namespace}",
