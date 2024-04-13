@@ -298,6 +298,7 @@ def cluster_deploy(
     admin_email,
     admin_password,
     instance_name,
+    kueue,
 ):  # noqa: D301
     """Deploy REANA cluster.
 
@@ -360,7 +361,11 @@ def cluster_deploy(
         cmds.append("reana-dev git-submodule --update")
     cmds.extend(
         [
-            "helm install kueue helm/kueue --create-namespace --namespace kueue-system",
+            "helm install kueue helm/kueue --create-namespace --namespace kueue-system",       
+            "kubectl wait --for=condition=available deployment/kueue-controller-manager -n kueue-system --timeout=5m",
+            "kubectl apply -f scripts/kueue/resourceFlavor.yaml",
+            "kubectl apply -f scripts/kueue/clusterQueue.yaml",
+            "kubectl apply -f scripts/kueue/localQueue.yaml",
             "helm dep update helm/reana",
             helm_install,
             f"kubectl config set-context --current --namespace={namespace}",
