@@ -234,7 +234,11 @@ def run_commands():
     help="Which directories from the Kubernetes nodes to mount inside the job pods? "
     "cluster_node_path:job_pod_mountpath, e.g /var/reana/mydata:/mydata",
 )
-@click.option("--no-cache", is_flag=True, help="Do not use Docker image layer cache.")
+@click.option(
+    "--no-cache", 
+    is_flag=True, 
+    help="Do not use Docker image layer cache."
+    )
 @click.option(
     "--component",
     "-c",
@@ -272,6 +276,12 @@ def run_commands():
     default=1,
     type=click.IntRange(min=1),
     help="Number of docker images to build in parallel.",
+)
+@click.option(
+    "--kueue",
+    "-k",
+    default=False,
+    help="Use Kueue scheduler for workflow execution? [default=True]",
 )
 @run_commands.command(name="run-ci")
 def run_ci(
