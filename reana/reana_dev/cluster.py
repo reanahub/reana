@@ -24,6 +24,7 @@ from reana.reana_dev.utils import (
     validate_mode_option,
 )
 
+from reana.config import USE_KUEUE
 
 def volume_mounts_to_list(ctx, param, value):
     """Convert tuple params to dictionary. e.g `(foo:bar)` to `{'foo': 'bar'}`.
@@ -307,7 +308,7 @@ def cluster_build(
 @click.option(
     "--kueue",
     "-k",
-    default=False,
+    default=USE_KUEUE,
     help="Use Kueue scheduler for workflow execution? [default=True]",
 )
 def cluster_deploy(
@@ -383,12 +384,14 @@ def cluster_deploy(
 
     if kueue:
         cmds.extend([
-        "helm install kueue helm/kueue --create-namespace --namespace kueue-system",
+        "helm install kueue Helm/kueue --create-namespace --namespace kueue-system --set kueueEnabled=true",
         "kubectl wait --for=condition=available deployment/kueue-controller-manager -n kueue-system --timeout=5m",
         "kubectl apply -f scripts/kueue/resourceFlavor.yaml",
         "kubectl apply -f scripts/kueue/clusterQueue.yaml",
         "kubectl apply -f scripts/kueue/localQueue.yaml",
-    ])
+        ])
+        USE_KUEUE = True
+
     cmds.extend(
         [
             "helm dep update helm/reana",
