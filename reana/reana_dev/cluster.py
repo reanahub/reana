@@ -26,6 +26,7 @@ from reana.reana_dev.utils import (
 
 from reana.config import USE_KUEUE
 
+
 def volume_mounts_to_list(ctx, param, value):
     """Convert tuple params to dictionary. e.g `(foo:bar)` to `{'foo': 'bar'}`.
 
@@ -66,11 +67,7 @@ def cluster_commands():
     callback=validate_mode_option,
     help="In which mode to run REANA cluster? (releasehelm,releasepypi,latest,debug) [default=latest]",
 )
-@click.option(
-    "--worker-nodes", 
-    default=0, 
-    help="How many worker nodes? [default=0]"
-)
+@click.option("--worker-nodes", default=0, help="How many worker nodes? [default=0]")
 @click.option(
     "--disable-default-cni",
     is_flag=True,
@@ -201,16 +198,8 @@ def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D3
     default="",
     help="Which components to exclude from build? [c1,c2,c3]",
 )
-@click.option(
-    "--no-cache", 
-    is_flag=True, 
-    help="Do not use Docker image layer cache."
-)
-@click.option(
-    "--skip-load", 
-    is_flag=True, 
-    help="Do not load images into kind node(s)."
-)
+@click.option("--no-cache", is_flag=True, help="Do not use Docker image layer cache.")
+@click.option("--skip-load", is_flag=True, help="Do not load images into kind node(s).")
 @click.option(
     "--parallel",
     "-p",
@@ -260,10 +249,7 @@ def cluster_build(
 
 @cluster_commands.command(name="cluster-deploy")
 @click.option(
-    "--namespace", 
-    "-n", 
-    default="default", 
-    help="Kubernetes namespace [default]"
+    "--namespace", "-n", default="default", help="Kubernetes namespace [default]"
 )
 @click.option(
     "-j",
@@ -374,6 +360,14 @@ def cluster_deploy(
         if "reana-ui" in standard_named_exclude_components:
             values_dict["components"]["reana_ui"]["enabled"] = False
 
+    if kueue:
+        values_dict.setdefault("components", {}).setdefault(
+            "reana_workflow_controller", {}
+        ).setdefault("environment", {})["KUEUE_ENABLED"] = True
+        values_dict.setdefault("components", {}).setdefault(
+            "reana_job_controller", {}
+        ).setdefault("environment", {})["KUEUE_ENABLED"] = True
+
     values_yaml = yaml.dump(values_dict) if values_dict else ""
     helm_install = f"cat <<EOF | helm install {instance_name} helm/reana -n {namespace} --create-namespace --wait -f -\n{values_yaml}\nEOF"
 
@@ -383,14 +377,15 @@ def cluster_deploy(
         cmds.append("reana-dev git-submodule --update")
 
     if kueue:
-        cmds.extend([
-        "helm install kueue Helm/kueue --create-namespace --namespace kueue-system --set kueueEnabled=true",
-        "kubectl wait --for=condition=available deployment/kueue-controller-manager -n kueue-system --timeout=5m",
-        "kubectl apply -f scripts/kueue/resourceFlavor.yaml",
-        "kubectl apply -f scripts/kueue/clusterQueue.yaml",
-        "kubectl apply -f scripts/kueue/localQueue.yaml",
-        ])
-        USE_KUEUE = True
+        cmds.extend(
+            [
+                "helm install kueue helm/kueue --create-namespace --namespace kueue-system",
+                "kubectl wait --for=condition=available deployment/kueue-controller-manager -n kueue-system --timeout=5m",
+                "kubectl apply -f scripts/kueue/resourceFlavor.yaml",
+                "kubectl apply -f scripts/kueue/clusterQueue.yaml",
+                "kubectl apply -f scripts/kueue/localQueue.yaml",
+            ]
+        )
 
     cmds.extend(
         [
@@ -409,10 +404,7 @@ def cluster_deploy(
 
 @cluster_commands.command(name="cluster-undeploy")
 @click.option(
-    "--namespace", 
-    "-n", 
-    default="default", 
-    help="Kubernetes namespace [default]"
+    "--namespace", "-n", default="default", help="Kubernetes namespace [default]"
 )
 @click.option(
     "--instance-name",
