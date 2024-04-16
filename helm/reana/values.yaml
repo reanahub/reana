@@ -22,6 +22,12 @@ workspaces:
 
 interactive_sessions:
   cronjob_schedule: "0 3 * * *"  # everyday at 3am
+  environments:
+    jupyter:
+      recommended:
+        - image: "docker.io/jupyter/scipy-notebook:notebook-6.4.5"
+          name: "Jupyter SciPy Notebook 6.4.5"
+      allow_custom: false
   maximum_inactivity_period: forever
 
 compute_backends:

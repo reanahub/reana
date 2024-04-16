@@ -164,6 +164,8 @@ spec:
           # Environment variables for job controller
           - name: REANA_JOB_CONTROLLER_ENV_VARS
             value: {{ .Values.components.reana_job_controller.environment | toJson | quote }}
+          - name: REANA_INTERACTIVE_SESSIONS_ENVIRONMENTS
+            value: {{ .Values.interactive_sessions.environments | toJson | quote }}
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
             value: {{ .Values.reana_hostname }}
