@@ -105,7 +105,7 @@ components:
     environment:
       SHARED_VOLUME_PATH: /var/reana
       REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 10
-      KUEUE_ENABLED: false
+      # KUEUE_ENABLED: false
   reana_workflow_engine_cwl:
     image: docker.io/reanahub/reana-workflow-engine-cwl:0.9.2
   reana_workflow_engine_yadage:
@@ -117,7 +117,7 @@ components:
   reana_job_controller:
     image: docker.io/reanahub/reana-job-controller:0.9.2
     environment:
-      KUEUE_ENABLED: false
+      # KUEUE_ENABLED: false
   reana_message_broker:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-message-broker:0.9.2
@@ -170,5 +170,5 @@ quota:
   disk_update: "0 3 * * *"  # everyday at 3am
   termination_update_policy: ""
 
-# kueue:
-#   enabled: true
+kueue:
+  enabled: true

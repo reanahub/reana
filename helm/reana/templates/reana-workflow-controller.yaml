@@ -192,6 +192,13 @@ spec:
                 name: {{ include "reana.prefix" . }}-db-secrets
                 key: password
           {{ end }}
+          {{- if .Values.kueue.enabled }}
+          - name: KUEUE_ENABLED
+            value: "True"
+          {{- else }}
+          - name: KUEUE_ENABLED
+            value: "False"
+          {{- end }}
       - name: job-status-consumer
         image: {{ .Values.components.reana_workflow_controller.image }}
         imagePullPolicy: {{ .Values.components.reana_workflow_controller.imagePullPolicy }}

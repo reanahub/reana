@@ -277,12 +277,12 @@ def run_commands():
     type=click.IntRange(min=1),
     help="Number of docker images to build in parallel.",
 )
-@click.option(
-    "--kueue",
-    "-k",
-    default=False,
-    help="Use Kueue scheduler for workflow execution? [default=True]",
-)
+# @click.option(
+#     "--kueue",
+#     "-k",
+#     default=False,
+#     help="Use Kueue scheduler for workflow execution? [default=True]",
+# )
 @run_commands.command(name="run-ci")
 def run_ci(
     build_arg,
