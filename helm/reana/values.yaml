@@ -171,7 +171,6 @@ quota:
 kueue:
   enabled: true
   borrowingLimit: 0
-  
   # Parameters for jobs
   batch:
     cpuNominalQuota: 2
