@@ -170,11 +170,11 @@ quota:
 
 kueue:
   enabled: true
-  borrowingLimit: 0
-  # Parameters for jobs
-  batch:
-    cpuNominalQuota: 2
-    memoryNominalQuota: 4Gi
-  job:
-    cpuNominalQuota: 5
-    memoryNominalQuota: 7Gi
+  # borrowingLimit: 0
+  # # Parameters for jobs
+  # batch:
+  #   cpuNominalQuota: 3
+  #   memoryNominalQuota: 4Gi
+  # job:
+  #   cpuNominalQuota: 3
+  #   memoryNominalQuota: 4Gi
