@@ -24,8 +24,6 @@ from reana.reana_dev.utils import (
     validate_mode_option,
 )
 
-# from reana.config import USE_KUEUE
-
 
 def volume_mounts_to_list(ctx, param, value):
     """Convert tuple params to dictionary. e.g `(foo:bar)` to `{'foo': 'bar'}`.
@@ -291,12 +289,6 @@ def cluster_build(
     default="reana",
     help="REANA instance name",
 )
-# @click.option(
-#     "--kueue",
-#     "-k",
-#     default=USE_KUEUE,
-#     help="Use Kueue scheduler for workflow execution? [default=True]",
-# )
 def cluster_deploy(
     namespace,
     job_mounts,
@@ -306,7 +298,6 @@ def cluster_deploy(
     admin_email,
     admin_password,
     instance_name,
-    # kueue,
 ):  # noqa: D301
     """Deploy REANA cluster.
 
@@ -360,14 +351,6 @@ def cluster_deploy(
         if "reana-ui" in standard_named_exclude_components:
             values_dict["components"]["reana_ui"]["enabled"] = False
 
-    # if kueue:
-    #     values_dict.setdefault("components", {}).setdefault(
-    #         "reana_workflow_controller", {}
-    #     ).setdefault("environment", {})["KUEUE_ENABLED"] = True
-    #     values_dict.setdefault("components", {}).setdefault(
-    #         "reana_job_controller", {}
-    #     ).setdefault("environment", {})["KUEUE_ENABLED"] = True
-
     values_yaml = yaml.dump(values_dict) if values_dict else ""
     helm_install = f"cat <<EOF | helm install {instance_name} helm/reana -n {namespace} --create-namespace --wait -f -\n{values_yaml}\nEOF"
 
@@ -375,18 +358,6 @@ def cluster_deploy(
     if mode in ("debug"):
         cmds.append("reana-dev python-install-eggs")
         cmds.append("reana-dev git-submodule --update")
-
-    # if kueue:
-    #     cmds.extend(
-    #         [
-    #             "helm install kueue helm/kueue --create-namespace --namespace kueue-system",
-    #             "kubectl wait --for=condition=available deployment/kueue-controller-manager -n kueue-system --timeout=5m",
-    #             "kubectl apply -f scripts/kueue/resourceFlavor.yaml",
-    #             "kubectl apply -f scripts/kueue/clusterQueue.yaml",
-    #             "kubectl apply -f scripts/kueue/localQueue.yaml",
-    #         ]
-    #     )
-
     cmds.extend(
         [
             "helm dep update helm/reana",

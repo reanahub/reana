@@ -298,6 +298,3 @@ PYTHON_EXECUTABLE_NAME = "python3.8"
 
 PYTHON_DOCKER_IMAGE = "docker.io/library/python:3.8"
 """Python docker image with the same version as cluster components."""
-
-USE_KUEUE = False
-"""Use Kueue for job submission."""
