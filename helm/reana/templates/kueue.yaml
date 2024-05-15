@@ -1,0 +1,64 @@
+# {{- if .Values.kueue.enabled }}
+# # Cluster Queue for Batch Job
+# ---
+# apiVersion: kueue.x-k8s.io/v1beta1
+# kind: ClusterQueue
+# metadata:
+#   name: "cluster-queue-reana-run-batch"
+# spec:
+#   namespaceSelector: {} 
+#   cohort: "reana"
+#   resourceGroups:
+#   - coveredResources: ["cpu", "memory"]
+#     flavors:
+#     - name: "default-flavor"
+#       resources:
+#       - name: "cpu"
+#         nominalQuota: {{ .Values.kueue.batch.cpuNominalQuota }}
+#         borrowingLimit: {{ .Values.kueue.borrowingLimit }}
+#       - name: "memory"
+#         nominalQuota: {{ .Values.kueue.batch.memoryNominalQuota }}
+# ---
+# # Local Queue for Batch Job
+# apiVersion: kueue.x-k8s.io/v1beta1
+# kind: LocalQueue
+# metadata:
+#   namespace: "default"
+#   name: "batch-queue-batch"
+# spec:
+#   clusterQueue: "cluster-queue-reana-run-batch"
+# ---
+# # Cluster Queue for Run Job
+# apiVersion: kueue.x-k8s.io/v1beta1
+# kind: ClusterQueue
+# metadata:
+#   name: "cluster-queue-reana-run-job"
+# spec:
+#   namespaceSelector: {} 
+#   cohort: "reana"
+#   resourceGroups:
+#   - coveredResources: ["cpu", "memory"]
+#     flavors:
+#     - name: "default-flavor"
+#       resources:
+#       - name: "cpu"
+#         nominalQuota: {{ .Values.kueue.job.cpuNominalQuota }}
+#         borrowingLimit: {{ .Values.kueue.borrowingLimit }}
+#       - name: "memory"
+#         nominalQuota: {{ .Values.kueue.job.memoryNominalQuota }}
+# ---
+# # Local Queue for Regular Job
+# apiVersion: kueue.x-k8s.io/v1beta1
+# kind: LocalQueue
+# metadata:
+#   namespace: "default"
+#   name: "local-queue-job"
+# spec:
+#   clusterQueue: "cluster-queue-reana-run-job"
+# ---
+# # default-flavor.yaml
+# apiVersion: kueue.x-k8s.io/v1beta1
+# kind: ResourceFlavor
+# metadata:
+#   name: "default-flavor"
+# {{- end }}
