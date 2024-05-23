@@ -206,6 +206,16 @@ spec:
                 name: {{ include "reana.prefix" . }}-db-secrets
                 key: password
           {{ end }}
+          - name: RABBIT_MQ_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-message-broker-secrets
+                key: user
+          - name: RABBIT_MQ_PASS
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-message-broker-secrets
+                key: password
       - name: job-status-consumer
         image: {{ .Values.components.reana_workflow_controller.image }}
         imagePullPolicy: {{ .Values.components.reana_workflow_controller.imagePullPolicy }}
@@ -269,6 +279,16 @@ spec:
             secretKeyRef:
               name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
               key: REANA_GITLAB_HOST
+        - name: RABBIT_MQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" . }}-message-broker-secrets
+              key: user
+        - name: RABBIT_MQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" . }}-message-broker-secrets
+              key: password
       volumes:
       - name: reana-shared-volume
         {{- if not (eq .Values.shared_storage.backend "hostpath") }}

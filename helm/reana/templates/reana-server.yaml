@@ -156,6 +156,16 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-cache-secrets
                 key: password
+          - name: RABBIT_MQ_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-message-broker-secrets
+                key: user
+          - name: RABBIT_MQ_PASS
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-message-broker-secrets
+                key: password
           {{- if .Values.debug.enabled }}
           # Disable CORS in development environment, for example
           # to connect from an external React application.
@@ -282,6 +292,16 @@ spec:
               name: {{ include "reana.prefix" $ }}-login-provider-secrets
               key: PROVIDER_SECRETS
         {{- end }}
+        - name: RABBIT_MQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" . }}-message-broker-secrets
+              key: user
+        - name: RABBIT_MQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" . }}-message-broker-secrets
+              key: password
       volumes:
       - name: reana-shared-volume
         {{- if not (eq .Values.shared_storage.backend "hostpath") }}

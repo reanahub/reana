@@ -50,6 +50,7 @@ infrastructure_storage: {}
 secrets:
   database: {}
   cache: {}
+  message_broker: {}
   gitlab: {}
   cern:
     sso: {}
