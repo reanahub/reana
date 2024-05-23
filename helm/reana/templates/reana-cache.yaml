@@ -31,6 +31,15 @@ spec:
       containers:
       - name: cache
         image: docker.io/library/redis:5.0.5
+        env:
+          - name: REANA_CACHE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-cache-secrets
+                key: password
+        args:
+          - "--requirepass"
+          - "$(REANA_CACHE_PASSWORD)"
         ports:
         - containerPort: 6379
       {{- if .Values.node_label_infrastructure }}

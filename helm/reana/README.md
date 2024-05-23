@@ -98,6 +98,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `reana_hostname`                                         | REANA hostname (e.g. reana.example.org)                                              | None                                            |
 | `namespace_runtime`                                      | Namespace in which the REANA runtime pods (workflow engines, jobs etc...) will run   | `.Release.Namespace`                            |
 | `naming_scheme`                                          | REANA component naming scheme                                                        | None                                            |
+| `secrets.cache.password`                                 | **[Do not use in production, use secrets instead]** Cache (Redis) password           | None                                            |
 | `secrets.cern.sso.CERN_CONSUMER_KEY`                     | CERN SSO consumer key                                                                | None                                            |
 | `secrets.cern.sso.CERN_CONSUMER_SECRET`                  | **[Do not use in production, use secrets instead]** CERN SSO consumer secret         | None                                            |
 | `secrets.database.password`                              | **[Do not use in production, use secrets instead]** PostgreSQL database password     | None                                            |

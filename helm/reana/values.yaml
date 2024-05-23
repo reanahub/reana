@@ -49,6 +49,7 @@ infrastructure_storage: {}
 
 secrets:
   database: {}
+  cache: {}
   gitlab: {}
   cern:
     sso: {}
