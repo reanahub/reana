@@ -1,6 +1,6 @@
 rules:
   body-case: [2, always, sentence-case]
-  body-full-stop: [2, always]
+  body-full-stop: [1, always]
   body-leading-blank: [2, always]
   body-max-line-length: [2, always, 72]
   footer-leading-blank: [2, always]

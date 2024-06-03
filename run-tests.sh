@@ -16,15 +16,25 @@ check_commitlint () {
     npx commitlint --from="$from" --to="$to"
     found=0
     while IFS= read -r line; do
-        if echo "$line" | grep -qP "\(\#$pr\)$"; then
+        commit_hash=$(echo "$line" | cut -d ' ' -f 1)
+        commit_title=$(echo "$line" | cut -d ' ' -f 2-)
+        commit_number_of_parents=$(git rev-list --parents "$commit_hash" -n1 | awk '{print NF-1}')
+        if [ "$commit_number_of_parents" -gt 1 ]; then
+            if echo "$commit_title" | grep -qP "^chore\(.*\): merge "; then
+                break
+            else
+                echo "✖   Merge commits are not allowed in feature branches: $commit_title"
+                found=1
+            fi
+        elif echo "$commit_title" | grep -qP "^chore\(.*\): release"; then
             true
-        elif echo "$line" | grep -qP "^chore\(.*\): release"; then
+        elif echo "$commit_title" | grep -qP "\(\#$pr\)$"; then
             true
         else
-            echo "✖   Headline does not end by '(#$pr)' PR number: $line"
+            echo "✖   Headline does not end by '(#$pr)' PR number: $commit_title"
             found=1
         fi
-    done < <(git log "$from..$to" --format="%s")
+    done < <(git log "$from..$to" --format="%H %s")
     if [ $found -gt 0 ]; then
         exit 1
     fi
