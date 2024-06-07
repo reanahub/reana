@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.9.4](https://github.com/reanahub/reana/compare/0.9.3...0.9.4) (2024-06-07)
+
+
+### Build
+
+* **helm:** add support for Kubernetes 1.30 ([#799](https://github.com/reanahub/reana/issues/799)) ([748ca07](https://github.com/reanahub/reana/commit/748ca0769c24286cb32b8bfaf3df0114748cfae0))
+
+
+### Bug fixes
+
+* **helm:** use ingressClassName instead of deprecated annotation ([#794](https://github.com/reanahub/reana/issues/794)) ([b4f4633](https://github.com/reanahub/reana/commit/b4f46334e79841a75bc4c35d84b5a90fbe31763a)), closes [#742](https://github.com/reanahub/reana/issues/742)
+
+
+### Continuous integration
+
+* **actions:** update GitHub actions due to Node 16 deprecation ([#790](https://github.com/reanahub/reana/issues/790)) ([8ce4a8d](https://github.com/reanahub/reana/commit/8ce4a8de6a46d427ac134b22f69a295e878ffdd8))
+* **commitlint:** improve checking of merge commits ([#803](https://github.com/reanahub/reana/issues/803)) ([16e5542](https://github.com/reanahub/reana/commit/16e55429a6d5d6d745bb563ed4d718b50ce7c0e5))
+
 ## [0.9.3](https://github.com/reanahub/reana/compare/0.9.2...0.9.3) (2024-03-13)
 
 ### :sparkles: What's new in REANA 0.9.3
