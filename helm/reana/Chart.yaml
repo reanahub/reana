@@ -36,7 +36,3 @@ dependencies:
     condition: traefik.enabled
     tags:
       - ingress
-  # - name: kueue
-  #   version: 0.1.0
-  #   repository: "file://./charts/kueue/"
-  #   condition: kueue.enabled
