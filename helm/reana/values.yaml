@@ -32,8 +32,8 @@ shared_storage:
   volume_size: 200
   access_modes: ReadWriteMany
   # shared_volume_mount_path: "/var/reana"
-  # hostpath:
-  #   root_path: "/var/reana"
+  hostpath:
+    root_path: "/var/reana"
   # cephfs:
   #   provisioner: manila-provisioner
   #   type: "Geneva CephFS Testing"
