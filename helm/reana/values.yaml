@@ -28,20 +28,20 @@ compute_backends:
   - kubernetes
 
 shared_storage:
-  backend: hostpath  # hostpath | cephfs | nfs
+  backend: nfs  # hostpath | cephfs | nfs
   volume_size: 200
   access_modes: ReadWriteMany
-  shared_volume_mount_path: "/var/reana"
-  hostpath:
-    root_path: "/var/reana"
-  cephfs:
-    provisioner: manila-provisioner
-    type: "Geneva CephFS Testing"
-    availability_zone: nova
-    os_secret_name: os-trustee
-    os_secret_namespace: kube-system
-    cephfs_os_share_id: <cephfs-share-id>
-    cephfs_os_share_access_id: <cephfs-share-access-id>
+  # shared_volume_mount_path: "/var/reana"
+  # hostpath:
+  #   root_path: "/var/reana"
+  # cephfs:
+  #   provisioner: manila-provisioner
+  #   type: "Geneva CephFS Testing"
+  #   availability_zone: nova
+  #   os_secret_name: os-trustee
+  #   os_secret_namespace: kube-system
+  #   cephfs_os_share_id: <cephfs-share-id>
+  #   cephfs_os_share_access_id: <cephfs-share-access-id>
 
 # Storage used by REANA's infrastructure (i.e. message broker and database).
 # If not specified, the shared storage containing the workspaces will be used instead.
