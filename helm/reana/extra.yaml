@@ -1,0 +1,5 @@
+# extra.yaml 
+shared_storage:
+  backend: nfs  # hostpath | cephfs | nfs
+  volume_size: 200
+  access_modes: ReadWriteMany
