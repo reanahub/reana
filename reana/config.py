@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -24,7 +24,8 @@ REPO_LIST_DEMO_RUNNABLE = [
 ]
 """All git repositories containing REANA runnable demos."""
 
-REANA_LIST_DEMO_ALL = REPO_LIST_DEMO_RUNNABLE + [
+REPO_LIST_DEMO_ALL = REPO_LIST_DEMO_RUNNABLE + [
+    "reana-demo-agc-cms-ttbar-coffea",
     "reana-demo-cdci-crab-pulsar-integral-verification",
     "reana-demo-cdci-integral-data-reduction",
     "reana-demo-cms-reco",
@@ -46,10 +47,6 @@ REPO_LIST_ALL = [
     "reana-client-go",
     "reana-commons",
     "reana-db",
-    "reana-demo-cdci-crab-pulsar-integral-verification",
-    "reana-demo-cdci-integral-data-reduction",
-    "reana-demo-cms-reco",
-    "reana-demo-lhcb-d2pimumu",
     "reana-env-aliphysics",
     "reana-env-jupyter",
     "reana-env-root6",
@@ -65,7 +62,7 @@ REPO_LIST_ALL = [
     "reana-workflow-engine-yadage",
     "reana-workflow-engine-snakemake",
     "www.reana.io",
-] + REPO_LIST_DEMO_RUNNABLE
+] + REPO_LIST_DEMO_ALL
 """All REANA git repositories."""
 
 REPO_LIST_CLIENT = [
