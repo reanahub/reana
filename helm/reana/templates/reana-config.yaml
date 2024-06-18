@@ -45,3 +45,6 @@ data:
       image_url: {{ .image_url | quote }}
       specification: {{ .specification | quote }}
     {{- end }}
+    interactive_sessions:
+      environments:
+        {{- .Values.interactive_sessions.environments | toYaml | nindent 8 }}
