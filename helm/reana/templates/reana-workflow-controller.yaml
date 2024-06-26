@@ -90,6 +90,8 @@ spec:
           - name: REANA_INGRESS_CLASS_NAME
             value: {{ .Values.ingress.ingress_class_name | quote }}
           {{- end }}
+          - name: REANA_INGRESS_HOST
+            value: {{ .Values.reana_hostname | default "" | quote  }}
           - name: REANA_DEFAULT_QUOTA_CPU_LIMIT
             value: {{ .Values.quota.default_cpu_limit | default 0 | quote }}
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
