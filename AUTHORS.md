@@ -8,6 +8,7 @@ organisation on GitHub, in alphabetical order:
 - [Adelina Lintuluoto](https://orcid.org/0000-0002-0726-1452)
 - [Agisilaos Kounelis](https://orcid.org/0000-0001-9312-3189)
 - [Alizee Pace](https://www.linkedin.com/in/aliz%C3%A9e-pace-516b4314b/)
+- [Alp Tuna](https://orcid.org/0009-0001-1915-3993)
 - [Ana Trisovic](https://orcid.org/0000-0003-1991-0533)
 - [Anton Khodak](https://orcid.org/0000-0003-3263-4553)
 - [Audrius Mecionis](https://orcid.org/0000-0002-3759-1663)
