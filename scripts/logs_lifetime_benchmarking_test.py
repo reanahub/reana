@@ -1,9 +1,21 @@
 import pandas as pd
+import subprocess
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter, SecondLocator
 import click
 
 """Run this script to generate the plots of current job status"""
+"""First compare the logs from reana-client logs command and the job pod ID's from statistics file"""
+
+def run_reana_client_logs(command):
+    command = f"reana-client logs -w {workflow}"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    if result.returncode == 0:
+        return result.stdout
+    else:
+        print("Comamnd failed to run, error:")
+        print(result.stderr)
+        return None
 
 def parse_log_file(file_path):
     with open(file_path, 'r') as f:
@@ -33,39 +45,48 @@ def filter_jobs(sorted_data, status):
 def extract_running_timestamps(running_jobs):
     timestamps_running = []
     encountered_jobs_running = set()
+
     for line in running_jobs:
         parts = line.split()
         job_id = parts[0]
         if job_id in encountered_jobs_running:
             continue
+
         start_time = pd.to_datetime(parts[3])
         finish_time_str = parts[5].split(',')[0]
+
         if finish_time_str != '<none>':
             finish_time = pd.to_datetime(finish_time_str)
             timestamps_running.append((start_time, 1))
             timestamps_running.append((finish_time, -1))
             encountered_jobs_running.add(job_id)
+
     timestamps_running.sort()
     return timestamps_running
 
 def extract_pending_timestamps(pending_jobs):
     timestamps_pending = []
     encountered_jobs_pending = set()
+
     for line in pending_jobs:
         parts = line.split()
         job_id = parts[0]
         if job_id in encountered_jobs_pending:
             continue
+
         start_time_str = parts[2]
         if start_time_str == '<none>':
             continue
+
         start_time = pd.to_datetime(start_time_str)
         finish_time_str = parts[3].split(',')[0]
+
         if finish_time_str != '<none>':
             finish_time = pd.to_datetime(finish_time_str)
             timestamps_pending.append((start_time, 1))
             timestamps_pending.append((finish_time, -1))
             encountered_jobs_pending.add(job_id)
+
     timestamps_pending.sort()
     return timestamps_pending
 
@@ -80,21 +101,6 @@ def calculate_cumulative(timestamps):
     return x, y
  
 def plot_data(succeeded_counts, x_running, y_running, x_pending, y_pending):
-    """Run benchmarking tests. Generate matplotlib plot
-
-    The script requires matplotlib and pandas packages
-
-    Steps to run benchmarking workflow lifetime test:
-
-        .. code-block:: console
-
-        \b
-        #To run this script 
-        $ kubectl #To save a live logs 
-        $ cd reana/scripts
-        $ python lifetime.py logs.txt # insert your .txt file with logs
-
-    """
     plt.figure(figsize=figsize)
 
     # Plot succeeded jobs
@@ -121,7 +127,30 @@ def plot_data(succeeded_counts, x_running, y_running, x_pending, y_pending):
 @click.argument('file_path')
 @click.option('--title', default='Analysis Results', help='Title of the analysis results')
 @click.option('--figsize', nargs=2, type=float, default=(12, 8), help='Figure size as two float values')
-def main(file_path):
+@click.option('--workflow', required=False, help='Name of the REANA workflow the same as the processed .txt file')
+def main(file_path, title, figsize, workflow):
+    """Compare the reana-client logs and the jobs from the analysis results
+       Run benchmarking tests. Generate matplotlib plot
+
+       The script requires matplotlib and pandas packages
+
+       Steps to run benchmarking workflow lifetime test:
+
+        .. code-block:: console
+
+        \b
+        #To run this script 
+        $ kubectl #To save a live logs 
+        $ cd reana/scripts
+        $ python lifetime.py logs.txt # insert your .txt file with logs
+
+    """
+    reana_logs = run_reana_client_logs(workflow)
+    reana_job_ids = set()
+    for line in reana_logs.splitlines():
+        if line.strip().startswith('reana-run-job'):
+            job_id  = line.strip().split()[0]
+            reana_job_ids.add(job_id)
     lines = parse_log_file(file_path)
     
     unique_jobs = extract_unique_jobs(lines)
