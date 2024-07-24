@@ -296,10 +296,10 @@ GITHUB_REANAHUB_URL = "https://github.com/reanahub"
 CODECOV_REANAHUB_URL = "https://codecov.io/gh/reanahub"
 """REANA Hub organisation Codecov URL."""
 
-PYTHON_EXECUTABLE_NAME = "python3.8"
+PYTHON_EXECUTABLE_NAME = "python3.12"
 """Python executable name with the same version as cluster components."""
 
-PYTHON_DOCKER_IMAGE = "docker.io/library/python:3.8"
+PYTHON_DOCKER_IMAGE = "docker.io/library/python:3.12"
 """Python docker image with the same version as cluster components."""
 
 RELEASE_COMMIT_REGEX = re.compile("^(release:|chore.*: release)")

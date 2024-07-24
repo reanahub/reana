@@ -802,11 +802,11 @@ def bump_pep440_version(
             f"{version.major}.{version.minor}.{version.micro}{dev_post_pre_part}"
         )
     elif (part and part == "micro") or (isinstance(version.micro, int) and not part):
-        next_version = Version(f"{version.major}.{version.minor}.{version.micro+1}")
+        next_version = Version(f"{version.major}.{version.minor}.{version.micro + 1}")
     elif (part and part == "minor") or (isinstance(version.minor, int) and not part):
-        next_version = Version(f"{version.major}.{version.minor+1}.0")
+        next_version = Version(f"{version.major}.{version.minor + 1}.0")
     elif (part and part == "major") or (isinstance(version.major, int) and not part):
-        next_version = Version(f"{version.major+1}.0.0")
+        next_version = Version(f"{version.major + 1}.0.0")
 
     return str(next_version)
 
