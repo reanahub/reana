@@ -13,6 +13,23 @@ spec:
   - port: 5432
     targetPort: 5432
     protocol: TCP
+{{- if .Values.debug.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reana.prefix" . }}-db-debug
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: "NodePort"
+  selector:
+    app: {{ include "reana.prefix" . }}-db
+  ports:
+  - port: 5432
+    targetPort: 5432
+    nodePort: 30432
+    protocol: TCP
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment

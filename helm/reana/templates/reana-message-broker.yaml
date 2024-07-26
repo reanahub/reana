@@ -11,19 +11,30 @@ spec:
      targetPort: 5672
      name: "tcp"
      protocol: TCP
-  {{- if .Values.debug.enabled }}
-   - port: 31672
-     targetPort: 15672
-     name: "management"
-     protocol: TCP
-  {{- else }}
    - port: 15672
      targetPort: 15672
      name: "management"
      protocol: TCP
-  {{- end }}
   selector:
     app: {{ include "reana.prefix" . }}-message-broker
+{{- if .Values.debug.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reana.prefix" . }}-message-broker-debug
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: "NodePort"
+  selector:
+    app: {{ include "reana.prefix" . }}-message-broker
+  ports:
+  - port: 15672
+    targetPort: 15672
+    nodePort: 31672
+    name: "management"
+    protocol: TCP
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet

@@ -124,6 +124,11 @@ def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D3
                     "hostPort": 31672,
                     "protocol": "TCP",
                 },  # rabbitmq
+                {
+                    "containerPort": 30432,
+                    "hostPort": 30432,
+                    "protocol": "TCP",
+                },  # postgresql
             ]
         )
 
