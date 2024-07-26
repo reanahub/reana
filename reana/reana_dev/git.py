@@ -779,11 +779,12 @@ def git_checkout(branch, component, exclude_components, fetch):  # noqa: D301
             run_command("git checkout {}".format(branch), component)
         else:
             click.secho(
-                "No branch {} in component {}, staying on current one.".format(
+                "No branch {} in component {}, creating new branch.".format(
                     branch, component
                 ),
-                fg="red",
+                fg="green",
             )
+            run_command("git checkout -b {}".format(branch), component)
 
 
 @click.option(
