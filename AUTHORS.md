@@ -30,6 +30,7 @@ organisation on GitHub, in alphabetical order:
 - [Giuseppe Steduto](https://orcid.org/0009-0002-1258-8553)
 - [Harri Hirvonsalo](https://orcid.org/0000-0002-5503-510X)
 - [Jan Okraska](https://orcid.org/0000-0002-1416-3244)
+- [Jelizaveta Lemeševa](https://orcid.org/0009-0003-6606-9270)
 - [Jose Benito Gonzalez Lopez](https://orcid.org/0000-0002-0816-7126)
 - [Kati Lassila-Perini](https://orcid.org/0000-0002-5502-1795)
 - [Kenyi Hurtado-Anampa](https://orcid.org/0000-0002-9779-3566)
