@@ -17,16 +17,14 @@ from setuptools import find_packages, setup
 readme = open("README.md").read()
 history = open("CHANGELOG.md").read()
 
-tests_require = [
-    "pytest-reana>=0.9.2,<0.10.0",
-]
-
 extras_require = {
     "docs": [
         "myst-parser",
         "Sphinx>=1.5.1",
     ],
-    "tests": tests_require,
+    "tests": [
+        "pytest-reana>=0.9.2,<0.10.0",
+    ],
     "benchmark": [
         "pandas>=1.1.5",
         "matplotlib>=3.3.4",
@@ -77,7 +75,6 @@ setup(
     python_requires=">=3.8",
     extras_require=extras_require,
     install_requires=install_requires,
-    tests_require=tests_require,
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Web Environment",
