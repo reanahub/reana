@@ -48,11 +48,6 @@ install_requires = [
     "packaging>=20.4",
 ]
 
-
-setup_requires = [
-    "pytest-runner>=2.7",
-]
-
 packages = find_packages()
 
 
@@ -82,7 +77,6 @@ setup(
     python_requires=">=3.8",
     extras_require=extras_require,
     install_requires=install_requires,
-    setup_requires=setup_requires,
     tests_require=tests_require,
     classifiers=[
         "Development Status :: 3 - Alpha",
