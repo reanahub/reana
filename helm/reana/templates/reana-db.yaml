@@ -59,12 +59,6 @@ spec:
           value: "Europe/Zurich"
         - name: POSTGRES_DB
           value: reana
-        {{- if not .Values.debug.enabled }}
-        - name: POSTGRES_USER
-          value: reana
-        - name: POSTGRES_PASSWORD
-          value: reana
-        {{- else }}
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
@@ -75,7 +69,6 @@ spec:
             secretKeyRef:
               name: {{ include "reana.prefix" . }}-db-secrets
               key: password
-        {{- end }}
         volumeMounts:
           - mountPath: /var/lib/postgresql/data
             subPath: db

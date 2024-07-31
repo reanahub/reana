@@ -173,6 +173,14 @@ traefik:
     enabled: true
     isDefaultClass: true
 
+pgbouncer:
+  enabled: false
+  image: docker.io/bitnami/pgbouncer:1.23.1
+  pool_mode: transaction
+  max_client_conn: 1000
+  max_db_connections: 100
+  environment: {}
+
 # Quota
 quota:
   enabled: true

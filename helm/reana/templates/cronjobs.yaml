@@ -30,19 +30,18 @@ spec:
             tty: true
             stdin: true
             {{- end }}
+            envFrom:
+              - configMapRef:
+                  name: {{ include "reana.prefix" . }}-database-config
             env:
             {{- if .Values.reana_hostname }}
             - name: REANA_HOSTNAME
               value: {{ .Values.reana_hostname }}
             {{- end }}
-            {{- range $key, $value := .Values.db_env_config }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
             {{- if .Values.debug.enabled }}
             - name: FLASK_ENV
               value:  "development"
-            {{- else }}
+            {{- end }}
             - name: REANA_DB_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -53,7 +52,6 @@ spec:
                 secretKeyRef:
                   name: {{ include "reana.prefix" . }}-db-secrets
                   key: password
-            {{- end }}
             - name: REANA_NOTIFICATIONS_ENABLED
               value: "{{ .Values.notifications.enabled }}"
             - name: REANA_EMAIL_RECEIVER
@@ -154,6 +152,9 @@ spec:
             tty: true
             stdin: true
             {{- end }}
+            envFrom:
+              - configMapRef:
+                  name: {{ include "reana.prefix" . }}-database-config
             env:
             - name: REANA_PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
               value: "true"
@@ -161,14 +162,10 @@ spec:
             - name: REANA_HOSTNAME
               value: {{ .Values.reana_hostname }}
             {{- end }}
-            {{- range $key, $value := .Values.db_env_config }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
             {{- if .Values.debug.enabled }}
             - name: FLASK_ENV
               value:  "development"
-            {{- else }}
+            {{- end }}
             - name: REANA_DB_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -179,7 +176,6 @@ spec:
                 secretKeyRef:
                   name: {{ include "reana.prefix" . }}-db-secrets
                   key: password
-            {{- end }}
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
             - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
@@ -239,19 +235,18 @@ spec:
             tty: true
             stdin: true
             {{- end }}
+            envFrom:
+              - configMapRef:
+                  name: {{ include "reana.prefix" . }}-database-config
             env:
             {{- if .Values.reana_hostname }}
             - name: REANA_HOSTNAME
               value: {{ .Values.reana_hostname }}
             {{- end }}
-            {{- range $key, $value := .Values.db_env_config }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
             {{- if .Values.debug.enabled }}
             - name: FLASK_ENV
               value:  "development"
-            {{- else }}
+            {{- end }}
             - name: REANA_DB_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -262,7 +257,6 @@ spec:
                 secretKeyRef:
                   name: {{ include "reana.prefix" . }}-db-secrets
                   key: password
-            {{- end }}
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
             - name: REANA_ADMIN_ACCESS_TOKEN
@@ -333,19 +327,18 @@ spec:
             tty: true
             stdin: true
             {{- end }}
+            envFrom:
+              - configMapRef:
+                  name: {{ include "reana.prefix" . }}-database-config
             env:
             {{- if .Values.reana_hostname }}
             - name: REANA_HOSTNAME
               value: {{ .Values.reana_hostname }}
             {{- end }}
-            {{- range $key, $value := .Values.db_env_config }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
             {{- if .Values.debug.enabled }}
             - name: FLASK_ENV
               value:  "development"
-            {{- else }}
+            {{- end }}
             - name: REANA_DB_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -356,7 +349,6 @@ spec:
                 secretKeyRef:
                   name: {{ include "reana.prefix" . }}-db-secrets
                   key: password
-            {{- end }}
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
             - name: REANA_ADMIN_ACCESS_TOKEN

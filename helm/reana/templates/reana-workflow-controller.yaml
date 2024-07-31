@@ -77,6 +77,9 @@ spec:
             mountPath: {{ $workspace_path._1 }}
           {{- end }}
           {{- end }}
+        envFrom:
+          - configMapRef:
+              name: {{ include "reana.prefix" . }}-database-config
         env:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
@@ -106,10 +109,6 @@ spec:
           {{- end }}
           - name: WORKSPACE_PATHS
             value: {{ .Values.workspaces.paths | toJson | quote }}
-          {{- range $key, $value := .Values.db_env_config }}
-          - name: {{ $key }}
-            value: {{ $value | quote }}
-          {{- end }}
           {{- range $key, $value := .Values.components.reana_workflow_controller.environment }}
           - name: {{ $key }}
             value: {{ $value | quote }}
@@ -200,7 +199,7 @@ spec:
             value: ""
           - name: GIT_SSL_NO_VERIFY
             value: "true"
-          {{- else }}
+          {{- end }}
           - name: REANA_DB_USERNAME
             valueFrom:
               secretKeyRef:
@@ -211,7 +210,6 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-db-secrets
                 key: password
-          {{ end }}
       - name: job-status-consumer
         image: {{ .Values.components.reana_workflow_controller.image }}
         imagePullPolicy: {{ .Values.components.reana_workflow_controller.imagePullPolicy }}
@@ -223,6 +221,9 @@ spec:
           {{- end }}
           - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
             name: reana-shared-volume
+        envFrom:
+          - configMapRef:
+              name: {{ include "reana.prefix" . }}-database-config
         env:
         - name: REANA_COMPONENT_PREFIX
           value: {{ include "reana.prefix" . }}
@@ -233,10 +234,6 @@ spec:
         {{- if .Values.quota.enabled }}
         - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
           value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" }}
-        {{- end }}
-        {{- range $key, $value := .Values.db_env_config }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
         {{- end }}
         {{- range $key, $value := .Values.components.reana_workflow_controller.environment }}
         - name: {{ $key }}
@@ -258,7 +255,7 @@ spec:
           value: ""
         - name: GIT_SSL_NO_VERIFY
           value: "true"
-        {{- else }}
+        {{- end }}
         - name: REANA_DB_USERNAME
           valueFrom:
             secretKeyRef:
@@ -269,7 +266,6 @@ spec:
             secretKeyRef:
               name: {{ include "reana.prefix" . }}-db-secrets
               key: password
-        {{ end }}
         - name: REANA_GITLAB_HOST
           valueFrom:
             secretKeyRef:
