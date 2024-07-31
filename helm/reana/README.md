@@ -98,6 +98,12 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `reana_hostname`                                         | REANA hostname (e.g. reana.example.org)                                              | None                                            |
 | `namespace_runtime`                                      | Namespace in which the REANA runtime pods (workflow engines, jobs etc...) will run   | `.Release.Namespace`                            |
 | `naming_scheme`                                          | REANA component naming scheme                                                        | None                                            |
+| `pgbouncer.enabled`                                      | Instantiate PgBouncer inside the cluster to pool database connections                | false                                           |
+| `pgbouncer.image`                                        | [PgBouncer image](https://hub.docker.com/r/bitnami/pgbouncer/) to use                | `bitnami/pgbouncer:1.23.1`                      |
+| `pgbouncer.pool_mode`                                    | Pool mode to use (session, transaction, statement)                                   | transaction                                     |
+| `pgbouncer.max_client_conn`                              | Maximum number of client connections allowed                                         | 1000                                            |
+| `pgbouncer.max_db_connections`                           | Maximum number of server connections allowed                                         | 100                                             |
+| `pgbouncer.environment`                                  | Additional PgBouncer environment variables                                           | `{}`                                            |
 | `secrets.cern.sso.CERN_CONSUMER_KEY`                     | CERN SSO consumer key                                                                | None                                            |
 | `secrets.cern.sso.CERN_CONSUMER_SECRET`                  | **[Do not use in production, use secrets instead]** CERN SSO consumer secret         | None                                            |
 | `secrets.database.password`                              | **[Do not use in production, use secrets instead]** PostgreSQL database password     | None                                            |
