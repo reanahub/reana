@@ -71,8 +71,14 @@ def cluster_commands():
     is_flag=True,
     help="Disable default CNI and use e.g. Calico.",
 )
+@click.option(
+    "--kind-node-version",
+    help="Which kindest/node image version to use?",
+)
 @cluster_commands.command(name="cluster-create")
-def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D301
+def cluster_create(
+    mounts, mode, worker_nodes, disable_default_cni, kind_node_version
+):  # noqa: D301
     """Create new REANA cluster.
 
     \b
@@ -169,9 +175,14 @@ def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D3
         kind_provider = "KIND_EXPERIMENTAL_PROVIDER=podman"
 
     # create cluster
-    cluster_create = "cat <<EOF | {kind_provider} kind create cluster --config=-\n{cluster_config}\nEOF"
-    cluster_create = cluster_create.format(
-        kind_provider=kind_provider, cluster_config=yaml.dump(cluster_config)
+    image_flag = ""
+    if kind_node_version is not None:
+        image_flag = f"--image kindest/node:{kind_node_version}"
+
+    cluster_create = "cat <<EOF | {kind_provider} kind create cluster {image_flag} --config=-\n{cluster_config}\nEOF".format(
+        kind_provider=kind_provider,
+        image_flag=image_flag,
+        cluster_config=yaml.dump(cluster_config),
     )
     run_command(cluster_create, "reana")
 
