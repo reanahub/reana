@@ -210,9 +210,20 @@ def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D3
     type=click.IntRange(min=1),
     help="Number of docker images to build in parallel.",
 )
+@click.option(
+    "--no-update-submodules",
+    is_flag=True,
+    help="Do not update git submodules.",
+)
 @cluster_commands.command(name="cluster-build")
 def cluster_build(
-    build_arg, mode, exclude_components, no_cache, skip_load, parallel
+    build_arg,
+    mode,
+    exclude_components,
+    no_cache,
+    skip_load,
+    parallel,
+    no_update_submodules,
 ):  # noqa: D301
     """Build REANA cluster.
 
@@ -225,7 +236,7 @@ def cluster_build(
     """
     cmds = []
     # initalise common submodules
-    if mode in ("latest", "debug"):
+    if mode in ("latest", "debug") and not no_update_submodules:
         cmds.append("reana-dev git-submodule --update")
     # build Docker images
     cmd = "reana-dev docker-build"
@@ -294,6 +305,11 @@ def cluster_build(
     default="reana",
     help="REANA instance name",
 )
+@click.option(
+    "--no-update-submodules",
+    is_flag=True,
+    help="Do not update git submodules.",
+)
 def cluster_deploy(
     namespace,
     job_mounts,
@@ -303,6 +319,7 @@ def cluster_deploy(
     admin_email,
     admin_password,
     instance_name,
+    no_update_submodules,
 ):  # noqa: D301
     """Deploy REANA cluster.
 
@@ -362,7 +379,8 @@ def cluster_deploy(
     cmds = []
     if mode in ("debug"):
         cmds.append("reana-dev python-install-eggs")
-        cmds.append("reana-dev git-submodule --update")
+        if not no_update_submodules:
+            cmds.append("reana-dev git-submodule --update")
     cmds.extend(
         [
             "helm dep update helm/reana",
