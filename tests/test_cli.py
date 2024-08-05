@@ -13,6 +13,9 @@ from __future__ import absolute_import, print_function
 import os
 import pytest
 import click
+from click.testing import CliRunner
+from unittest.mock import patch
+from reana.reana_dev.cli import reana_dev
 
 
 def test_shorten_component_name():
@@ -27,28 +30,97 @@ def test_shorten_component_name():
         assert name_short == shorten_component_name(name_long)
 
 
-def test_get_expected_output_filenames_for_example():
-    """Tests for get_expected_output_filenames_for_example()."""
-    from reana.reana_dev.run import get_expected_output_filenames_for_example
+def run_command_possibilities(command, component, return_output=False):
+    """Possible return values for run_command."""
+    if "reana-client test" in command and "cwl" in command:
+        return """
+        ==> Testing file "tests/cwl/log-messages.feature"...
+          -> ERROR: Scenario "-> SUCCESS: Writing SUCCESS in the scenario name should make no difference"
+          -> SUCCESS: Scenario "If one scenario fails, the whole test should fail"
+        """
+    elif "reana-client test" in command:
+        return """
+        ==> Testing file "tests/yadage/log-messages.feature"...
+          -> SUCCESS: Scenario "-> ERROR: Writing ERROR in the scenario name should make no difference"
+          -> SUCCESS: Scenario "If a different test fails, this one shouldn't"
+        """
+    elif "reana-client status" in command:
+        return "finished"
+    return ""
 
-    for example, output in (
-        ("", ("plot.png",)),
-        ("reana-demo-helloworld", ("greetings.txt",)),
-        ("reana-demo-root6-roofit", ("plot.png",)),
-        ("reana-demo-alice-lego-train-test-run", ("plot.pdf",)),
-    ):
-        assert output == get_expected_output_filenames_for_example(example)
+
+@patch(
+    "reana.reana_dev.run.run_command",
+    side_effect=lambda command, component, return_output=False: (
+        """
+        ==> Testing file "tests/cwl/log-messages.feature"...
+          -> SUCCESS: Scenario "-> ERROR: Writing ERROR in the scenario name should make no difference"
+        """
+        if "reana-client test" in command
+        else "finished" if "reana-client status" in command else ""
+    ),
+)
+@patch(
+    "reana.reana_dev.run.get_example_reana_yaml_file_path",
+    return_value="reana-cwl.yaml",
+)
+def test_run_example_check_only_passes(
+    mock_run_command, mock_get_example_reana_yaml_file_path
+):
+    """Tests for run-example command with check-only flag, when all tests pass."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        result = runner.invoke(
+            reana_dev,
+            [
+                "run-example",
+                "-c",
+                "r-d-r-roofit",
+                "-w",
+                "cwl",
+                "--check-only",
+            ],
+        )
+        assert "1 passed" in result.output
+        assert "0 failed" in result.output
+        assert result.exit_code == 0
 
 
-def test_get_expected_log_message_for_example():
-    """Tests for get_expected_log_messages_for_example()."""
-    from reana.reana_dev.run import get_expected_log_messages_for_example
-
-    for example, output in (
-        ("", ("job:",)),
-        ("reana-demo-helloworld", ("Parameters: inputfile=",)),
-    ):
-        assert output == get_expected_log_messages_for_example(example)
+@patch(
+    "reana.reana_dev.run.run_command",
+    side_effect=run_command_possibilities,
+)
+@patch(
+    "reana.reana_dev.run.get_example_reana_yaml_file_path",
+    return_value="reana-cwl.yaml",
+    side_effect=lambda component, workflow_engine, compute_backend: (
+        "reana-cwl.yaml" if workflow_engine == "cwl" else "reana-yadage.yaml"
+    ),
+)
+def test_run_example_check_only_one_fail_one_pass(
+    mock_run_command, mock_get_example_reana_yaml_file_path
+):
+    """Test for run-example command with check-only flag, and where one example fails and one passes."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        result = runner.invoke(
+            reana_dev,
+            [
+                "run-example",
+                "-c",
+                "r-d-r-roofit",
+                "-w",
+                "cwl",
+                "-w",
+                "yadage",
+                "--check-only",
+            ],
+        )
+        assert "2 submitted" in result.output
+        assert "1 passed" in result.output
+        assert "1 failed: root6-roofit-cwl-kubernetes" in result.output
 
 
 def test_is_component_python_package():
