@@ -13,6 +13,9 @@ from __future__ import absolute_import, print_function
 import os
 import pytest
 import click
+from click.testing import CliRunner
+from unittest.mock import patch
+from reana.reana_dev.cli import reana_dev
 
 
 def test_shorten_component_name():
@@ -27,28 +30,95 @@ def test_shorten_component_name():
         assert name_short == shorten_component_name(name_long)
 
 
-def test_get_expected_output_filenames_for_example():
-    """Tests for get_expected_output_filenames_for_example()."""
-    from reana.reana_dev.run import get_expected_output_filenames_for_example
+@patch(
+    "reana.reana_dev.run.run_command",
+    side_effect=lambda command, component, return_output=False: (
+        """
+        Using test file tests/serial/log-messages.feature
+        Summary of tests/serial/log-messages.feature:
+        Tested Writing failed in the scenario name should make no difference: failed: passed
+        """
+        if "reana-client test" in command
+        else "finished" if "reana-client status" in command else ""
+    ),
+)
+@patch(
+    "reana.reana_dev.run.get_example_reana_yaml_file_path",
+    return_value="reana-cwl.yaml",
+)
+def test_run_example_check_only_passes(
+    mock_run_command, mock_get_example_reana_yaml_file_path
+):
+    runner = CliRunner()
+    with runner.isolation():
+        result = runner.invoke(
+            reana_dev,
+            [
+                "run-example",
+                "-c",
+                "r-d-r-roofit",
+                "-w",
+                "cwl",
+                "--check-only",
+            ],
+        )
+        assert "1 passed" in result.output
+        assert "0 failed" in result.output
+        assert result.exit_code == 0
 
-    for example, output in (
-        ("", ("plot.png",)),
-        ("reana-demo-helloworld", ("greetings.txt",)),
-        ("reana-demo-root6-roofit", ("plot.png",)),
-        ("reana-demo-alice-lego-train-test-run", ("plot.pdf",)),
-    ):
-        assert output == get_expected_output_filenames_for_example(example)
+
+def run_command_possibilities(command, component, return_output=False):
+    if "reana-client test" in command and "cwl" in command:
+        return """
+        Using test file tests/serial/log-messages.feature
+        Summary of tests/serial/log-messages.feature:
+        Tested Writing passed in the scenario name should make no difference: passed: failed
+        Tested If one scenario fails, the whole test should fail: passed
+        """
+    elif "reana-client test" in command:
+        return """
+        Using test file tests/serial/log-messages.feature
+        Summary of tests/serial/log-messages.feature:
+        Tested Writing passed in the scenario name should make no difference: passed
+        Tested If one scenario fails, the whole test should fail: passed
+        """
+    elif "reana-client status" in command:
+        return "finished"
+    return ""
 
 
-def test_get_expected_log_message_for_example():
-    """Tests for get_expected_log_messages_for_example()."""
-    from reana.reana_dev.run import get_expected_log_messages_for_example
-
-    for example, output in (
-        ("", ("job:",)),
-        ("reana-demo-helloworld", ("Parameters: inputfile=",)),
-    ):
-        assert output == get_expected_log_messages_for_example(example)
+@patch(
+    "reana.reana_dev.run.run_command",
+    side_effect=run_command_possibilities,
+)
+@patch(
+    "reana.reana_dev.run.get_example_reana_yaml_file_path",
+    return_value="reana-cwl.yaml",
+    side_effect=lambda component, workflow_engine, compute_backend: (
+        "reana-cwl.yaml" if workflow_engine == "cwl" else "reana-yadage.yaml"
+    ),
+)
+def test_run_example_check_only_one_fail_one_pass(
+    mock_run_command, mock_get_example_reana_yaml_file_path
+):
+    runner = CliRunner()
+    with runner.isolation():
+        result = runner.invoke(
+            reana_dev,
+            [
+                "run-example",
+                "-c",
+                "r-d-r-roofit",
+                "-w",
+                "cwl",
+                "-w",
+                "yadage",
+                "--check-only",
+            ],
+        )
+        assert "2 submitted" in result.output
+        assert "1 passed" in result.output
+        assert "1 failed: root6-roofit-cwl-kubernetes" in result.output
 
 
 def test_is_component_python_package():
