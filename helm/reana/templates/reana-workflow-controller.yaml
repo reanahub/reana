@@ -30,6 +30,9 @@ spec:
         - podSelector:
             matchLabels:
               app: {{ include "reana.prefix" . }}-server
+        - podSelector:
+            matchLabels:
+              app: {{ include "reana.prefix" . }}-interactive-session-cleanup
 ---
 apiVersion: apps/v1
 kind: Deployment
