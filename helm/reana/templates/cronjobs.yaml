@@ -16,6 +16,9 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          labels:
+            app: {{ include "reana.prefix" . }}-system-status
         spec:
           serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
           containers:
@@ -141,6 +144,9 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          labels:
+            app: {{ include "reana.prefix" . }}-resource-quota-update
         spec:
           containers:
           - name: {{ include "reana.prefix" . }}-resource-quota-update
@@ -226,6 +232,9 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          labels:
+            app: {{ include "reana.prefix" . }}-retention-rules-apply
         spec:
           containers:
           - name: {{ include "reana.prefix" . }}-retention-rules-apply
@@ -319,6 +328,9 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          labels:
+            app: {{ include "reana.prefix" . }}-interactive-session-cleanup
         spec:
           serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
           containers:
