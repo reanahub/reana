@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.9.4](https://github.com/reanahub/reana/compare/0.9.3...0.9.4) (2024-08-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **python:** drop support for Python 3.6 and 3.7
+
+### Build
+
+* **docker:** upgrade to Ubuntu 24.04 and Python 3.12 ([#810](https://github.com/reanahub/reana/issues/810)) ([69eb86b](https://github.com/reanahub/reana/commit/69eb86b21fe9c7fc1d4cfa39905ef5ddb4c1c756))
+* **helm:** add support for Kubernetes 1.30 ([#799](https://github.com/reanahub/reana/issues/799)) ([748ca07](https://github.com/reanahub/reana/commit/748ca0769c24286cb32b8bfaf3df0114748cfae0))
+* **python:** add minimal `pyproject.toml` ([#815](https://github.com/reanahub/reana/issues/815)) ([9112171](https://github.com/reanahub/reana/commit/9112171e28faddac6b000dba48d9fec8ee8963d3))
+* **python:** drop support for Python 3.6 and 3.7 ([#793](https://github.com/reanahub/reana/issues/793)) ([8762855](https://github.com/reanahub/reana/commit/8762855d33f859215233439496fc1934532482c4))
+* **python:** remove deprecated `pytest-runner` ([#815](https://github.com/reanahub/reana/issues/815)) ([d9db515](https://github.com/reanahub/reana/commit/d9db515e8a36c6398ed658bc6e8ed0469382ca34))
+* **python:** use optional deps instead of `tests_require` ([#815](https://github.com/reanahub/reana/issues/815)) ([668eee4](https://github.com/reanahub/reana/commit/668eee4437c4224a84a3c0274bb7c905d2a5b6a4))
+
+
+### Features
+
+* **config:** new reana-demo-agc-cms-ttbar-coffea example ([#792](https://github.com/reanahub/reana/issues/792)) ([aff5c8f](https://github.com/reanahub/reana/commit/aff5c8f9837af51a42c52d5621cac6e040096941))
+* **helm:** add value to customise interactive session images ([#795](https://github.com/reanahub/reana/issues/795)) ([cd94d12](https://github.com/reanahub/reana/commit/cd94d1257a06441146f2284529f929ae5793cd99))
+* **helm:** allow cluster administrator to configure ingress host ([#804](https://github.com/reanahub/reana/issues/804)) ([19ce68e](https://github.com/reanahub/reana/commit/19ce68ed25317e246d28cb66c106380488af5278))
+* **helm:** allow cluster administrator to configure ingress host ([#804](https://github.com/reanahub/reana/issues/804)) ([1479730](https://github.com/reanahub/reana/commit/14797309ff964b7897e072801c441c4c34532856))
+
+
+### Bug fixes
+
+* **helm:** add NodePort services for debugging ([#812](https://github.com/reanahub/reana/issues/812)) ([33359ca](https://github.com/reanahub/reana/commit/33359cad47070781a714ce4bdfebd433dbb35c7d))
+* **helm:** use ingressClassName instead of deprecated annotation ([#794](https://github.com/reanahub/reana/issues/794)) ([b4f4633](https://github.com/reanahub/reana/commit/b4f46334e79841a75bc4c35d84b5a90fbe31763a)), closes [#742](https://github.com/reanahub/reana/issues/742)
+
+
+### Continuous integration
+
+* **actions:** update GitHub actions due to Node 16 deprecation ([#790](https://github.com/reanahub/reana/issues/790)) ([8ce4a8d](https://github.com/reanahub/reana/commit/8ce4a8de6a46d427ac134b22f69a295e878ffdd8))
+* **commitlint:** check PR number presence in merge commits ([#810](https://github.com/reanahub/reana/issues/810)) ([f1291ed](https://github.com/reanahub/reana/commit/f1291edf432a048e161d991fdbfc000f63af9b32))
+* **commitlint:** improve checking of merge commits ([#803](https://github.com/reanahub/reana/issues/803)) ([16e5542](https://github.com/reanahub/reana/commit/16e55429a6d5d6d745bb563ed4d718b50ce7c0e5))
+* **pytest:** invoke `pytest` directly instead of `setup.py test` ([#815](https://github.com/reanahub/reana/issues/815)) ([a29f469](https://github.com/reanahub/reana/commit/a29f4692fbb0244956a5055f18990e6c76bc6f4d))
+
+
+### Documentation
+
+* **authors:** add Jelizaveta Lemeševa ([#812](https://github.com/reanahub/reana/issues/812)) ([9698c63](https://github.com/reanahub/reana/commit/9698c63e28d15fac0621639d6155d65efebc06f8))
+
 ## [0.9.3](https://github.com/reanahub/reana/compare/0.9.2...0.9.3) (2024-03-13)
 
 ### :sparkles: What's new in REANA 0.9.3
