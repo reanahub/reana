@@ -1,0 +1,88 @@
+{{- if .Values.pgbouncer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reana.prefix" . }}-pgbouncer
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include "reana.prefix" . }}-pgbouncer
+  ports:
+  - port: 6432
+    targetPort: 6432
+    protocol: TCP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "reana.prefix" . }}-pgbouncer-conf
+  namespace: {{ .Release.Namespace }}
+data:
+  PGBOUNCER_POOL_MODE: {{ .Values.pgbouncer.pool_mode | quote }}
+  PGBOUNCER_MAX_CLIENT_CONN: {{ .Values.pgbouncer.max_client_conn | quote }}
+  PGBOUNCER_MAX_DB_CONNECTIONS: {{ .Values.pgbouncer.max_db_connections | quote }}
+  PGBOUNCER_DEFAULT_POOL_SIZE: {{ .Values.pgbouncer.max_db_connections | quote }}
+  {{- if .Values.components.reana_db.enabled }}
+  PGBOUNCER_DATABASE: reana
+  POSTGRESQL_HOST: {{ include "reana.prefix" . }}-db
+  POSTGRESQL_PORT: "5432"
+  {{- else }}
+  PGBOUNCER_DATABASE: {{ .Values.db_env_config.REANA_DB_NAME | quote }}
+  POSTGRESQL_HOST:  {{ .Values.db_env_config.REANA_DB_HOST | quote }}
+  POSTGRESQL_PORT:  {{ .Values.db_env_config.REANA_DB_PORT | quote }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "reana.prefix" . }}-pgbouncer
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ if .Values.maintenance.enabled -}} 0 {{- else -}} 1 {{- end }}
+  selector:
+    matchLabels:
+      app: {{ include "reana.prefix" . }}-pgbouncer
+  template:
+    metadata:
+      labels:
+        app: {{ include "reana.prefix" . }}-pgbouncer
+    spec:
+      containers:
+      - name: pgbouncer
+        image: {{ .Values.pgbouncer.image | quote }}
+        ports:
+        - containerPort: 6432
+        envFrom:
+          - configMapRef:
+              name: {{ include "reana.prefix" . }}-pgbouncer-conf
+        env:
+        - name: POSTGRESQL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" . }}-db-secrets
+              key: user
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" . }}-db-secrets
+              key: password
+        - name: PGBOUNCER_USERLIST
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" . }}-pgbouncer-secrets
+              key: userlist
+        {{- range $key, $value := .Values.pgbouncer.environment }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+      {{- if .Values.node_label_infrastructuredb }}
+      {{- $full_label := split "=" .Values.node_label_infrastructuredb }}
+      nodeSelector:
+        {{ $full_label._0 }}: {{ $full_label._1 }}
+      {{- else if .Values.node_label_infrastructure }}
+      {{- $full_label := split "=" .Values.node_label_infrastructure }}
+      nodeSelector:
+        {{ $full_label._0 }}: {{ $full_label._1 }}
+      {{- end }}
+{{- end }}
