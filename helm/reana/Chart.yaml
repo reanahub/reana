@@ -43,3 +43,9 @@ dependencies:
     version: 0.47.7
     repository: https://fluent.github.io/helm-charts
     condition: fluent-bit.enabled
+  - name: dask-kubernetes-operator
+    version: 2024.8.0
+    repository: https://helm.dask.org
+    condition: dask.enabled
+    tags:
+      - dask

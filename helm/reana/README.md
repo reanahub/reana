@@ -68,6 +68,11 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_workflow_engine_snakemake.environment` | [REANA-Workflow-Engine-Snakemake](https://github.com/reanahub/reana-workflow-engine-snakemake) environment variables | `{}`            |
 | `components.reana_workflow_engine_snakemake.image`       | [REANA-Workflow-Engine-Snakemake image](https://hub.docker.com/r/reanahub/reana-workflow-engine-snakemake) to use | `docker.io/reanahub/reana-workflow-engine-snakemake:<chart-release-version>` |
 | `compute_backends`                                       | List of supported compute backends (kubernetes, htcondorcern, slurmcern)             | "kubernetes"                                    |
+| `dask.enabled`                                           | Enable support for running Dask workflows | false |
+| `dask.cluster_max_memory_limit`                          | The maximum memory limit for Dask clusters created by users | "16Gi" |
+| `dask.cluster_default_number_of_workers`                 | The number of Dask workers created by default | 2 |
+| `dask.cluster_default_single_worker_memory`              | The amount of memory used by default by a single Dask worker | "2Gi" |
+| `dask.cluster_max_single_worker_memory`                  | The maximum amount of memory that users can ask for the single Dask worker | "8Gi" |
 | `db_env_config.REANA_DB_HOST`                            | Environment variable to connect to external databases                                | `<chart-release-name>-db`                       |
 | `db_env_config.REANA_DB_NAME`                            | Environment variable to connect to external databases                                | reana                                           |
 | `db_env_config.REANA_DB_PORT`                            | Environment variable to connect to external databases                                | "5432"                                          |

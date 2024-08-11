@@ -179,6 +179,18 @@ spec:
             value: {{ .Values.components.reana_job_controller.environment | toJson | quote }}
           - name: REANA_INTERACTIVE_SESSIONS_ENVIRONMENTS
             value: {{ .Values.interactive_sessions.environments | toJson | quote }}
+          - name: DASK_ENABLED
+            value: {{ .Values.dask.enabled | quote }}
+          {{- if .Values.dask.enabled }}
+          - name: REANA_DASK_CLUSTER_MAX_MEMORY_LIMIT
+            value: {{ .Values.dask.cluster_max_memory_limit | default "16Gi" }}
+          - name: REANA_DASK_CLUSTER_DEFAULT_NUMBER_OF_WORKERS
+            value: !!str {{ .Values.dask.cluster_default_number_of_workers | default 2 }}
+          - name: REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_MEMORY
+            value: {{ .Values.dask.cluster_default_single_worker_memory | default "2Gi" }}
+          - name: REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_MEMORY
+            value: {{ .Values.dask.cluster_max_single_worker_memory | default "8Gi" }}
+          {{- end }}        
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
             value: {{ .Values.reana_hostname }}
