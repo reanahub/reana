@@ -22,6 +22,16 @@ rules:
 - apiGroups: ["metrics.k8s.io"]
   resources: ["pods", "nodes"]
   verbs: ["get", "list", "watch"]
+# Custom dask kubernetes resources
+- apiGroups: ["kubernetes.dask.org"]
+  resources: ["daskclusters", "daskautoscalers"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+# Traefik Middleware permissions
+{{- if .Values.traefik.enabled }}
+- apiGroups: ["traefik.containo.us"]
+  resources: ["middlewares"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
