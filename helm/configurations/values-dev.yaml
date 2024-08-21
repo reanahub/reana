@@ -8,6 +8,8 @@ components:
       environment:
         REANA_SCHEDULER_REQUEUE_SLEEP: 2
         REANA_RATELIMIT_SLOW: "5 per second"
+        REANA_RATELIMIT_GUEST_USER: "100 per second"
+        REANA_RATELIMIT_AUTHENTICATED_USER: "100 per second"
     reana_workflow_controller:
       image: docker.io/reanahub/reana-workflow-controller
       environment:
