@@ -28,6 +28,9 @@ spec:
     metadata:
       labels:
         app: {{ include "reana.prefix" . }}-server
+      annotations:
+        checksum/database-config: {{ include (print $.Template.BasePath "/database-config.yaml") . | sha256sum }}
+        checksum/database-secrets: {{ include (print $.Template.BasePath "/database-secrets.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
       containers:

@@ -1,0 +1,21 @@
+{{- if .Values.pgbouncer.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "reana.prefix" . }}-pgbouncer-config
+  namespace: {{ .Release.Namespace }}
+data:
+  PGBOUNCER_POOL_MODE: {{ .Values.pgbouncer.pool_mode | quote }}
+  PGBOUNCER_MAX_CLIENT_CONN: {{ .Values.pgbouncer.max_client_conn | quote }}
+  PGBOUNCER_MAX_DB_CONNECTIONS: {{ .Values.pgbouncer.max_db_connections | quote }}
+  PGBOUNCER_DEFAULT_POOL_SIZE: {{ .Values.pgbouncer.max_db_connections | quote }}
+  {{- if .Values.components.reana_db.enabled }}
+  PGBOUNCER_DATABASE: reana
+  POSTGRESQL_HOST: {{ include "reana.prefix" . }}-db
+  POSTGRESQL_PORT: "5432"
+  {{- else }}
+  PGBOUNCER_DATABASE: {{ .Values.db_env_config.REANA_DB_NAME | quote }}
+  POSTGRESQL_HOST:  {{ .Values.db_env_config.REANA_DB_HOST | quote }}
+  POSTGRESQL_PORT:  {{ .Values.db_env_config.REANA_DB_PORT | quote }}
+  {{- end }}
+{{- end }}
