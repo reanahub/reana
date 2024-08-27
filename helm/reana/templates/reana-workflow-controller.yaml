@@ -1,3 +1,6 @@
+{{- $opensearchEnv := .Values.components.reana_workflow_controller.environment }}
+{{- $opensearchEnabled := $opensearchEnv.REANA_OPENSEARCH_ENABLED }}
+{{- $opensearchTlsEnabled := and $opensearchEnabled $opensearchEnv.REANA_OPENSEARCH_USE_SSL }}
 ---
 apiVersion: v1
 kind: Service
@@ -82,6 +85,11 @@ spec:
           - name: {{ $workspace_path._0 | quote | replace "/" "" }}
             mountPath: {{ $workspace_path._1 }}
           {{- end }}
+          {{- end }}
+          {{- if $opensearchTlsEnabled }}
+          - name: {{ include "reana.prefix" . }}-opensearch-tls-secrets
+            mountPath: /code/certs
+            readOnly: true
           {{- end }}
         envFrom:
           - configMapRef:
@@ -216,6 +224,13 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-db-secrets
                 key: password
+          {{- if $opensearchEnabled }}
+          - name: REANA_OPENSEARCH_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-opensearch-secrets
+                key: REANA_OPENSEARCH_PASSWORD
+          {{- end }}
       - name: job-status-consumer
         image: {{ .Values.components.reana_workflow_controller.image }}
         imagePullPolicy: {{ .Values.components.reana_workflow_controller.imagePullPolicy }}
@@ -287,6 +302,14 @@ spec:
         hostPath:
           path: {{ .Values.shared_storage.hostpath.root_path }}
         {{- end }}
+      {{- if $opensearchTlsEnabled }}
+      - name: {{ include "reana.prefix" . }}-opensearch-tls-secrets
+        secret:
+          secretName: {{ include "reana.prefix" . }}-opensearch-tls-secrets
+          items:
+            - key: ca.crt
+              path: ca.crt
+      {{- end }}
       {{- if .Values.debug.enabled }}
       - name: reana-code
         hostPath:

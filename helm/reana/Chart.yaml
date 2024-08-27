@@ -35,3 +35,7 @@ dependencies:
     condition: traefik.enabled
     tags:
       - ingress
+  - name: opensearch
+    version: 2.22.1
+    repository: https://opensearch-project.github.io/helm-charts/
+    condition: opensearch.enabled

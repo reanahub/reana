@@ -14,6 +14,8 @@ components:
       image: docker.io/reanahub/reana-workflow-controller
       environment:
         REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES: failed
+        REANA_OPENSEARCH_USE_SSL: false
+        REANA_OPENSEARCH_ENABLED: false
     reana_workflow_engine_cwl:
       image: docker.io/reanahub/reana-workflow-engine-cwl
     reana_workflow_engine_yadage:
@@ -31,3 +33,34 @@ components:
 
 pgbouncer:
   enabled: true
+
+# OpenSearch configuration for dev environment
+opensearch:
+  enabled: false
+  tls:
+    generate: false
+  singleNode: true
+  config:
+    opensearch.yml: |
+      cluster.name: reana-opensearch
+      network.host: 0.0.0.0
+      plugins.security.disabled: true
+  securityConfig:
+    enabled: false
+    internalUsersSecret:
+    rolesSecret:
+    rolesMappingSecret:
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+  extraEnvs:
+    - name: DISABLE_INSTALL_DEMO_CONFIG
+      value: "false"
+    - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: reana-opensearch-secrets
+          key: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+  secretMounts: []
+  customSecurityConfig:

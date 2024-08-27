@@ -112,6 +112,11 @@ components:
     environment:
       SHARED_VOLUME_PATH: /var/reana
       REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 10
+      REANA_OPENSEARCH_ENABLED: false
+      REANA_OPENSEARCH_USE_SSL: true
+      REANA_OPENSEARCH_CA_CERTS: "/code/certs/ca.crt"
+      REANA_OPENSEARCH_USER: reana
+      REANA_OPENSEARCH_PASSWORD: ""  # Set this value in the Helm command
   reana_workflow_engine_cwl:
     image: docker.io/reanahub/reana-workflow-engine-cwl:0.9.3
     environment: {}
@@ -189,3 +194,167 @@ quota:
   # backward compatibility
   disk_update: "0 3 * * *"  # everyday at 3am
   termination_update_policy: ""
+
+# OpenSearch chart values.yaml
+opensearch:
+  enabled: false
+  clusterName: "reana-opensearch"
+  masterService: "reana-opensearch-master"
+  tls:
+    generate: true
+    ca:
+      cn: "reana.io"
+      ttl: 365
+    cert:
+      cn: "reana-opensearch-master.default.svc.cluster.local"
+      ttl: 180
+    admin:
+      cn: "opensearch-admin.reana.io"
+      ttl: 180
+  singleNode: true  # advanced storage configuration needed if set to false
+  config:
+    opensearch.yml: |
+      cluster.name: reana-opensearch
+      network.host: 0.0.0.0
+      plugins:
+        security:
+          nodes_dn:
+            - "CN={{ .Values.tls.cert.cn }}"
+          authcz:
+            admin_dn:
+            - "CN={{ .Values.tls.admin.cn }}"
+          ssl:
+            transport:
+              pemcert_filepath: certs/tls.crt
+              pemkey_filepath: certs/tls.key
+              pemtrustedcas_filepath: certs/ca.crt
+              enforce_hostname_verification: false
+            http:
+              enabled: true
+              pemcert_filepath: certs/tls.crt
+              pemkey_filepath: certs/tls.key
+              pemtrustedcas_filepath: certs/ca.crt
+          allow_default_init_securityindex: true
+          check_snapshot_restore_write_privileges: true
+          enable_snapshot_restore_privilege: true
+          ssl_cert_reload_enabled: true # https://opensearch.org/docs/latest/security/access-control/api/#reload-transport-certificates
+          restapi:
+            roles_enabled:
+              - all_access
+              - security_rest_api_access
+          system_indices:
+            enabled: true
+            indices:
+              [
+                ".opendistro-alerting-config",
+                ".opendistro-alerting-alert*",
+                ".opendistro-anomaly-results*",
+                ".opendistro-anomaly-detector*",
+                ".opendistro-anomaly-checkpoints",
+                ".opendistro-anomaly-detection-state",
+                ".opendistro-reports-*",
+                ".opendistro-notifications-*",
+                ".opendistro-notebooks",
+                ".opendistro-asynchronous-search-response*",
+              ]
+  extraEnvs:
+    - name: DISABLE_INSTALL_DEMO_CONFIG
+      value: "true"
+  secretMounts:
+    - name: reana-opensearch-tls-secrets
+      secretName: reana-opensearch-tls-secrets
+      path: /usr/share/opensearch/config/certs
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "4Gi"
+  persistence:
+    enabled: false
+  securityConfig:
+    enabled: true
+    internalUsersSecret: "reana-opensearch-config-secrets"
+    rolesSecret: "reana-opensearch-config-secrets"
+    rolesMappingSecret: "reana-opensearch-config-secrets"
+  extraVolumes:
+    - name: reana-opensearch-volume
+      hostPath:
+        path: /var/reana
+    # You can instead configure infrastructure volume:
+    # - name: reana-opensearch-volume
+    #   persistentVolumeClaim:
+    #     claimName: reana-infrastructure-persistent-volume
+    #     readOnly: false
+    # Or shared volume:
+    # - name: reana-opensearch-volume
+    #   persistentVolumeClaim:
+    #     claimName: reana-shared-persistent-volume
+    #     readOnly: false
+  extraVolumeMounts:
+    - mountPath: /usr/share/opensearch/data
+      subPath: opensearch
+      name: reana-opensearch-volume
+  # Configure REANA and FluentBit users and roles for job log collection
+  customSecurityConfig:
+    internalUsers:
+      reana:
+        hash: ""  # Required. To generate hash, run plugins/opensearch-security/tools/hash.sh -p <new-password>; supply in Helm command flags
+        reserved: false
+        backend_roles:
+          - readall
+        description: REANA user
+      fluentbit:
+        hash: ""  # Required. To generate hash, run plugins/opensearch-security/tools/hash.sh -p <new-password>; supply in Helm command flags
+        reserved: false
+        backend_roles:
+          - fluentbit
+        description: FluentBit user
+    roles:
+      fluentbit:
+        reserved: true
+        hidden: false
+        description: Provide the minimum permissions for fluentbit
+        cluster_permissions:
+          - cluster_monitor
+          - cluster_composite_ops
+          - indices:admin/template/get
+          - indices:admin/template/put
+          - cluster:admin/ingest/pipeline/put
+          - cluster:admin/ingest/pipeline/get
+          - indices:data/write/bulk*
+        index_permissions:
+          - index_patterns:
+            - fluentbit-*
+            fls: []
+            masked_fields: []
+            allowed_actions:
+              - crud
+              - create_index
+        tenant_permissions: []
+        static: true
+    rolesMapping:
+      fluentbit:
+        hosts: []
+        users: []
+        reserved: false
+        hidden: false
+        backend_roles:
+        - fluentbit
+        and_backend_roles: []
+      own_index:
+        hosts: []
+        users:
+          - "*"
+        reserved: false
+        hidden: false
+        backend_roles: []
+        and_backend_roles: []
+        description: Allow full access to an index named like the username
+      readall:
+        hosts: []
+        users:
+          - "reana"
+        reserved: false
+        hidden: false
+        backend_roles:
+          - readall
+        and_backend_roles: []
