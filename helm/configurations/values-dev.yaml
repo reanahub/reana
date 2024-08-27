@@ -31,3 +31,28 @@ components:
 
 pgbouncer:
   enabled: true
+
+# OpenSearch configuration for dev environment
+opensearch:
+  tls:
+    generate: false
+  singleNode: true
+  config:
+    opensearch.yml: |
+      cluster.name: opensearch-cluster
+      network.host: 0.0.0.0
+      plugins.security.disabled: true
+  extraEnvs:
+    - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+      value: ReanaOS1=
+  securityConfig:
+    enabled: false
+    internalUsersSecret:
+    rolesSecret:
+    rolesMappingSecret:
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+  secretMounts: []
+  customSecurityConfig:
