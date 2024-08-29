@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -605,7 +605,7 @@ def upgrade_requirements(component: str) -> bool:
 
     docker_cmd = (
         f"docker run --rm -it -v {get_srcdir(component)}:/code:z {PYTHON_DOCKER_IMAGE} "
-        f"bash -c 'cd /code && pip install --upgrade pip-tools setuptools pip && {pip_compile_cmd}'"
+        f"bash -c 'cd /code && pip install --upgrade pip-tools 'setuptools<71' pip && {pip_compile_cmd}'"
     )
     run_command(docker_cmd, component)
     return True
