@@ -188,7 +188,7 @@ def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D3
     "--build-arg",
     "-b",
     multiple=True,
-    help="Any build arguments? (e.g. `-b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern`)",
+    help="Any build arguments? (e.g. `-b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern,compute4punch`)",
 )
 @click.option(
     "--mode",
@@ -219,7 +219,7 @@ def cluster_build(
     \b
     Example:
        $ reana-dev cluster-build --exclude-components=r-ui,r-a-vomsproxy
-                                 -b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern
+                                 -b COMPUTE_BACKENDS=kubernetes,htcondorcern,slurmcern,compute4punch
                                  --mode debug
                                  --no-cache
     """

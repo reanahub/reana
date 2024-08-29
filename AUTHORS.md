@@ -36,6 +36,7 @@ organisation on GitHub, in alphabetical order:
 - [Kenyi Hurtado-Anampa](https://orcid.org/0000-0002-9779-3566)
 - [Leticia Wanderley](https://orcid.org/0000-0003-4649-6630)
 - [Lukas Heinrich](https://orcid.org/0000-0002-4048-7584)
+- [Manuel Giffels](https://orcid.org/0000-0003-0193-3032)
 - [Marco Donadoni](https://orcid.org/0000-0003-2922-5505)
 - [Marco Vidal](https://orcid.org/0000-0002-9363-4971)
 - [Maria Fernando](https://github.com/MMFernando)
