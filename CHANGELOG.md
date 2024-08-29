@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.9.4](https://github.com/reanahub/reana/compare/0.9.3...0.9.4) (2024-08-29)
+
+
+### Build
+
+* **helm:** add support for Kubernetes 1.30 ([#799](https://github.com/reanahub/reana/issues/799)) ([748ca07](https://github.com/reanahub/reana/commit/748ca0769c24286cb32b8bfaf3df0114748cfae0))
+* **helm:** add support for Kubernetes 1.31 ([#822](https://github.com/reanahub/reana/issues/822)) ([7da51d3](https://github.com/reanahub/reana/commit/7da51d3be56b9bf03381c41342fb141cfb36b84b))
+
+
+### Features
+
+* **config:** add Compute4PUNCH backend ([#780](https://github.com/reanahub/reana/issues/780)) ([c2f490b](https://github.com/reanahub/reana/commit/c2f490b8251ffcebcf53a72ac5f2bcc9ce0190b4))
+* **helm:** allow cluster administrator to configure ingress host ([#804](https://github.com/reanahub/reana/issues/804)) ([1479730](https://github.com/reanahub/reana/commit/14797309ff964b7897e072801c441c4c34532856))
+
+
+### Continuous integration
+
+* **python:** pin setuptools 70 ([#822](https://github.com/reanahub/reana/issues/822)) ([be45c54](https://github.com/reanahub/reana/commit/be45c549c057ea2356b2f6688dd142c68ea11d44))
+
 ## [0.9.3](https://github.com/reanahub/reana/compare/0.9.2...0.9.3) (2024-03-13)
 
 ### :sparkles: What's new in REANA 0.9.3
