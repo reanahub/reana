@@ -56,3 +56,11 @@ opensearch:
       memory: "2Gi"
   secretMounts: []
   customSecurityConfig:
+
+# FluentBit configuration for dev environment
+fluent-bit:
+  outputConfig:
+    tls: "Off"
+    tlsCaFile: ""
+  extraVolumes: []
+  extraVolumeMounts: []
