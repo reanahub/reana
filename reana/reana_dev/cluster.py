@@ -345,11 +345,12 @@ def cluster_deploy(
         return job_mount_config
 
     if mode in ("releasehelm") and values == "helm/configurations/values-dev.yaml":
-        values = "helm/reana/values.yaml"
+        values = ""
 
     values_dict = {}
-    with open(os.path.join(get_srcdir("reana"), values)) as f:
-        values_dict = yaml.safe_load(f.read())
+    if values:
+        with open(os.path.join(get_srcdir("reana"), values)) as f:
+            values_dict = yaml.safe_load(f.read()) or {}
 
     job_mount_config = job_mounts_to_config(job_mounts)
     if job_mount_config:
@@ -365,9 +366,12 @@ def cluster_deploy(
             find_standard_component_name(c) for c in exclude_components.split(",")
         ]
         if "reana-ui" in standard_named_exclude_components:
-            values_dict["components"]["reana_ui"]["enabled"] = False
+            values_dict.setdefault("components", {}).setdefault("reana_ui", {})[
+                "enabled"
+            ] = False
 
-    values_yaml = yaml.dump(values_dict) if values_dict else ""
+    # set arbitrary big value for `width` to prevent PyYAML from wrapping long lines
+    values_yaml = yaml.dump(values_dict, width=100000) if values_dict else ""
     helm_install = f"cat <<EOF | helm install {instance_name} helm/reana -n {namespace} --create-namespace --wait -f -\n{values_yaml}\nEOF"
 
     cmds = []
