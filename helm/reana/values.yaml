@@ -358,3 +358,192 @@ opensearch:
         backend_roles:
           - readall
         and_backend_roles: []
+
+# FluentBit chart values.yaml
+fluent-bit:
+  enabled: false
+  inputConfig:
+    refreshInterval: 2
+    rotateWait: 5
+    skipLongLines: "On"
+    skipEmptyLines: "On"
+  filterConfig:
+    bufferSize: 512k
+    kubeUrl: https://kubernetes.default.svc:443
+    kubeCaFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    kubeTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+  outputConfig:
+    host: reana-opensearch-master.default.svc.cluster.local
+    httpUser: fluentbit
+    httpPasswd:
+    tls: "On"
+    tlsVerify: "On"
+    tlsVerifyHostname: "On"
+    tlsCaFile: /fluent-bit/etc/certs/ca.crt
+    tlsCrtFile: ""
+    tlsKeyFile: ""
+    tlsKeyPassword: ""
+  ## https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/configuration-file
+  config:
+    service: |
+      [SERVICE]
+          Daemon Off
+          Flush {{ .Values.flush }}
+          Log_Level {{ .Values.logLevel }}
+          Parsers_File /fluent-bit/etc/parsers.conf
+          Parsers_File /fluent-bit/etc/conf/custom_parsers.conf
+          HTTP_Server On
+          HTTP_Listen 0.0.0.0
+          HTTP_Port {{ .Values.metricsPort }}
+          Health_Check On
+
+    # ## https://docs.fluentbit.io/manual/pipeline/inputs
+    inputs: |
+      [INPUT]
+          Name tail
+          Path /var/log/containers/reana-run-job-*
+          multiline.parser docker, cri
+          Tag kube.*
+          Skip_Long_Lines {{ .Values.inputConfig.skipLongLines }}
+          Skip_Empty_Lines {{ .Values.inputConfig.skipEmptyLines }}
+          Refresh_Interval {{ .Values.inputConfig.refreshInterval }}
+          Rotate_Wait {{ .Values.inputConfig.rotateWait }}
+
+      [INPUT]
+          Name tail
+          Path /var/log/containers/reana-run-batch-*
+          multiline.parser docker, cri
+          Tag kube.*
+          Skip_Long_Lines {{ .Values.inputConfig.skipLongLines }}
+          Skip_Empty_Lines {{ .Values.inputConfig.skipEmptyLines }}
+          Refresh_Interval {{ .Values.inputConfig.refreshInterval }}
+          Rotate_Wait {{ .Values.inputConfig.rotateWait }}
+
+    ## https://docs.fluentbit.io/manual/pipeline/filters
+    filters: |
+      [FILTER]
+          Name kubernetes
+          Buffer_Size {{ .Values.filterConfig.bufferSize }}
+          Match kube.*
+          Annotations Off
+          Kube_Tag_Prefix kube.var.log.containers.
+          Kube_URL {{ .Values.filterConfig.kubeUrl }}
+          Kube_CA_File {{ .Values.filterConfig.kubeCaFile }}
+          Kube_Token_File {{ .Values.filterConfig.kubeTokenFile }}
+
+      [FILTER]
+          Name parser
+          Match kube.var.log.containers.reana-run-batch-*job-controller*
+          Key_name log
+          Parser reana-capture
+          Reserve_Data On
+          Preserve_Key On
+
+      [FILTER]
+          Name grep
+          Match kube.var.log.containers.reana-run-batch-*job-controller*
+          Logical_Op or
+          Regex level ERROR
+          Regex level WARNING
+
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation lift
+          Nested_under kubernetes
+          Add_prefix kubernetes.
+
+      [FILTER]
+          Name nest
+          Match kube.*
+          Operation lift
+          Nested_under kubernetes.labels
+          Add_prefix kubernetes.labels.
+
+      [FILTER]
+          Name record_modifier
+          Match kube.*
+          Remove_key time
+          Remove_key stream
+          Remove_key kubernetes.pod_name
+          Remove_key kubernetes.namespace_name
+          Remove_key kubernetes.pod_id
+          Remove_key kubernetes.labels.batch.kubernetes.io/controller-uid
+          Remove_key kubernetes.labels.batch.kubernetes.io/job-name
+          Remove_key kubernetes.labels.controller-uid
+          Remove_key kubernetes.labels.reana-run-job-workflow-uuid
+          Remove_key kubernetes.labels.reana_workflow_mode
+          Remove_key kubernetes.annotations.*
+          Remove_key kubernetes.host
+          Remove_key kubernetes.container_name
+          Remove_key kubernetes.docker_id
+          Remove_key kubernetes.container_hash
+          Remove_key kubernetes.container_image
+          Remove_key _p
+
+      [FILTER]
+          Name record_modifier
+          Match kube.var.log.containers.reana-run-job-*
+          Remove_key kubernetes.labels.reana-run-batch-workflow-uuid
+
+      [FILTER]
+          Name record_modifier
+          Match kube.var.log.containers.reana-run-batch-*
+          Remove_key kubernetes.labels.job-name
+
+    ## https://docs.fluentbit.io/manual/pipeline/outputs
+    outputs: |
+      [OUTPUT]
+          Name opensearch
+          Match kube.var.log.containers.reana-run-job-*
+          Host {{ .Values.outputConfig.host }}
+          {{- if .Values.outputConfig.httpPasswd }}
+          HTTP_User {{ .Values.outputConfig.httpUser }}
+          HTTP_Passwd {{ .Values.outputConfig.httpPasswd }}
+          {{- end }}
+          Index fluentbit-job_log
+          Suppress_Type_Name On
+          tls {{ .Values.outputConfig.tls }}
+          tls.verify {{ .Values.outputConfig.tlsVerify }}
+          tls.verify_hostname {{ .Values.outputConfig.tlsVerifyHostname }}
+          {{ if .Values.outputConfig.tlsCaFile }}tls.ca_file {{ .Values.outputConfig.tlsCaFile }}{{- end }}
+          {{ if .Values.outputConfig.tlsCrtFile }}tls.crt_file {{ .Values.outputConfig.tlsCrtFile }}{{- end }}
+          {{ if .Values.outputConfig.tlsKeyFile }}tls.key_file {{ .Values.outputConfig.tlsKeyFile }}{{- end }}
+          {{ if .Values.outputConfig.tlsKeyPassword }}tls.key_password {{ .Values.outputConfig.tlsKeyPassword }}{{- end }}
+
+      [OUTPUT]
+          Name opensearch
+          Match kube.var.log.containers.reana-run-batch-*
+          Host {{ .Values.outputConfig.host }}
+          {{- if .Values.outputConfig.httpPasswd }}
+          HTTP_User {{ .Values.outputConfig.httpUser }}
+          HTTP_Passwd {{ .Values.outputConfig.httpPasswd }}
+          {{- end }}
+          Index fluentbit-workflow_log
+          Suppress_Type_Name On
+          tls {{ .Values.outputConfig.tls }}
+          tls.verify {{ .Values.outputConfig.tlsVerify }}
+          tls.verify_hostname {{ .Values.outputConfig.tlsVerifyHostname }}
+          {{ if .Values.outputConfig.tlsCaFile }}tls.ca_file {{ .Values.outputConfig.tlsCaFile }}{{- end }}
+          {{ if .Values.outputConfig.tlsCrtFile }}tls.crt_file {{ .Values.outputConfig.tlsCrtFile }}{{- end }}
+          {{ if .Values.outputConfig.tlsKeyFile }}tls.key_file {{ .Values.outputConfig.tlsKeyFile }}{{- end }}
+          {{ if .Values.outputConfig.tlsKeyPassword }}tls.key_password {{ .Values.outputConfig.tlsKeyPassword }}{{- end }}
+
+    ## https://docs.fluentbit.io/manual/pipeline/parsers
+    customParsers: |
+      [PARSER]
+          Name reana-capture
+          Format regex
+          Regex /^(?<timestamp>[1-9:\-,\w ]+) \| (?<name>[a-zA-Z1-9]+) \| (?<thread>[a-zA-Z1-9_\- \w\(\)]+) \| (?<level>[a-zA-Z]+) \| (?<message>.*)/m
+  extraVolumes:
+    - name: reana-opensearch-ca
+      secret:
+        secretName: reana-opensearch-tls-secrets
+        items:
+        - key: ca.crt
+          path: ca.crt
+  extraVolumeMounts:
+    - name: reana-opensearch-ca
+      mountPath: /fluent-bit/etc/certs
+      readOnly: true
+  priorityClassName: "reana-fluent-bit-priority-class"

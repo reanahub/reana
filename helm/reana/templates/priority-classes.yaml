@@ -1,0 +1,11 @@
+{{- if index .Values "fluent-bit" "enabled" }}
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ include "reana.prefix" . }}-fluent-bit-priority-class
+value: {{ index .Values "fluent-bit" "priority" | default 1000000 }}
+preemptionPolicy: Never
+globalDefault: false
+description: "PriorityClass for FluentBit DaemonSet pods. This priority class will not cause other pods to be preempted."
+{{- end }}

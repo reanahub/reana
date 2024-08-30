@@ -39,3 +39,7 @@ dependencies:
     version: 2.22.1
     repository: https://opensearch-project.github.io/helm-charts/
     condition: opensearch.enabled
+  - name: fluent-bit
+    version: 0.47.7
+    repository: https://fluent.github.io/helm-charts
+    condition: fluent-bit.enabled

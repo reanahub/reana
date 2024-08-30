@@ -73,6 +73,29 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `db_env_config.REANA_DB_PORT`                            | Environment variable to connect to external databases                                | "5432"                                          |
 | `debug.enabled`                                          | Instantiate a [wdb](https://github.com/Kozea/wdb) remote debugger inside the cluster, accessible in port `31984` | false               |
 | `eos.enabled`                                            | **[CERN only]** Enable EOS support inside the cluster                                | false                                           |
+| `fluent-bit.enabled`                                     | Enable FluentBit                                                                     | false                                           |
+| `fluent-bit.inputConfig.*`                               | Pass certain `tail` input [configuration parameters](https://docs.fluentbit.io/manual/pipeline/inputs/tail#config)|                    |
+| `fluent-bit.inputConfig.refreshInterval`                 | `tail` input configuration parameter `Refresh_Interval`                              | 2                                               |
+| `fluent-bit.inputConfig.rotateWait`                      | `tail` input configuration parameter `Rotate_Wait`                                   | 5                                               |
+| `fluent-bit.inputConfig.skipLongLines`                   | `tail` input configuration parameter `Skip_Long_Lines`                               | On                                              |
+| `fluent-bit.inputConfig.skipEmptyLines`                  | `tail` input configuration parameter `Skip_Empty_Lines`                              | On                                              |
+| `fluent-bit.filterConfig.*`                              | Pass certain `kubernetes` filter [configuration parameters](https://docs.fluentbit.io/manual/pipeline/filters/kubernetes#configuration-parameters)| |
+| `fluent-bit.filterConfig.bufferSize`                     | `kubernetes` filter configuration parameter `Buffer_Size`                            | 512k                                            |
+| `fluent-bit.filterConfig.kubeUrl`                        | `kubernetes` filter configuration parameter `Kube_URL`                               | https://kubernetes.default.svc:443              |
+| `fluent-bit.filterConfig.kubeCaFile`                     | `kubernetes` filter configuration parameter `Kube_CA_File`                           | /var/run/secrets/kubernetes.io/serviceaccount/ca.crt |
+| `fluent-bit.filterConfig.kubeTokenFile`                  | `kubernetes` filter configuration parameter `Kube_Token_File`                        | /var/run/secrets/kubernetes.io/serviceaccount/token |
+| `fluent-bit.outputConfig.*`                              | Pass certain `opensearch` output [configuration parameters](https://docs.fluentbit.io/manual/pipeline/outputs/opensearch#configuration-parameters)| |
+| `fluent-bit.outputConfig.host`                           | `opensearch` output configuration parameter `Host`                                   | reana-opensearch-master                       |
+| `fluent-bit.outputConfig.httpUser`                       | `opensearch` output configuration parameter `HTTP_User`                              | fluentbit                                       |
+| `fluent-bit.outputConfig.httpPasswd`                     | `opensearch` output configuration parameter `HTTP_Passwd`                            | None                                            |
+| `fluent-bit.outputConfig.tls`                            | `opensearch` output configuration parameter `tls`                                    | "On"                                            |
+| `fluent-bit.outputConfig.tlsVerify`                      | `opensearch` output configuration parameter `tls.verify`                             | "On"                                            |
+| `fluent-bit.outputConfig.tlsVerifyHostname`              | `opensearch` output configuration parameter `tls.verify_hostname`                    | "Off"                                           |
+| `fluent-bit.outputConfig.tlsCaFile`                      | `opensearch` output configuration parameter `tls.ca_file`                            | /fluent-bit/etc/certs/ca.crt                    |
+| `fluent-bit.outputConfig.tlsCrtFile`                     | `opensearch` output configuration parameter `tls.crt_file`                           | ""                                              |
+| `fluent-bit.outputConfig.tlsKeyFile`                     | `opensearch` output configuration parameter `tls.key_file`                           | ""                                              |
+| `fluent-bit.outputConfig.tlsKeyPassword`                 | `opensearch` output configuration parameter `tls.key_passwd`                         | ""                                              |
+| `fluent-bit.priority`                                    | Priority class value for FluentBit pods                                              | 1000000                                         |
 | `fullnameOverride`                                       | Name to override the `reana.prefix`                                                  | None                                            |
 | `infrastructure_storage`                                 | Optional volume used by REANA's infrastructure (i.e. database and message broker). It has the same settings as `shared_storage` | {}   |
 | `ingress.annotations.traefik.ingress.kubernetes.io/router.entrypoints` | Entrypoints allowed by the ingress controller                          | "web,websecure"                                 |

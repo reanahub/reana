@@ -64,3 +64,12 @@ opensearch:
           key: OPENSEARCH_INITIAL_ADMIN_PASSWORD
   secretMounts: []
   customSecurityConfig:
+
+# FluentBit configuration for dev environment
+fluent-bit:
+  enabled: false
+  outputConfig:
+    tls: "Off"
+    tlsCaFile: ""
+  extraVolumes: []
+  extraVolumeMounts: []
