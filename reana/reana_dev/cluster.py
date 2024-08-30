@@ -378,7 +378,8 @@ def cluster_deploy(
                 "enabled"
             ] = False
 
-    values_yaml = yaml.dump(values_dict) if values_dict else ""
+    # set arbitrary big value for `width` to prevent PyYAML from wrapping long lines
+    values_yaml = yaml.dump(values_dict, width=100000) if values_dict else ""
     helm_install = f"cat <<EOF | helm install {instance_name} helm/reana -n {namespace} --create-namespace --wait -f -\n{values_yaml}\nEOF"
 
     cmds = []
