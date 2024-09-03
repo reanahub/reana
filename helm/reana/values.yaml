@@ -112,6 +112,11 @@ components:
     environment:
       SHARED_VOLUME_PATH: /var/reana
       REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 10
+      REANA_OPENSEARCH_ENABLED: false
+      REANA_OPENSEARCH_USE_SSL: true
+      REANA_OPENSEARCH_CA_CERTS: "/code/certs/ca.crt"
+      REANA_OPENSEARCH_USER: reana
+      REANA_OPENSEARCH_PASSWORD: ""  # Set this value in the Helm command
   reana_workflow_engine_cwl:
     image: docker.io/reanahub/reana-workflow-engine-cwl:0.9.3
     environment: {}

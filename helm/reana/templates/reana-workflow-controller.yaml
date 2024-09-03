@@ -1,3 +1,6 @@
+{{- $opensearchEnv := .Values.components.reana_workflow_controller.environment }}
+{{- $opensearchEnabled := $opensearchEnv.REANA_OPENSEARCH_ENABLED }}
+{{- $opensearchTlsEnabled := and $opensearchEnabled $opensearchEnv.REANA_OPENSEARCH_USE_SSL }}
 ---
 apiVersion: v1
 kind: Service
