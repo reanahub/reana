@@ -60,6 +60,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_workflow_engine_snakemake.environment` | [REANA-Workflow-Engine-Snakemake](https://github.com/reanahub/reana-workflow-engine-snakemake) environment variables | `{}`            |
 | `components.reana_workflow_engine_snakemake.image`       | [REANA-Workflow-Engine-Snakemake image](https://hub.docker.com/r/reanahub/reana-workflow-engine-snakemake) to use | `docker.io/reanahub/reana-workflow-engine-snakemake:<chart-release-version>` |
 | `compute_backends`                                       | List of supported compute backends (kubernetes, htcondorcern, slurmcern)             | "kubernetes"                                    |
+| `dask.enabled` | Install dask-kubernetes-operator custom resources in the cluster for dask workflows | true
 | `db_env_config.REANA_DB_HOST`                            | Environment variable to connect to external databases                                | `<chart-release-name>-db`                       |
 | `db_env_config.REANA_DB_NAME`                            | Environment variable to connect to external databases                                | reana                                           |
 | `db_env_config.REANA_DB_PORT`                            | Environment variable to connect to external databases                                | "5432"                                          |

@@ -23,11 +23,13 @@ rules:
   resources: ["pods", "nodes"]
   verbs: ["get", "list", "watch"]
 # Custom dask kubernetes resources
+{{- if .Values.dask.enabled }}
 - apiGroups: ["kubernetes.dask.org"]
   resources: ["daskclusters", "daskautoscalers"]
   verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+{{- end }}
 # Traefik Middleware permissions
-{{- if .Values.traefik.enabled }}
+{{- if and .Values.traefik.enabled .Values.dask.enabled }}
 - apiGroups: ["traefik.containo.us"]
   resources: ["middlewares"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
