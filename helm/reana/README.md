@@ -61,6 +61,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_workflow_engine_snakemake.image`       | [REANA-Workflow-Engine-Snakemake image](https://hub.docker.com/r/reanahub/reana-workflow-engine-snakemake) to use | `docker.io/reanahub/reana-workflow-engine-snakemake:<chart-release-version>` |
 | `compute_backends`                                       | List of supported compute backends (kubernetes, htcondorcern, slurmcern)             | "kubernetes"                                    |
 | `dask.enabled` | Install dask-kubernetes-operator custom resources in the cluster to enable dask workflows | true |
+| `dask.autoscaler_enabled` | Enable dask autoscaler instead of creating static dask clusters | true |
 | `dask.cluster_default_cores_limit` | Default cores limit for dask clusters | 4 |
 | `dask.cluster_max_cores_limit` | Max cores limit for dask clusters | 16 | 
 | `dask.cluster_default_memory_limit` | Default memory limit for dask clusters | "2Gi" |

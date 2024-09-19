@@ -175,6 +175,7 @@ traefik:
 
 dask:
   enabled: true
+  autoscaler_enabled: true
   cluster_default_cores_limit: 4
   cluster_max_cores_limit: 8
   cluster_default_memory_limit: "2Gi"
