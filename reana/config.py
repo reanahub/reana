@@ -29,6 +29,7 @@ REPO_LIST_DEMO_ALL = REPO_LIST_DEMO_RUNNABLE + [
     "reana-demo-cdci-crab-pulsar-integral-verification",
     "reana-demo-cdci-integral-data-reduction",
     "reana-demo-cms-reco",
+    "reana-demo-dask-coffea",
     "reana-demo-fcchh-fullsim",
     "reana-demo-lhcb-d2pimumu",
     "reana-demo-lhcb-mc-production",
@@ -256,6 +257,9 @@ DOCKER_PREFETCH_IMAGES = {
     ],
     "reana-demo-alice-lego-train-test-run": [
         "docker.io/reanahub/reana-env-aliphysics:vAN-20180614-1",
+    ],
+    "reana-demo-dask-coffea": [
+        "docker.io/coffeateam/coffea-dask-cc7:0.7.22-py3.10-g7f049",
     ],
 }
 """Images to be prefetched depending on the REANA demo to be executed."""
