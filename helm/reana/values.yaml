@@ -173,6 +173,16 @@ traefik:
     enabled: true
     isDefaultClass: true
 
+dask:
+  enabled: true
+  autoscaler_enabled: true
+  cluster_default_cores_limit: 4
+  cluster_max_cores_limit: 8
+  cluster_default_memory_limit: "2Gi"
+  cluster_max_memory_limit: "4Gi"
+  cluster_default_single_worker_cores: 0.5
+  cluster_default_single_worker_memory: "256Mi"
+
 pgbouncer:
   enabled: false
   image: docker.io/bitnami/pgbouncer:1.23.1
