@@ -60,13 +60,11 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_workflow_engine_snakemake.environment` | [REANA-Workflow-Engine-Snakemake](https://github.com/reanahub/reana-workflow-engine-snakemake) environment variables | `{}`            |
 | `components.reana_workflow_engine_snakemake.image`       | [REANA-Workflow-Engine-Snakemake image](https://hub.docker.com/r/reanahub/reana-workflow-engine-snakemake) to use | `docker.io/reanahub/reana-workflow-engine-snakemake:<chart-release-version>` |
 | `compute_backends`                                       | List of supported compute backends (kubernetes, htcondorcern, slurmcern)             | "kubernetes"                                    |
-| `dask.enabled` | Install dask-kubernetes-operator custom resources in the cluster to enable dask workflows | true |
-| `dask.cluster_default_cores_limit` | Default cores limit for dask clusters | 4 |
-| `dask.cluster_max_cores_limit` | Max cores limit for dask clusters | 16 | 
-| `dask.cluster_default_memory_limit` | Default memory limit for dask clusters | "2Gi" |
-| `dask.cluster_max_memory_limit` | Max memory limit for dask clusters | "4Gi" | 
-| `dask.cluster_default_single_worker_cores` | Amount of cores used by a single dask worker by default | 0.5 |
-| `dask.cluster_default_single_worker_memory` | Amount of memory used by a single dask worker by default | "512Mi" | 
+| `dask.enabled` | Install dask-kubernetes-operator custom resources in the cluster to support Dask workflows | false |
+| `dask.cluster_max_memory_limit` | Max memory limit for Dask clusters | "16Gi" | 
+| `dask.cluster_default_number_of_workers` | Number of workers in Dask clusters by default | 2 | 
+| `dask.cluster_default_single_worker_memory` | Amount of memory used by a single Dask worker by default | "2Gi" |
+| `dask.cluster_max_single_worker_memory` | Maximum amount of memory that can be used by a single Dask worker | "8Gi" |
 | `db_env_config.REANA_DB_HOST`                            | Environment variable to connect to external databases                                | `<chart-release-name>-db`                       |
 | `db_env_config.REANA_DB_NAME`                            | Environment variable to connect to external databases                                | reana                                           |
 | `db_env_config.REANA_DB_PORT`                            | Environment variable to connect to external databases                                | "5432"                                          |
