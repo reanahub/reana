@@ -35,3 +35,9 @@ dependencies:
     condition: traefik.enabled
     tags:
       - ingress
+  - name: dask-kubernetes-operator
+    version: 2024.8.0
+    repository: https://helm.dask.org
+    condition: dask.enabled
+    tags:
+      - dask
