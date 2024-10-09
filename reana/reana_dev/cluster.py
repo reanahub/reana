@@ -305,6 +305,7 @@ def cluster_build(
     default="reana",
     help="REANA instance name",
 )
+@click.option("--live-logs", is_flag=True, help="Enable live job logs.")
 def cluster_deploy(
     namespace,
     job_mounts,
@@ -314,6 +315,7 @@ def cluster_deploy(
     admin_email,
     admin_password,
     instance_name,
+    live_logs,
 ):  # noqa: D301
     """Deploy REANA cluster.
 
@@ -349,7 +351,7 @@ def cluster_deploy(
 
     values_dict = {}
     with open(os.path.join(get_srcdir("reana"), values)) as f:
-        values_dict = yaml.safe_load(f.read())
+        values_dict = yaml.safe_load(f.read()) or {}
 
     job_mount_config = job_mounts_to_config(job_mounts)
     if job_mount_config:
@@ -360,14 +362,24 @@ def cluster_deploy(
     if mode in ("debug"):
         values_dict.setdefault("debug", {})["enabled"] = True
 
+    if live_logs:
+        values_dict.setdefault("opensearch", {})["enabled"] = True
+        values_dict.setdefault("fluent-bit", {})["enabled"] = True
+        values_dict.setdefault("components", {}).setdefault(
+            "reana_workflow_controller", {}
+        ).setdefault("environment", {})["REANA_OPENSEARCH_ENABLED"] = True
+
     if exclude_components:
         standard_named_exclude_components = [
             find_standard_component_name(c) for c in exclude_components.split(",")
         ]
         if "reana-ui" in standard_named_exclude_components:
-            values_dict["components"]["reana_ui"]["enabled"] = False
+            values_dict.setdefault("components", {}).setdefault("reana_ui", {})[
+                "enabled"
+            ] = False
 
-    values_yaml = yaml.dump(values_dict) if values_dict else ""
+    # set arbitrary big value for `width` to prevent PyYAML from wrapping long lines
+    values_yaml = yaml.dump(values_dict, width=100000) if values_dict else ""
     helm_install = f"cat <<EOF | helm install {instance_name} helm/reana -n {namespace} --create-namespace --wait -f -\n{values_yaml}\nEOF"
 
     cmds = []

@@ -1,3 +1,6 @@
+{{- $opensearchEnv := .Values.components.reana_workflow_controller.environment }}
+{{- $opensearchEnabled := $opensearchEnv.REANA_OPENSEARCH_ENABLED }}
+{{- $opensearchTlsEnabled := and $opensearchEnabled $opensearchEnv.REANA_OPENSEARCH_USE_SSL }}
 ---
 apiVersion: v1
 kind: Service
@@ -83,9 +86,18 @@ spec:
             mountPath: {{ $workspace_path._1 }}
           {{- end }}
           {{- end }}
+          {{- if $opensearchTlsEnabled }}
+          - name: {{ include "reana.prefix" . }}-opensearch-tls-secrets
+            mountPath: /code/certs
+            readOnly: true
+          {{- end }}
         envFrom:
           - configMapRef:
               name: {{ include "reana.prefix" . }}-database-config
+          {{- if $opensearchEnabled }}
+          - secretRef:
+              name: {{ include "reana.prefix" . }}-opensearch-secrets
+          {{- end }}
         env:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
@@ -287,6 +299,14 @@ spec:
         hostPath:
           path: {{ .Values.shared_storage.hostpath.root_path }}
         {{- end }}
+      {{- if $opensearchTlsEnabled }}
+      - name: {{ include "reana.prefix" . }}-opensearch-tls-secrets
+        secret:
+          secretName: {{ include "reana.prefix" . }}-opensearch-tls-secrets
+          items:
+            - key: ca.crt
+              path: ca.crt
+      {{- end }}
       {{- if .Values.debug.enabled }}
       - name: reana-code
         hostPath:
