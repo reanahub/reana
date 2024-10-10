@@ -13,6 +13,7 @@ include *.yml
 include .flake8
 include LICENSE
 include pytest.ini
+exclude .editorconfig
 exclude .readthedocs.yaml
 prune docs/_build
 recursive-include reana *.py
