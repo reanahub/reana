@@ -193,3 +193,17 @@ jobs:
         run: |
           pip install yamllint
           ./run-tests.sh --check-yamllint
+
+  lint-markdownlint:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+
+      - name: Lint Markdown files
+        run: |
+          npm install markdownlint-cli2 --global
+          ./run-tests.sh --check-markdownlint

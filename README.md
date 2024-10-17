@@ -1,5 +1,3 @@
-[![image](docs/logo-reana.png)](http://docs.reana.io)
-
 # REANA - Reusable Analyses
 
 [![image](https://github.com/reanahub/reana/workflows/CI/badge.svg)](https://github.com/reanahub/reana/actions)
@@ -8,6 +6,8 @@
 [![image](https://img.shields.io/badge/discourse-forum-blue.svg)](https://forum.reana.io)
 [![image](https://img.shields.io/github/license/reanahub/reana.svg)](https://github.com/reanahub/reana/blob/master/LICENSE)
 [![image](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+[![image](docs/logo-reana.png)](http://docs.reana.io)
 
 ## About
 
