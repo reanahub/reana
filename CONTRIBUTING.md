@@ -14,7 +14,7 @@ If you create a pull request fixing a bug or implementing a feature, you can run
 the tests to ensure that everything is operating correctly:
 
 ```console
-$ ./run-tests.sh
+./run-tests.sh
 ```
 
 Each pull request should preserve or increase code coverage.

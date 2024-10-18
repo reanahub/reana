@@ -1,33 +1,33 @@
 # REANA components pointing to `latest`, locally built master branch
 
 components:
-    reana_db:
-      image: docker.io/library/postgres:14.10
-    reana_server:
-      image: docker.io/reanahub/reana-server
-      environment:
-        REANA_SCHEDULER_REQUEUE_SLEEP: 2
-        REANA_RATELIMIT_SLOW: "5 per second"
-        REANA_RATELIMIT_GUEST_USER: "100 per second"
-        REANA_RATELIMIT_AUTHENTICATED_USER: "100 per second"
-    reana_workflow_controller:
-      image: docker.io/reanahub/reana-workflow-controller
-      environment:
-        REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES: failed
-    reana_workflow_engine_cwl:
-      image: docker.io/reanahub/reana-workflow-engine-cwl
-    reana_workflow_engine_yadage:
-      image: docker.io/reanahub/reana-workflow-engine-yadage
-    reana_workflow_engine_serial:
-      image: docker.io/reanahub/reana-workflow-engine-serial
-    reana_workflow_engine_snakemake:
-      image: docker.io/reanahub/reana-workflow-engine-snakemake
-    reana_job_controller:
-      image: docker.io/reanahub/reana-job-controller
-    reana_message_broker:
-      image: docker.io/reanahub/reana-message-broker
-    reana_ui:
-      image: docker.io/reanahub/reana-ui
+  reana_db:
+    image: docker.io/library/postgres:14.10
+  reana_server:
+    image: docker.io/reanahub/reana-server
+    environment:
+      REANA_SCHEDULER_REQUEUE_SLEEP: 2
+      REANA_RATELIMIT_SLOW: "5 per second"
+      REANA_RATELIMIT_GUEST_USER: "100 per second"
+      REANA_RATELIMIT_AUTHENTICATED_USER: "100 per second"
+  reana_workflow_controller:
+    image: docker.io/reanahub/reana-workflow-controller
+    environment:
+      REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES: failed
+  reana_workflow_engine_cwl:
+    image: docker.io/reanahub/reana-workflow-engine-cwl
+  reana_workflow_engine_yadage:
+    image: docker.io/reanahub/reana-workflow-engine-yadage
+  reana_workflow_engine_serial:
+    image: docker.io/reanahub/reana-workflow-engine-serial
+  reana_workflow_engine_snakemake:
+    image: docker.io/reanahub/reana-workflow-engine-snakemake
+  reana_job_controller:
+    image: docker.io/reanahub/reana-job-controller
+  reana_message_broker:
+    image: docker.io/reanahub/reana-message-broker
+  reana_ui:
+    image: docker.io/reanahub/reana-ui
 
 pgbouncer:
   enabled: true

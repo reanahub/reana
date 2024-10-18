@@ -75,6 +75,14 @@ check_helm () {
     helm lint helm/reana
 }
 
+check_yamllint () {
+    yamllint .
+}
+
+check_markdownlint () {
+    markdownlint-cli2 .
+}
+
 check_all () {
     check_commitlint
     check_shellcheck
@@ -85,6 +93,8 @@ check_all () {
     check_sphinx
     check_pytest
     check_helm
+    check_yamllint
+    check_markdownlint
 }
 
 if [ $# -eq 0 ]; then
@@ -103,5 +113,7 @@ case $arg in
     --check-sphinx) check_sphinx;;
     --check-pytest) check_pytest;;
     --check-helm) check_helm;;
+    --check-yamllint) check_yamllint;;
+    --check-markdownlint) check_markdownlint;;
     *) echo "[ERROR] Invalid argument '$arg'. Exiting." && exit 1;;
 esac

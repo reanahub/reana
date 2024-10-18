@@ -1,0 +1,11 @@
+# MD013/line-length : Line length : https://github.com/DavidAnson/markdownlint/blob/v0.35.0/doc/md013.md
+MD013: false
+
+# MD037/no-space-in-emphasis : Spaces inside emphasis markers : https://github.com/DavidAnson/markdownlint/blob/v0.35.0/doc/md037.md
+MD037: false
+
+# MD041/first-line-heading/first-line-h1 : First line in a file should be a top-level heading : https://github.com/DavidAnson/markdownlint/blob/v0.35.0/doc/md041.md
+MD041: false
+
+# MD043/required-headings : Required heading structure : https://github.com/DavidAnson/markdownlint/blob/v0.35.0/doc/md043.md
+MD043: false
