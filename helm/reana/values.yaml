@@ -129,6 +129,9 @@ components:
   reana_workflow_engine_snakemake:
     image: docker.io/reanahub/reana-workflow-engine-snakemake:0.9.3
     environment: {}
+  reana_workflow_validator:
+    image: docker.io/reanahub/reana-workflow-validator:0.95.0
+    environment: {}
   reana_job_controller:
     image: docker.io/reanahub/reana-job-controller:0.9.3
     environment: {}

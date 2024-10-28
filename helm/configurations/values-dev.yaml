@@ -24,6 +24,8 @@ components:
       image: docker.io/reanahub/reana-workflow-engine-serial
     reana_workflow_engine_snakemake:
       image: docker.io/reanahub/reana-workflow-engine-snakemake
+    reana_workflow_validator:
+      image: docker.io/reanahub/reana-workflow-validator
     reana_job_controller:
       image: docker.io/reanahub/reana-job-controller
     reana_message_broker:

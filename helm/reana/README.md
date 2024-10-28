@@ -66,6 +66,8 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_workflow_engine_yadage.image`          | [REANA-Workflow-Engine-Yadage image](https://hub.docker.com/r/reanahub/reana-workflow-engine-yadage) to use | `docker.io/reanahub/reana-workflow-engine-yadage:<chart-release-version>` |
 | `components.reana_workflow_engine_snakemake.environment` | [REANA-Workflow-Engine-Snakemake](https://github.com/reanahub/reana-workflow-engine-snakemake) environment variables | `{}`            |
 | `components.reana_workflow_engine_snakemake.image`       | [REANA-Workflow-Engine-Snakemake image](https://hub.docker.com/r/reanahub/reana-workflow-engine-snakemake) to use | `docker.io/reanahub/reana-workflow-engine-snakemake:<chart-release-version>` |
+| `components.reana_workflow_validator.environment`        | [REANA-Workflow-Validator](https://github.com/reanahub/reana-workflow-validator) environment variables | `{}`            |
+| `components.reana_workflow_validator.image`              | [REANA-Workflow-Validator image](https://hub.docker.com/r/reanahub/reana-workflow-validator) to use | `docker.io/reanahub/reana-workflow-validator:<chart-release-version>` |
 | `compute_backends`                                       | List of supported compute backends (kubernetes, htcondorcern, slurmcern)             | "kubernetes"                                    |
 | `dask.enabled`                                           | Enable support for running Dask workflows | false |
 | `dask.autoscaler_enabled`                                | Enable Dask autoscaler | true |
