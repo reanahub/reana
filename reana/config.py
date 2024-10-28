@@ -61,6 +61,7 @@ REPO_LIST_ALL = [
     "reana-workflow-engine-serial",
     "reana-workflow-engine-yadage",
     "reana-workflow-engine-snakemake",
+    "reana-workflow-validator",
     "www.reana.io",
 ] + REPO_LIST_DEMO_ALL
 """All REANA git repositories."""
@@ -90,6 +91,7 @@ REPO_LIST_CLUSTER_RUNTIME_BATCH = [
     "reana-workflow-engine-serial",
     "reana-workflow-engine-yadage",
     "reana-workflow-engine-snakemake",
+    "reana-workflow-validator",
 ]
 """List of git repositories related to batch runtime cluster components."""
 
@@ -122,6 +124,7 @@ REPO_LIST_PYTHON_REQUIREMENTS = [
     "reana-workflow-engine-serial",
     "reana-workflow-engine-yadage",
     "reana-workflow-engine-snakemake",
+    "reana-workflow-validator",
 ]
 """List of cluster components that have a Python requirements file."""
 
@@ -211,6 +214,7 @@ COMPONENTS_USING_SHARED_MODULE_COMMONS = [
     "reana-workflow-engine-serial",
     "reana-workflow-engine-yadage",
     "reana-workflow-engine-snakemake",
+    "reana-workflow-validator",
 ]
 """List of components which use the module REANA-Commons."""
 
