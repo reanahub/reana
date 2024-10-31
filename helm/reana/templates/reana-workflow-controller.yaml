@@ -182,6 +182,8 @@ spec:
           - name: DASK_ENABLED
             value: {{ .Values.dask.enabled | quote }}
           {{- if .Values.dask.enabled }}
+          - name: DASK_AUTOSCALER_ENABLED
+            value: {{ .Values.dask.autoscaler_enabled | quote | default "true" }}
           - name: REANA_DASK_CLUSTER_MAX_MEMORY_LIMIT
             value: {{ .Values.dask.cluster_max_memory_limit | default "16Gi" }}
           - name: REANA_DASK_CLUSTER_DEFAULT_NUMBER_OF_WORKERS
@@ -288,6 +290,10 @@ spec:
           value: ""
         - name: GIT_SSL_NO_VERIFY
           value: "true"
+        {{- end }}
+        {{- if .Values.dask.enabled }}
+        - name: DASK_AUTOSCALER_ENABLED
+          value: {{ .Values.dask.autoscaler_enabled | quote | default "true" }}
         {{- end }}
         - name: REANA_DB_USERNAME
           valueFrom:

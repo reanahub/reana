@@ -180,6 +180,7 @@ traefik:
 
 dask:
   enabled: false
+  autoscaler_enabled: true
   cluster_max_memory_limit: "16Gi"
   cluster_default_number_of_workers: 2
   cluster_default_single_worker_memory: "2Gi"
