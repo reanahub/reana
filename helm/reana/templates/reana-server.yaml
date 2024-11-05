@@ -107,6 +107,8 @@ spec:
             value: {{ .Values.dask.cluster_max_memory_limit | default "16Gi" }}
           - name: REANA_DASK_CLUSTER_DEFAULT_NUMBER_OF_WORKERS
             value: !!str {{ .Values.dask.cluster_default_number_of_workers | default 2 }}
+          - name: REANA_DASK_CLUSTER_MAX_NUMBER_OF_WORKERS
+            value: !!str {{ .Values.dask.cluster_max_number_of_workers | default 20 }}
           - name: REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_MEMORY
             value: {{ .Values.dask.cluster_default_single_worker_memory | default "2Gi" }}
           - name: REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_MEMORY

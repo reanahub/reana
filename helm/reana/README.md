@@ -72,6 +72,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `dask.autoscaler_enabled`                                | Enable Dask autoscaler | true |
 | `dask.cluster_max_memory_limit`                          | The maximum memory limit for Dask clusters created by users | "16Gi" |
 | `dask.cluster_default_number_of_workers`                 | The number of Dask workers created by default | 2 |
+| `dask.cluster_max_number_of_workers`                     | The maximum number of Dask workers that users can ask for | 20 |
 | `dask.cluster_default_single_worker_memory`              | The amount of memory used by default by a single Dask worker | "2Gi" |
 | `dask.cluster_max_single_worker_memory`                  | The maximum amount of memory that users can ask for the single Dask worker | "8Gi" |
 | `db_env_config.REANA_DB_HOST`                            | Environment variable to connect to external databases                                | `<chart-release-name>-db`                       |
