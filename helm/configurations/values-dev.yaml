@@ -64,6 +64,8 @@ opensearch:
           key: OPENSEARCH_INITIAL_ADMIN_PASSWORD
   secretMounts: []
   customSecurityConfig:
+  podSecurityContext:
+    fsGroup: 0
 
 # FluentBit configuration for dev environment
 fluent-bit:
