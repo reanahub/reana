@@ -141,7 +141,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `opensearch.tls.generate`                                | Enable the generation of a self-signed TLS certificates for OpenSearch               | true                                            |
 | `opensearch.tls.ca.cn`                                   | OpenSearch root CA certificate common name (CN)                                      | reana.io                                        |
 | `opensearch.tls.ca.ttl`                                  | OpenSearch root CA certificate TTL in days                                           | 365                                             |
-| `opensearch.tls.cert.cn`                                 | OpenSearch node certificate common name (CN)                                         | reana-opensearch-master.default.svc.cluster.local |
+| `opensearch.tls.cert.cn`                                 | OpenSearch node certificate common name (CN)                                         | reana-opensearch-master                         |
 | `opensearch.tls.cert.ttl`                                | OpenSearch node certificate TTL in days                                              | 180                                             |
 | `opensearch.tls.admin.cn`                                | OpenSearch admin certificate common name (CN)                                        | opensearch-admin.reana.io                       |
 | `opensearch.tls.admin.ttl`                               | OpenSearch admin certificate TTL in days                                             | 180                                             |

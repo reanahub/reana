@@ -215,7 +215,7 @@ opensearch:
       cn: "reana.io"
       ttl: 365
     cert:
-      cn: "reana-opensearch-master.default.svc.cluster.local"
+      cn: "reana-opensearch-master"
       ttl: 180
     admin:
       cn: "opensearch-admin.reana.io"
@@ -382,7 +382,7 @@ fluent-bit:
     kubeCaFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     kubeTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
   outputConfig:
-    host: reana-opensearch-master.default.svc.cluster.local
+    host: reana-opensearch-master
     httpUser: fluentbit
     httpPasswd:
     tls: "On"
