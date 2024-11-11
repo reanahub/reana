@@ -58,7 +58,6 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_workflow_controller.environment.REANA_OPENSEARCH_USE_SSL` | Use SSL when connecting to OpenSearch instance.                   | true                                            |
 | `components.reana_workflow_controller.environment.REANA_OPENSEARCH_CA_CERTS` | Path to a file with OpenSearch root CA certificates.             | "/code/certs/ca.crt"                            |
 | `components.reana_workflow_controller.environment.REANA_OPENSEARCH_USER` | OpenSearch user name for Basic Authentication.                       | reana                                           |
-| `components.reana_workflow_controller.environment.REANA_OPENSEARCH_PASSWORD` | OpenSearch password for Basic Authentication. Set this value in the Helm command. | ""                             |
 | `components.reana_workflow_engine_cwl.environment`       | [REANA-Workflow-Engine-CWL](https://github.com/reanahub/reana-workflow-engine-cwl) environment variables | `{}`                        |
 | `components.reana_workflow_engine_cwl.image`             | [REANA-Workflow-Engine-CWL image](https://hub.docker.com/r/reanahub/reana-workflow-engine-cwl) to use | `docker.io/reanahub/reana-workflow-engine-cwl:<chart-release-version>` |
 | `components.reana_workflow_engine_serial.environment`    | [REANA-Workflow-Engine-Serial](https://github.com/reanahub/reana-workflow-engine-serial) environment variables | `{}`                  |
@@ -162,6 +161,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `secrets.gitlab.REANA_GITLAB_OAUTH_APP_ID`               | GitLab OAuth application id                                                          | None                                            |
 | `secrets.gitlab.REANA_GITLAB_OAUTH_APP_SECRET`           | **[Do not use in production, use secrets instead]** GitLab OAuth application secret  | None                                            |
 | `secrets.login`                                          | **[Do not use in production, use secrets instead]** Third-party Keycloak identity provider consumer key and secret ([configuration details](https://docs.reana.io/administration/configuration/configuring-access/#keycloak-single-sign-on-configuration)) | `{}` |
+| `secrets.opensearch.password`                            | **[Do not use in production, use secrets instead]** OpenSearch password for Basic Authentication | None |
 | `secrets.reana.REANA_SECRET_KEY`                         | **[Do not use in production, use secrets instead]** REANA encryption secret key      | None                                            |
 | `serviceAccount.create`                                  | Create a service account for the REANA system user                                   | true                                            |
 | `serviceAccount.name`                                    | Service account name                                                                 | reana                                           |

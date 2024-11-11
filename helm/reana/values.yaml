@@ -60,6 +60,7 @@ secrets:
     sso: {}
   reana: {}
   login: {}
+  opensearch: {}
 
 # Enable and configure SSO authentication via a third-party Keycloak identity provider
 login: []
@@ -116,7 +117,6 @@ components:
       REANA_OPENSEARCH_USE_SSL: true
       REANA_OPENSEARCH_CA_CERTS: "/code/certs/ca.crt"
       REANA_OPENSEARCH_USER: reana
-      REANA_OPENSEARCH_PASSWORD: ""  # Set this value in the Helm command
   reana_workflow_engine_cwl:
     image: docker.io/reanahub/reana-workflow-engine-cwl:0.9.3
     environment: {}
