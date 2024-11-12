@@ -185,6 +185,10 @@ def cluster_create(
         cluster_config=yaml.dump(cluster_config),
     )
     run_command(cluster_create, "reana")
+    run_command(
+        "docker exec kind-control-plane sh -c 'mkdir -p /var/reana && chmod g+rwx /var/reana'",
+        "reana",
+    )
 
     # pull Docker images
     if mode in ("releasepypi", "latest", "debug"):
