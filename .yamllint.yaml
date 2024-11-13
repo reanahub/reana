@@ -1,9 +1,11 @@
 extends: default
 
 rules:
+  comments:
+    min-spaces-from-content: 1
   document-start: disable
   line-length: disable
   truthy: disable
 
 ignore:
-  - helm/reana  # is linted by `helm lint` and `ct lint`
+  - helm/reana # is linted by `helm lint` and `ct lint`
