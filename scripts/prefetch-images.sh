@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -19,8 +19,7 @@ for image in \
     docker.io/reanahub/reana-workflow-engine-cwl:0.9.3 \
     docker.io/reanahub/reana-workflow-engine-serial:0.9.3 \
     docker.io/reanahub/reana-workflow-engine-snakemake:0.9.3 \
-    docker.io/reanahub/reana-workflow-engine-yadage:0.9.4 \
-    ; do
-        docker pull $image
-        kind load docker-image $image
+    docker.io/reanahub/reana-workflow-engine-yadage:0.9.4; do
+    docker pull $image
+    kind load docker-image $image
 done

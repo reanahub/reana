@@ -221,3 +221,14 @@ jobs:
         run: |
           npm install prettier --global
           ./run-tests.sh --check-prettier
+
+  format-shfmt:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check shell script code fomatting
+        run: |
+          sudo apt-get install shfmt
+          ./run-tests.sh --check-shfmt
