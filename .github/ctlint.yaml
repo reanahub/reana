@@ -6,6 +6,3 @@ rules:
   document-start: disable
   line-length: disable
   truthy: disable
-
-ignore:
-  - helm/reana/templates # is linted by `helm lint` and `ct lint`
