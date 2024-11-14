@@ -4,11 +4,109 @@
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 
-name: CI
+name: ci
 
 on: [push, pull_request]
 
 jobs:
+  docs-sphinx:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt install libcurl4-openssl-dev libssl-dev
+          sudo apt-get install libgnutls28-dev
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip setuptools py
+          pip install -e .[all]
+
+      - name: Run Sphinx documentation with doctests
+        run: ./run-tests.sh --check-sphinx
+
+  format-black:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Python code formatting
+        run: |
+          pip install black
+          ./run-tests.sh --check-black
+
+  format-prettier:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+
+      - name: Check Prettier code fomatting
+        run: |
+          npm install prettier --global
+          ./run-tests.sh --check-prettier
+
+  format-pydocstyle:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check compliance with Python docstring conventions
+        run: |
+          pip install pydocstyle
+          ./run-tests.sh --check-pydocstyle
+
+  format-shfmt:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check shell script code fomatting
+        run: |
+          sudo apt-get install shfmt
+          ./run-tests.sh --check-shfmt
+
+  lint-check-manifest:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Python manifest completeness
+        run: |
+          pip install check-manifest
+          ./run-tests.sh --check-manifest
+
   lint-commitlint:
     runs-on: ubuntu-24.04
     steps:
@@ -35,33 +133,6 @@ jobs:
         run: |
           ./run-tests.sh --check-commitlint ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} ${{ github.event.pull_request.number }}
 
-  lint-shellcheck:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Runs shell script static analysis
-        run: |
-          sudo apt-get install shellcheck
-          ./run-tests.sh --check-shellcheck
-
-  format-black:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Check Python code formatting
-        run: |
-          pip install black
-          ./run-tests.sh --check-black
-
   lint-flake8:
     runs-on: ubuntu-24.04
     steps:
@@ -79,62 +150,76 @@ jobs:
           pip install flake8
           ./run-tests.sh --check-flake8
 
-  format-pydocstyle:
+  lint-helm:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2
+
+      - name: Run chart-testing (lint)
+        run: ct lint --config .github/ct.yaml --lint-conf .github/ctlint.yaml
+
+  lint-jsonlint:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+
+      - name: Lint JSON files
+        run: |
+          npm install jsonlint --global
+          ./run-tests.sh --check-jsonlint
+
+  lint-markdownlint:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+
+      - name: Lint Markdown files
+        run: |
+          npm install markdownlint-cli2 --global
+          ./run-tests.sh --check-markdownlint
+
+  lint-shellcheck:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Runs shell script static analysis
+        run: |
+          sudo apt-get install shellcheck
+          ./run-tests.sh --check-shellcheck
+
+  lint-yamllint:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Check compliance with Python docstring conventions
+      - name: Lint YAML files
         run: |
-          pip install pydocstyle
-          ./run-tests.sh --check-pydocstyle
-
-  lint-check-manifest:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Check Python manifest completeness
-        run: |
-          pip install check-manifest
-          ./run-tests.sh --check-manifest
-
-  docs-sphinx:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt install libcurl4-openssl-dev libssl-dev
-          sudo apt-get install libgnutls28-dev
-
-      - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip setuptools py
-          pip install -e .[all]
-
-      - name: Run Sphinx documentation with doctests
-        run: ./run-tests.sh --check-sphinx
+          pip install yamllint
+          ./run-tests.sh --check-yamllint
 
   python-tests:
     runs-on: ubuntu-24.04
@@ -161,74 +246,3 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
-
-  lint-helm:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up chart-testing
-        uses: helm/chart-testing-action@v2
-
-      - name: Run chart-testing (lint)
-        run: ct lint --config .github/ct.yaml --lint-conf .github/ctlint.yaml
-
-  lint-yamllint:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Lint YAML files
-        run: |
-          pip install yamllint
-          ./run-tests.sh --check-yamllint
-
-  lint-markdownlint:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-
-      - name: Lint Markdown files
-        run: |
-          npm install markdownlint-cli2 --global
-          ./run-tests.sh --check-markdownlint
-
-  format-prettier:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-
-      - name: Check Prettier code fomatting
-        run: |
-          npm install prettier --global
-          ./run-tests.sh --check-prettier
-
-  format-shfmt:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Check shell script code fomatting
-        run: |
-          sudo apt-get install shfmt
-          ./run-tests.sh --check-shfmt

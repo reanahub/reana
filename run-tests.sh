@@ -91,6 +91,10 @@ check_shfmt() {
     shfmt -d .
 }
 
+check_jsonlint() {
+    find . -name "*.json" -exec jsonlint -q {} \+
+}
+
 check_all() {
     check_commitlint
     check_shellcheck
@@ -105,6 +109,7 @@ check_all() {
     check_markdownlint
     check_prettier
     check_shfmt
+    check_jsonlint
 }
 
 if [ $# -eq 0 ]; then
@@ -127,5 +132,6 @@ case $arg in
 --check-markdownlint) check_markdownlint ;;
 --check-prettier) check_prettier ;;
 --check-shfmt) check_shfmt ;;
+--check-jsonlint) check_jsonlint ;;
 *) echo "[ERROR] Invalid argument '$arg'. Exiting." && exit 1 ;;
 esac
