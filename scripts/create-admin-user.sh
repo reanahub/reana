@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # This file is part of REANA.
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -19,8 +19,7 @@ admin_email=$3
 admin_password=$4
 
 # Wait for database to be ready
-while [ "0" -ne "$(kubectl -n "${kubernetes_namespace}" exec "deployment/${instance_name}-db" -- pg_isready -U reana -h 127.0.0.1 -p 5432 &> /dev/null && echo $? || echo 1)" ]
-do
+while [ "0" -ne "$(kubectl -n "${kubernetes_namespace}" exec "deployment/${instance_name}-db" -- pg_isready -U reana -h 127.0.0.1 -p 5432 &>/dev/null && echo $? || echo 1)" ]; do
     echo "Waiting for deployment/${instance_name}-db to be ready..."
     sleep 5
 done
@@ -30,8 +29,7 @@ kubectl -n "${kubernetes_namespace}" exec "deployment/${instance_name}-server" -
 
 # Create admin user
 if ! admin_access_token=$(kubectl -n "${kubernetes_namespace}" exec "deployment/${instance_name}-server" -c rest-api -- \
-    flask reana-admin create-admin-user --email "${admin_email}" --password "${admin_password}")
-then
+    flask reana-admin create-admin-user --email "${admin_email}" --password "${admin_password}"); then
     # Output failures
     echo "${admin_access_token}"
     exit 1
@@ -39,7 +37,7 @@ fi
 
 # Add token to secrets
 kubectl -n "${kubernetes_namespace}" create secret generic "${instance_name}"-admin-access-token \
-      --from-literal=ADMIN_ACCESS_TOKEN="${admin_access_token}"
+    --from-literal=ADMIN_ACCESS_TOKEN="${admin_access_token}"
 
 # Success!
 echo "Success! You may now set the following environment variables:"

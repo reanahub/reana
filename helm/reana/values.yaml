@@ -16,12 +16,12 @@ maintenance:
 workspaces:
   retention_rules:
     maximum_period: forever
-    cronjob_schedule: "0 2 * * *"  # everyday at 2am
+    cronjob_schedule: "0 2 * * *" # everyday at 2am
   paths:
     - /var/reana:/var/reana
 
 interactive_sessions:
-  cronjob_schedule: "0 3 * * *"  # everyday at 3am
+  cronjob_schedule: "0 3 * * *" # everyday at 3am
   environments:
     jupyter:
       recommended:
@@ -34,7 +34,7 @@ compute_backends:
   - kubernetes
 
 shared_storage:
-  backend: hostpath  # hostpath | cephfs | nfs
+  backend: hostpath # hostpath | cephfs | nfs
   volume_size: 200
   access_modes: ReadWriteMany
   shared_volume_mount_path: "/var/reana"
@@ -82,7 +82,7 @@ components:
     enabled: true
     docs_url: https://docs.reana.io
     forum_url: https://forum.reana.io
-    file_preview_size_limit: 5242880  # 5 * 1024**2 = 5 MiB
+    file_preview_size_limit: 5242880 # 5 * 1024**2 = 5 MiB
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-ui:0.9.4
   reana_db:
@@ -202,9 +202,10 @@ pgbouncer:
 quota:
   enabled: true
   periodic_update_policy: "{{ .Values.quota.disk_update }}"
-  workflow_termination_update_policy: "{{ .Values.quota.termination_update_policy }}"
+  workflow_termination_update_policy:
+    "{{ .Values.quota.termination_update_policy }}"
   # backward compatibility
-  disk_update: "0 3 * * *"  # everyday at 3am
+  disk_update: "0 3 * * *" # everyday at 3am
   termination_update_policy: ""
 
 # OpenSearch chart values.yaml
@@ -223,7 +224,7 @@ opensearch:
     admin:
       cn: "opensearch-admin.reana.io"
       ttl: 180
-  singleNode: true  # advanced storage configuration needed if set to false
+  singleNode: true # advanced storage configuration needed if set to false
   config:
     opensearch.yml: |
       cluster.name: reana-opensearch
@@ -291,16 +292,16 @@ opensearch:
     - name: reana-opensearch-volume
       hostPath:
         path: /var/reana
-    # You can instead configure infrastructure volume:
-    # - name: reana-opensearch-volume
-    #   persistentVolumeClaim:
-    #     claimName: reana-infrastructure-persistent-volume
-    #     readOnly: false
-    # Or shared volume:
-    # - name: reana-opensearch-volume
-    #   persistentVolumeClaim:
-    #     claimName: reana-shared-persistent-volume
-    #     readOnly: false
+  # You can instead configure infrastructure volume:
+  # - name: reana-opensearch-volume
+  #   persistentVolumeClaim:
+  #     claimName: reana-infrastructure-persistent-volume
+  #     readOnly: false
+  # Or shared volume:
+  # - name: reana-opensearch-volume
+  #   persistentVolumeClaim:
+  #     claimName: reana-shared-persistent-volume
+  #     readOnly: false
   extraVolumeMounts:
     - mountPath: /usr/share/opensearch/data
       subPath: opensearch
@@ -309,13 +310,13 @@ opensearch:
   customSecurityConfig:
     internalUsers:
       reana:
-        hash: ""  # Required. To generate hash, run plugins/opensearch-security/tools/hash.sh -p <new-password>; supply in Helm command flags
+        hash: "" # Required. To generate hash, run plugins/opensearch-security/tools/hash.sh -p <new-password>; supply in Helm command flags
         reserved: false
         backend_roles:
           - readall
         description: REANA user
       fluentbit:
-        hash: ""  # Required. To generate hash, run plugins/opensearch-security/tools/hash.sh -p <new-password>; supply in Helm command flags
+        hash: "" # Required. To generate hash, run plugins/opensearch-security/tools/hash.sh -p <new-password>; supply in Helm command flags
         reserved: false
         backend_roles:
           - fluentbit
@@ -335,7 +336,7 @@ opensearch:
           - indices:data/write/bulk*
         index_permissions:
           - index_patterns:
-            - fluentbit-*
+              - fluentbit-*
             fls: []
             masked_fields: []
             allowed_actions:
@@ -350,7 +351,7 @@ opensearch:
         reserved: false
         hidden: false
         backend_roles:
-        - fluentbit
+          - fluentbit
         and_backend_roles: []
       own_index:
         hosts: []
@@ -552,8 +553,8 @@ fluent-bit:
       secret:
         secretName: reana-opensearch-tls-secrets
         items:
-        - key: ca.crt
-          path: ca.crt
+          - key: ca.crt
+            path: ca.crt
   extraVolumeMounts:
     - name: reana-opensearch-ca
       mountPath: /fluent-bit/etc/certs
