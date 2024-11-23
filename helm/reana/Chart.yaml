@@ -27,7 +27,7 @@ keywords:
   - reusable-science
 type: application
 version: 0.9.3
-kubeVersion: '>= 1.21.0-0 < 1.32.0-0'
+kubeVersion: '>= 1.21.0-0'
 dependencies:
   - name: traefik
     version: 10.6.2
