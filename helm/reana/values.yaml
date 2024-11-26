@@ -434,6 +434,16 @@ fluent-bit:
           Refresh_Interval {{ .Values.inputConfig.refreshInterval }}
           Rotate_Wait {{ .Values.inputConfig.rotateWait }}
 
+      [INPUT]
+          Name tail
+          Path /var/log/containers/{{ include "reana.prefix" . }}-run-dask-*
+          multiline.parser docker, cri
+          Tag kube.*
+          Skip_Long_Lines {{ .Values.inputConfig.skipLongLines }}
+          Skip_Empty_Lines {{ .Values.inputConfig.skipEmptyLines }}
+          Refresh_Interval {{ .Values.inputConfig.refreshInterval }}
+          Rotate_Wait {{ .Values.inputConfig.rotateWait }}
+
     ## https://docs.fluentbit.io/manual/pipeline/filters
     filters: |
       [FILTER]
@@ -535,6 +545,24 @@ fluent-bit:
           HTTP_Passwd {{ .Values.outputConfig.httpPasswd }}
           {{- end }}
           Index fluentbit-workflow_log
+          Suppress_Type_Name On
+          tls {{ .Values.outputConfig.tls }}
+          tls.verify {{ .Values.outputConfig.tlsVerify }}
+          tls.verify_hostname {{ .Values.outputConfig.tlsVerifyHostname }}
+          {{ if .Values.outputConfig.tlsCaFile }}tls.ca_file {{ .Values.outputConfig.tlsCaFile }}{{- end }}
+          {{ if .Values.outputConfig.tlsCrtFile }}tls.crt_file {{ .Values.outputConfig.tlsCrtFile }}{{- end }}
+          {{ if .Values.outputConfig.tlsKeyFile }}tls.key_file {{ .Values.outputConfig.tlsKeyFile }}{{- end }}
+          {{ if .Values.outputConfig.tlsKeyPassword }}tls.key_password {{ .Values.outputConfig.tlsKeyPassword }}{{- end }}
+
+      [OUTPUT]
+          Name opensearch
+          Match kube.var.log.containers.{{ include "reana.prefix" . }}-run-dask-*
+          Host {{ .Values.outputConfig.host }}
+          {{- if .Values.outputConfig.httpPasswd }}
+          HTTP_User {{ .Values.outputConfig.httpUser }}
+          HTTP_Passwd {{ .Values.outputConfig.httpPasswd }}
+          {{- end }}
+          Index fluentbit-dask_log
           Suppress_Type_Name On
           tls {{ .Values.outputConfig.tls }}
           tls.verify {{ .Values.outputConfig.tlsVerify }}
