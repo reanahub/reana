@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.9.4](https://github.com/reanahub/reana/compare/0.9.3...0.9.4) (2024-12-03)
+
+
+### Build
+
+* **helm:** add support for Kubernetes 1.30 ([#799](https://github.com/reanahub/reana/issues/799)) ([748ca07](https://github.com/reanahub/reana/commit/748ca0769c24286cb32b8bfaf3df0114748cfae0))
+* **helm:** add support for Kubernetes 1.31 ([#822](https://github.com/reanahub/reana/issues/822)) ([7da51d3](https://github.com/reanahub/reana/commit/7da51d3be56b9bf03381c41342fb141cfb36b84b))
+
+
+### Features
+
+* **config:** add Compute4PUNCH backend ([#780](https://github.com/reanahub/reana/issues/780)) ([c2f490b](https://github.com/reanahub/reana/commit/c2f490b8251ffcebcf53a72ac5f2bcc9ce0190b4))
+* **helm:** allow cluster administrator to configure ingress host ([#804](https://github.com/reanahub/reana/issues/804)) ([1479730](https://github.com/reanahub/reana/commit/14797309ff964b7897e072801c441c4c34532856))
+* **helm:** allow only reana-server to connect to reana-cache ([#847](https://github.com/reanahub/reana/issues/847)) ([e1772ff](https://github.com/reanahub/reana/commit/e1772ffb39d2b1b4c91893f6eda0301edabb105f))
+* **helm:** release check on most-supported Kubernetes version ([#848](https://github.com/reanahub/reana/issues/848)) ([1a98b0a](https://github.com/reanahub/reana/commit/1a98b0ab4d248544a03d83da13a66b399819f713))
+* **helm:** support password-protected rabbitmq ([#847](https://github.com/reanahub/reana/issues/847)) ([20a0ea8](https://github.com/reanahub/reana/commit/20a0ea8fcf854c74a508f0b415c066a9912fbe34))
+* **helm:** support password-protected redis ([#847](https://github.com/reanahub/reana/issues/847)) ([be12076](https://github.com/reanahub/reana/commit/be1207630b9cb6c694139d458cd3ea545747b95f))
+* **scripts:** upgrade to Jupyter SciPy 7.2.2 notebook ([#846](https://github.com/reanahub/reana/issues/846)) ([1ca9dea](https://github.com/reanahub/reana/commit/1ca9deaf1b73e18774019cf1e0cb5cc1fb1c3016))
+
+
+### Bug fixes
+
+* **helm:** allow interactive-session-cleanup job to access RWC ([#853](https://github.com/reanahub/reana/issues/853)) ([b9bc602](https://github.com/reanahub/reana/commit/b9bc602fc5be2ab717d2c09cb9018b6e5ca8180e))
+* **reana-dev:** correctly handle missing changelog of components ([#858](https://github.com/reanahub/reana/issues/858)) ([32549d1](https://github.com/reanahub/reana/commit/32549d1f4f1ce06d6be015721d8abc1598dba5b1)), closes [#857](https://github.com/reanahub/reana/issues/857)
+
+
+### Continuous integration
+
+* **python:** pin setuptools 70 ([#822](https://github.com/reanahub/reana/issues/822)) ([be45c54](https://github.com/reanahub/reana/commit/be45c549c057ea2356b2f6688dd142c68ea11d44))
+
+
+### Documentation
+
+* **helm:** clarify secrets-related warning in README ([#847](https://github.com/reanahub/reana/issues/847)) ([fab5591](https://github.com/reanahub/reana/commit/fab559187a49c21d368c4863cd0a888ff831c330))
+
 ## [0.9.3](https://github.com/reanahub/reana/compare/0.9.2...0.9.3) (2024-03-13)
 
 ### :sparkles: What's new in REANA 0.9.3
