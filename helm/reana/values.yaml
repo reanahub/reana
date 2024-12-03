@@ -85,7 +85,7 @@ components:
     image: docker.io/library/postgres:12.13
   reana_server:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-server:0.9.3
+    image: docker.io/reanahub/reana-server:0.9.4
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
       REANA_SCHEDULER_REQUEUE_SLEEP: 15
@@ -104,24 +104,24 @@ components:
       log_5xx: true
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-workflow-controller:0.9.3
+    image: docker.io/reanahub/reana-workflow-controller:0.9.4
     environment:
       SHARED_VOLUME_PATH: /var/reana
       REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 10
   reana_workflow_engine_cwl:
-    image: docker.io/reanahub/reana-workflow-engine-cwl:0.9.3
+    image: docker.io/reanahub/reana-workflow-engine-cwl:0.9.4
     environment: {}
   reana_workflow_engine_yadage:
-    image: docker.io/reanahub/reana-workflow-engine-yadage:0.9.4
+    image: docker.io/reanahub/reana-workflow-engine-yadage:0.9.5
     environment: {}
   reana_workflow_engine_serial:
-    image: docker.io/reanahub/reana-workflow-engine-serial:0.9.3
+    image: docker.io/reanahub/reana-workflow-engine-serial:0.9.4
     environment: {}
   reana_workflow_engine_snakemake:
-    image: docker.io/reanahub/reana-workflow-engine-snakemake:0.9.3
+    image: docker.io/reanahub/reana-workflow-engine-snakemake:0.9.4
     environment: {}
   reana_job_controller:
-    image: docker.io/reanahub/reana-job-controller:0.9.3
+    image: docker.io/reanahub/reana-job-controller:0.9.4
     environment: {}
   reana_message_broker:
     imagePullPolicy: IfNotPresent

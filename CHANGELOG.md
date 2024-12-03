@@ -1,5 +1,124 @@
 # Changelog
 
+## [0.9.4](https://github.com/reanahub/reana/compare/0.9.3...0.9.4) (2024-12-16)
+
+### :sparkles: What's new in REANA 0.9.4
+
+REANA 0.9.4 is a minor update that adds support for using user secrets in
+Jupyter notebook sessions, adds support for the Compute4PUNCH infrastructure,
+fixes issues with the HTCondor compute backend job dispatch, and improves the
+security of the platform.
+
+Please see the [REANA 0.9.4 release blog
+post](https://blog.reana.io/posts/2024/reana-0.9.4) for more information.
+
+### :zap: Detailed changelog for REANA 0.9.4 components
+
+#### reana [0.9.4](https://github.com/reanahub/reana/compare/0.9.3...0.9.4) (2024-12-03)
+
+* [Build] **helm:** add support for Kubernetes 1.30 ([#799](https://github.com/reanahub/reana/issues/799)) ([748ca07](https://github.com/reanahub/reana/commit/748ca0769c24286cb32b8bfaf3df0114748cfae0))
+* [Build] **helm:** add support for Kubernetes 1.31 ([#822](https://github.com/reanahub/reana/issues/822)) ([7da51d3](https://github.com/reanahub/reana/commit/7da51d3be56b9bf03381c41342fb141cfb36b84b))
+* [Features] **config:** add Compute4PUNCH backend ([#780](https://github.com/reanahub/reana/issues/780)) ([c2f490b](https://github.com/reanahub/reana/commit/c2f490b8251ffcebcf53a72ac5f2bcc9ce0190b4))
+* [Features] **helm:** allow cluster administrator to configure ingress host ([#804](https://github.com/reanahub/reana/issues/804)) ([1479730](https://github.com/reanahub/reana/commit/14797309ff964b7897e072801c441c4c34532856))
+* [Features] **helm:** allow only reana-server to connect to reana-cache ([#847](https://github.com/reanahub/reana/issues/847)) ([e1772ff](https://github.com/reanahub/reana/commit/e1772ffb39d2b1b4c91893f6eda0301edabb105f))
+* [Features] **helm:** release check on most-supported Kubernetes version ([#848](https://github.com/reanahub/reana/issues/848)) ([1a98b0a](https://github.com/reanahub/reana/commit/1a98b0ab4d248544a03d83da13a66b399819f713))
+* [Features] **helm:** support password-protected rabbitmq ([#847](https://github.com/reanahub/reana/issues/847)) ([20a0ea8](https://github.com/reanahub/reana/commit/20a0ea8fcf854c74a508f0b415c066a9912fbe34))
+* [Features] **helm:** support password-protected redis ([#847](https://github.com/reanahub/reana/issues/847)) ([be12076](https://github.com/reanahub/reana/commit/be1207630b9cb6c694139d458cd3ea545747b95f))
+* [Features] **scripts:** upgrade to Jupyter SciPy 7.2.2 notebook ([#846](https://github.com/reanahub/reana/issues/846)) ([1ca9dea](https://github.com/reanahub/reana/commit/1ca9deaf1b73e18774019cf1e0cb5cc1fb1c3016))
+* [Bug fixes] **helm:** allow interactive-session-cleanup job to access RWC ([#853](https://github.com/reanahub/reana/issues/853)) ([b9bc602](https://github.com/reanahub/reana/commit/b9bc602fc5be2ab717d2c09cb9018b6e5ca8180e))
+* [Bug fixes] **reana-dev:** correctly handle missing changelog of components ([#858](https://github.com/reanahub/reana/issues/858)) ([32549d1](https://github.com/reanahub/reana/commit/32549d1f4f1ce06d6be015721d8abc1598dba5b1)), closes [#857](https://github.com/reanahub/reana/issues/857)
+* [Continuous integration] **python:** pin setuptools 70 ([#822](https://github.com/reanahub/reana/issues/822)) ([be45c54](https://github.com/reanahub/reana/commit/be45c549c057ea2356b2f6688dd142c68ea11d44))
+* [Documentation] **helm:** clarify secrets-related warning in README ([#847](https://github.com/reanahub/reana/issues/847)) ([fab5591](https://github.com/reanahub/reana/commit/fab559187a49c21d368c4863cd0a888ff831c330))
+
+#### reana-client [0.9.4](https://github.com/reanahub/reana-client/compare/0.9.3...0.9.4) (2024-11-29)
+
+* [Build] **docker:** create `reana-client` container image ([#710](https://github.com/reanahub/reana-client/issues/710)) ([2c99c5d](https://github.com/reanahub/reana-client/commit/2c99c5d1bd36e4303885875375085f7d714e8732)), closes [#709](https://github.com/reanahub/reana-client/issues/709)
+* [Build] **python:** add support for Python 3.13 ([#736](https://github.com/reanahub/reana-client/issues/736)) ([fd9b944](https://github.com/reanahub/reana-client/commit/fd9b9446d58f21cc6e57b343874d55433532c959))
+* [Build] **python:** bump shared REANA packages as of 2024-11-28 ([#736](https://github.com/reanahub/reana-client/issues/736)) ([778df03](https://github.com/reanahub/reana-client/commit/778df037dbeb1340478060e7f913dfff7c0235e5))
+* [Continuous integration] **actions:** pin setuptools 70 ([#728](https://github.com/reanahub/reana-client/issues/728)) ([0a4bcc7](https://github.com/reanahub/reana-client/commit/0a4bcc79af33dd00a6a03216be32d10000bb432b))
+* [Documentation] **cli:** fix `open` command documentation typo ([#728](https://github.com/reanahub/reana-client/issues/728)) ([c822dd6](https://github.com/reanahub/reana-client/commit/c822dd6570d5474e535be83d0ee4beb44ecee85b))
+
+#### reana-commons [0.9.9](https://github.com/reanahub/reana-commons/compare/0.9.8...0.9.9) (2024-11-28)
+
+* [Build] **python:** add support for Python 3.13 ([#480](https://github.com/reanahub/reana-commons/issues/480)) ([5de7605](https://github.com/reanahub/reana-commons/commit/5de760512a3aa86282a9dc31ac031773ddf49ef6))
+* [Features] **schema:** allow Compute4PUNCH backend options ([#445](https://github.com/reanahub/reana-commons/issues/445)) ([0570f4a](https://github.com/reanahub/reana-commons/commit/0570f4ade9135a2d340009d2091c97dfc81a2e60))
+* [Bug fixes] **config:** remove hard-coded component host name domain ([#458](https://github.com/reanahub/reana-commons/issues/458)) ([f2faeaa](https://github.com/reanahub/reana-commons/commit/f2faeaa76f42c4484db70766fc1d7a3a122ee38f)), closes [#457](https://github.com/reanahub/reana-commons/issues/457)
+* [Continuous integration] **actions:** pin setuptools 70 ([#479](https://github.com/reanahub/reana-commons/issues/479)) ([b80bc70](https://github.com/reanahub/reana-commons/commit/b80bc707fa9311e3e5d00ea71bb17f853845d6bf))
+
+#### reana-db [0.9.5](https://github.com/reanahub/reana-db/compare/0.9.4...0.9.5) (2024-11-26)
+
+* [Features] **cli:** add new `migrate-secret-key` command ([#240](https://github.com/reanahub/reana-db/issues/240)) ([efcbe72](https://github.com/reanahub/reana-db/commit/efcbe724a2797edf94a531a2fd49ae0dc25d29f7))
+* [Continuous integration] **actions:** pin setuptools 70 ([#239](https://github.com/reanahub/reana-db/issues/239)) ([3202759](https://github.com/reanahub/reana-db/commit/320275969c64513f695ce59a145088f6222aa594))
+* [Continuous integration] **python:** test more Python versions ([#239](https://github.com/reanahub/reana-db/issues/239)) ([e0cba7f](https://github.com/reanahub/reana-db/commit/e0cba7faa97cbf2919c4008ec884ea46ec817cd5))
+
+#### reana-job-controller [0.9.4](https://github.com/reanahub/reana-job-controller/compare/0.9.3...0.9.4) (2024-11-29)
+
+* [Build] **deps:** update reana-auth-vomsproxy to 1.3.0 ([#466](https://github.com/reanahub/reana-job-controller/issues/466)) ([72e9ea1](https://github.com/reanahub/reana-job-controller/commit/72e9ea1442d2b6cf7d466d0701e269fda1e15b22))
+* [Build] **docker:** pin setuptools 70 ([#465](https://github.com/reanahub/reana-job-controller/issues/465)) ([c593d9b](https://github.com/reanahub/reana-job-controller/commit/c593d9bc84763f142573396be48c762eefa8f6ec))
+* [Build] **python:** bump shared REANA packages as of 2024-11-28 ([#477](https://github.com/reanahub/reana-job-controller/issues/477)) ([9cdd06c](https://github.com/reanahub/reana-job-controller/commit/9cdd06c72faa5ded628b2766113ab37ac06f5868))
+* [Features] **backends:** add new Compute4PUNCH backend ([#430](https://github.com/reanahub/reana-job-controller/issues/430)) ([4243252](https://github.com/reanahub/reana-job-controller/commit/42432522c8d9dd5e4ee908a16b1be87046908e08))
+* [Bug fixes] **config:** read secret key from env ([#476](https://github.com/reanahub/reana-job-controller/issues/476)) ([1b5aa98](https://github.com/reanahub/reana-job-controller/commit/1b5aa98b0ed76ea614dac1209ba23b366d417d9f))
+* [Bug fixes] **config:** update reana-auth-vomsproxy to 1.2.1 to fix WLCG IAM ([#457](https://github.com/reanahub/reana-job-controller/issues/457)) ([132868f](https://github.com/reanahub/reana-job-controller/commit/132868f4824a0f4049febf17c90bea0df838e724))
+* [Bug fixes] **htcondorcern:** run provided command in unpacked image ([#474](https://github.com/reanahub/reana-job-controller/issues/474)) ([9cda591](https://github.com/reanahub/reana-job-controller/commit/9cda591affaa1f821409961ec4e379e1bf5fa248)), closes [#471](https://github.com/reanahub/reana-job-controller/issues/471)
+* [Bug fixes] **htcondorcern:** support multiline commands ([#474](https://github.com/reanahub/reana-job-controller/issues/474)) ([eb07aa9](https://github.com/reanahub/reana-job-controller/commit/eb07aa9b7b03d38dd47cd004ff8b48440ad45c2a)), closes [#470](https://github.com/reanahub/reana-job-controller/issues/470)
+* [Bug fixes] **kubernetes:** avoid privilege escalation in Kubernetes jobs ([#476](https://github.com/reanahub/reana-job-controller/issues/476)) ([389f0ea](https://github.com/reanahub/reana-job-controller/commit/389f0ea9606d4ac5fa24458b7cef39e8ab430c64))
+
+
+#### reana-server [0.9.4](https://github.com/reanahub/reana-server/compare/0.9.3...0.9.4) (2024-11-29)
+
+* [Build] **python:** bump shared REANA packages as of 2024-11-28 ([#714](https://github.com/reanahub/reana-server/issues/714)) ([94fbf77](https://github.com/reanahub/reana-server/commit/94fbf7766218f4ffaf3f23be64ec6d46be1acb00))
+* [Features] **config:** make ACCOUNTS_USERINFO_HEADERS customisable ([#713](https://github.com/reanahub/reana-server/issues/713)) ([8c01d51](https://github.com/reanahub/reana-server/commit/8c01d513c2365f337c26a2211c2ddb82df4186d4))
+* [Features] **config:** make APP_DEFAULT_SECURE_HEADERS customisable ([#713](https://github.com/reanahub/reana-server/issues/713)) ([1919358](https://github.com/reanahub/reana-server/commit/1919358cb3b05f09bceff9a904e9607760bc3fb1))
+* [Features] **config:** make PROXYFIX_CONFIG customisable ([#713](https://github.com/reanahub/reana-server/issues/713)) ([5b6c276](https://github.com/reanahub/reana-server/commit/5b6c276f57f642cc0965f096fa59875b9599df08))
+* [Features] **config:** support password-protected redis ([#713](https://github.com/reanahub/reana-server/issues/713)) ([a2aad8a](https://github.com/reanahub/reana-server/commit/a2aad8ac506b98e5c29d357cec65172b6437cc8f))
+* [Features] **ext:** improve error message for db decryption error ([#713](https://github.com/reanahub/reana-server/issues/713)) ([bbab1bf](https://github.com/reanahub/reana-server/commit/bbab1bf7338e9790e2195a02e320df16db1826f6))
+* [Bug fixes] **config:** do not set DEBUG programmatically ([#713](https://github.com/reanahub/reana-server/issues/713)) ([c98cbc1](https://github.com/reanahub/reana-server/commit/c98cbc1d15afca9309e4839db543ac19cd2036ce))
+* [Bug fixes] **config:** read secret key from env ([#713](https://github.com/reanahub/reana-server/issues/713)) ([6ee6422](https://github.com/reanahub/reana-server/commit/6ee6422d87d38339b359ad7a306575b97f210440))
+* [Bug fixes] **get_workflow_specification:** avoid returning null parameters ([#689](https://github.com/reanahub/reana-server/issues/689)) ([46633d6](https://github.com/reanahub/reana-server/commit/46633d6bcc151c73880f9ecbd2c02d2246492794))
+* [Bug fixes] **reana-admin:** respect service domain when cleaning sessions ([#687](https://github.com/reanahub/reana-server/issues/687)) ([ede882d](https://github.com/reanahub/reana-server/commit/ede882d384ae0959eb8a9484b7d491baa628a1ee))
+* [Bug fixes] **set_workflow_status:** publish workflows to submission queue ([#691](https://github.com/reanahub/reana-server/issues/691)) ([6e35bd7](https://github.com/reanahub/reana-server/commit/6e35bd776e17c1bc04145c68c1f5ea3ce5143b7e)), closes [#690](https://github.com/reanahub/reana-server/issues/690)
+* [Bug fixes] **start:** validate endpoint parameters ([#689](https://github.com/reanahub/reana-server/issues/689)) ([d2d3673](https://github.com/reanahub/reana-server/commit/d2d3673dac8917d746ddafd84bb3660e7f83c9b6))
+* [Continuous integration] **commitlint:** improve checking of merge commits ([#689](https://github.com/reanahub/reana-server/issues/689)) ([69f45fc](https://github.com/reanahub/reana-server/commit/69f45fc3aae9bc625ed733de9af13eb7c0111048))
+
+
+#### reana-workflow-controller [0.9.4](https://github.com/reanahub/reana-workflow-controller/compare/0.9.3...0.9.4) (2024-11-29)
+
+* [Build] **docker:** pin setuptools 70 ([#601](https://github.com/reanahub/reana-workflow-controller/issues/601)) ([be6a388](https://github.com/reanahub/reana-workflow-controller/commit/be6a3885f4f2e84ca77c7e09a89e5f2f06185452))
+* [Build] **python:** bump shared REANA packages as of 2024-11-28 ([#620](https://github.com/reanahub/reana-workflow-controller/issues/620)) ([179fa89](https://github.com/reanahub/reana-workflow-controller/commit/179fa89ccc4a5e77fca9efa403f4ad2003b40db3))
+* [Features] **config:** upgrade to Jupyter SciPy 7.2.2 notebook ([#614](https://github.com/reanahub/reana-workflow-controller/issues/614)) ([72f0c4c](https://github.com/reanahub/reana-workflow-controller/commit/72f0c4c69759c8abf1d67c735232e5b6c033d504))
+* [Features] **helm:** allow cluster administrator to configure ingress host ([#588](https://github.com/reanahub/reana-workflow-controller/issues/588)) ([a7c9c85](https://github.com/reanahub/reana-workflow-controller/commit/a7c9c851277f3ca191c073fdc6c6d5d4149a95e8))
+* [Features] **sessions:** expose user secrets in interactive sessions ([#591](https://github.com/reanahub/reana-workflow-controller/issues/591)) ([784efee](https://github.com/reanahub/reana-workflow-controller/commit/784efee4be8b4a9785d03d3d05b00f3da2b455c2))
+* [Bug fixes] **config:** read secret key from env ([#615](https://github.com/reanahub/reana-workflow-controller/issues/615)) ([7df1279](https://github.com/reanahub/reana-workflow-controller/commit/7df1279f45e0981a06c3af705873c4d1d797404d))
+* [Bug fixes] **manager:** avoid privilege escalation in Kubernetes jobs ([#615](https://github.com/reanahub/reana-workflow-controller/issues/615)) ([24563e5](https://github.com/reanahub/reana-workflow-controller/commit/24563e568044e29d4399f78d8c081d144f116761))
+* [Bug fixes] **manager:** pass RabbitMQ connection details to workflow engine ([#615](https://github.com/reanahub/reana-workflow-controller/issues/615)) ([cf4ee73](https://github.com/reanahub/reana-workflow-controller/commit/cf4ee734788da33f15a80e1fc1f0b3233ea5a007))
+* [Bug fixes] **set_workflow_status:** validate endpoint arguments ([#589](https://github.com/reanahub/reana-workflow-controller/issues/589)) ([5945d7f](https://github.com/reanahub/reana-workflow-controller/commit/5945d7fca095531b3601e551c527457f9413643c))
+
+#### reana-workflow-engine-cwl [0.9.4](https://github.com/reanahub/reana-workflow-engine-cwl/compare/0.9.3...0.9.4) (2024-11-29)
+
+* [Build] **docker:** pin setuptools 70 ([#287](https://github.com/reanahub/reana-workflow-engine-cwl/issues/287)) ([3c2cd8a](https://github.com/reanahub/reana-workflow-engine-cwl/commit/3c2cd8a474d167574bf8746b6430f4ae13a83e61))
+* [Build] **python:** bump shared REANA packages as of 2024-11-28 ([#289](https://github.com/reanahub/reana-workflow-engine-cwl/issues/289)) ([f9d3688](https://github.com/reanahub/reana-workflow-engine-cwl/commit/f9d3688858e6f1ff52fa58fecd9ce233dd97b0e1))
+* [Features] **task:** allow Compute4PUNCH backend options ([#277](https://github.com/reanahub/reana-workflow-engine-cwl/issues/277)) ([9b2a3d0](https://github.com/reanahub/reana-workflow-engine-cwl/commit/9b2a3d0872329e79d0b2d9a0972b0c09f08ff694))
+
+#### reana-workflow-engine-serial [0.9.4](https://github.com/reanahub/reana-workflow-engine-serial/compare/0.9.3...0.9.4) (2024-11-29)
+
+* [Build] **docker:** pin setuptools 70 ([#216](https://github.com/reanahub/reana-workflow-engine-serial/issues/216)) ([f94d003](https://github.com/reanahub/reana-workflow-engine-serial/commit/f94d0036ded9562155528d52f33110e43c954384))
+* [Build] **python:** bump shared REANA packages as of 2024-11-28 ([#218](https://github.com/reanahub/reana-workflow-engine-serial/issues/218)) ([430fd04](https://github.com/reanahub/reana-workflow-engine-serial/commit/430fd04acb6485754a0cc5fa4dbeefd3aaa022e4))
+* [Features] **tasks:** allow Compute4PUNCH backend options ([#210](https://github.com/reanahub/reana-workflow-engine-serial/issues/210)) ([a6313f2](https://github.com/reanahub/reana-workflow-engine-serial/commit/a6313f22dcdcab08a84b3dd6c8ce7386122d7400))
+
+#### reana-workflow-engine-snakemake [0.9.4](https://github.com/reanahub/reana-workflow-engine-snakemake/compare/0.9.3...0.9.4) (2024-11-29)
+
+* [Build] **docker:** fix XRootD repository location ([#95](https://github.com/reanahub/reana-workflow-engine-snakemake/issues/95)) ([69fea32](https://github.com/reanahub/reana-workflow-engine-snakemake/commit/69fea329dd9bf91ff9eb1de9ac741262512a872a))
+* [Build] **docker:** pin setuptools 70 ([#102](https://github.com/reanahub/reana-workflow-engine-snakemake/issues/102)) ([b27c9cf](https://github.com/reanahub/reana-workflow-engine-snakemake/commit/b27c9cfa21603ecc1554931f23c945d3f9e256d6))
+* [Build] **python:** bump shared REANA packages as of 2024-11-28 ([#104](https://github.com/reanahub/reana-workflow-engine-snakemake/issues/104)) ([fb9efc8](https://github.com/reanahub/reana-workflow-engine-snakemake/commit/fb9efc8267c24ce65e8d188a5171d8abd5531cd7))
+* [Features] **executor:** allow Compute4PUNCH backend options ([#97](https://github.com/reanahub/reana-workflow-engine-snakemake/issues/97)) ([4b00c52](https://github.com/reanahub/reana-workflow-engine-snakemake/commit/4b00c523eb8750f49262471a43c9deefad1021d3))
+* [Bug fixes] **executor:** override default resources to remove mem/disk ([#91](https://github.com/reanahub/reana-workflow-engine-snakemake/issues/91)) ([572a83f](https://github.com/reanahub/reana-workflow-engine-snakemake/commit/572a83f5190c7cae95a4607b792f4b6e0c39262c)), closes [#90](https://github.com/reanahub/reana-workflow-engine-snakemake/issues/90)
+
+#### reana-workflow-engine-yadage [0.9.5](https://github.com/reanahub/reana-workflow-engine-yadage/compare/0.9.4...0.9.5) (2024-11-29)
+
+* [Build] **docker:** pin setuptools 70 ([#274](https://github.com/reanahub/reana-workflow-engine-yadage/issues/274)) ([bc505d8](https://github.com/reanahub/reana-workflow-engine-yadage/commit/bc505d84a4092610e883e766ad08d2efefe8d908))
+* [Build] **python:** bump shared REANA packages as of 2024-11-28 ([#276](https://github.com/reanahub/reana-workflow-engine-yadage/issues/276)) ([5911143](https://github.com/reanahub/reana-workflow-engine-yadage/commit/59111432c2c5a7fea98a71ffb2d78a9e7c1a47af))
+* [Features] **externalbackend:** allow Compute4PUNCH backend options ([#269](https://github.com/reanahub/reana-workflow-engine-yadage/issues/269)) ([1ce8e6a](https://github.com/reanahub/reana-workflow-engine-yadage/commit/1ce8e6a41f14996c50c53fcd7e84565626756ace))
+
 ## [0.9.3](https://github.com/reanahub/reana/compare/0.9.2...0.9.3) (2024-03-13)
 
 ### :sparkles: What's new in REANA 0.9.3
