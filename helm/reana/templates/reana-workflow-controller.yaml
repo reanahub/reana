@@ -192,7 +192,7 @@ spec:
             value: {{ .Values.dask.cluster_default_single_worker_memory | default "2Gi" }}
           - name: REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_MEMORY
             value: {{ .Values.dask.cluster_max_single_worker_memory | default "8Gi" }}
-          {{- end }}        
+          {{- end }}
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
             value: {{ .Values.reana_hostname }}
@@ -237,6 +237,16 @@ spec:
             valueFrom:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-db-secrets
+                key: password
+          - name: RABBIT_MQ_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-message-broker-secrets
+                key: user
+          - name: RABBIT_MQ_PASS
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-message-broker-secrets
                 key: password
           {{- if $opensearchEnabled }}
           - name: REANA_OPENSEARCH_PASSWORD
@@ -310,6 +320,16 @@ spec:
             secretKeyRef:
               name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
               key: REANA_GITLAB_HOST
+        - name: RABBIT_MQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" . }}-message-broker-secrets
+              key: user
+        - name: RABBIT_MQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" . }}-message-broker-secrets
+              key: password
       volumes:
       - name: reana-shared-volume
         {{- if not (eq .Values.shared_storage.backend "hostpath") }}
