@@ -1816,7 +1816,9 @@ def get_aggregate_changelog(previous_reana_client):  # noqa: D301
         )
 
         # also add current version, as it might not be tagged yet
-        versions_to_add.add(get_current_component_version_from_source_files(component))
+        current_version = get_current_component_version_from_source_files(component)
+        if current_version != prev_version:
+            versions_to_add.add(current_version)
 
         aggregated_changelog_lines += get_formatted_changelog_lines(
             component, versions_to_add

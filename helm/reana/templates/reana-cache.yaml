@@ -13,6 +13,23 @@ spec:
     targetPort: 6379
     protocol: TCP
 ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "reana.prefix" . }}-cache
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "reana.prefix" . }}-cache
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ include "reana.prefix" . }}-server
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,6 +48,15 @@ spec:
       containers:
       - name: cache
         image: docker.io/library/redis:5.0.5
+        env:
+          - name: REANA_CACHE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-cache-secrets
+                key: password
+        args:
+          - "--requirepass"
+          - "$(REANA_CACHE_PASSWORD)"
         ports:
         - containerPort: 6379
       {{- if .Values.node_label_infrastructure }}

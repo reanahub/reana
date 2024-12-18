@@ -56,11 +56,26 @@ spec:
       - name: message-broker
         image: {{ .Values.components.reana_message_broker.image }}
         imagePullPolicy: {{ .Values.components.reana_message_broker.imagePullPolicy }}
+        env:
+        - name: RABBIT_MQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" . }}-message-broker-secrets
+              key: user
+        - name: RABBIT_MQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "reana.prefix" . }}-message-broker-secrets
+              key: password
         ports:
         - containerPort: 5672
           name: tcp
         - containerPort: 15672
           name: management
+        command:
+        - "/start.sh"
+        - "$(RABBIT_MQ_USER)"
+        - "$(RABBIT_MQ_PASS)"
         volumeMounts:
         - mountPath: /var/lib/rabbitmq/mnesia
           subPath: rabbitmq/mnesia
