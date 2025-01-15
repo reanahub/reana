@@ -25,8 +25,8 @@ interactive_sessions:
   environments:
     jupyter:
       recommended:
-        - image: "docker.io/jupyter/scipy-notebook:notebook-6.4.5"
-          name: "Jupyter SciPy Notebook 6.4.5"
+        - image: "quay.io/jupyter/scipy-notebook:notebook-7.2.2"
+          name: "Jupyter SciPy Notebook 7.2.2"
       allow_custom: false
   maximum_inactivity_period: forever
 
