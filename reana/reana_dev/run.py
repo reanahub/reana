@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -246,6 +246,9 @@ def run_commands():
     type=click.IntRange(min=1),
     help="Number of docker images to build in parallel.",
 )
+@click.option(
+    "--namespace", "-n", default="default", help="Kubernetes namespace [default]"
+)
 @run_commands.command(name="run-ci")
 def run_ci(
     build_arg,
@@ -260,6 +263,7 @@ def run_ci(
     workflow_engine,
     disable_default_cni,
     parallel,
+    namespace,
 ):  # noqa: D301
     """Run CI build.
 
@@ -284,6 +288,7 @@ def run_ci(
                           -c r-d-helloworld
                           --exclude-components=r-ui,r-a-krb5,r-a-rucio,r-a-vomsproxy
                           --mode debug
+                          --namespace myreana
                           --admin-email john.doe@example.org
                           --admin-password mysecretpassword
     """
@@ -324,7 +329,7 @@ def run_ci(
         run_command(cmd, "reana")
     # deploy cluster
     cmd = (
-        f"reana-dev cluster-deploy --mode {mode}"
+        f"reana-dev cluster-deploy --mode {mode} --namespace {namespace}"
         f" --admin-email {admin_email} --admin-password {admin_password}"
     )
     if exclude_components:
@@ -333,7 +338,7 @@ def run_ci(
         cmd += " -j {}".format(job_mount)
     run_command(cmd, "reana")
     # run demo examples
-    cmd = "eval $(reana-dev client-setup-environment) && reana-dev run-example"
+    cmd = f"eval $(reana-dev client-setup-environment -n {namespace}) && reana-dev run-example"
     for component in components:
         cmd += " -c {}".format(component)
     for a_workflow_engine in workflow_engine:
