@@ -2,3 +2,4 @@ validate-maintainers: false
 check-version-increment: false
 chart-dirs:
   - helm
+target-branch: master
