@@ -436,7 +436,7 @@ fluent-bit:
 
       [INPUT]
           Name tail
-          Path /var/log/containers/{{ include "reana.prefix" . }}-run-dask-*
+          Path /var/log/containers/{{ include "reana.prefix" . }}-dask-*
           multiline.parser docker, cri
           Tag kube.*
           Skip_Long_Lines {{ .Values.inputConfig.skipLongLines }}
@@ -556,7 +556,7 @@ fluent-bit:
 
       [OUTPUT]
           Name opensearch
-          Match kube.var.log.containers.{{ include "reana.prefix" . }}-run-dask-*
+          Match kube.var.log.containers.{{ include "reana.prefix" . }}-dask-*
           Host {{ .Values.outputConfig.host }}
           {{- if .Values.outputConfig.httpPasswd }}
           HTTP_User {{ .Values.outputConfig.httpUser }}
