@@ -175,6 +175,7 @@ traefik:
         # without additional configs will use default insecure one
         enabled: true
   enabled: true
+  external: false
   rbac:
     enabled: true
   service:

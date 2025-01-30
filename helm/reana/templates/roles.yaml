@@ -29,7 +29,7 @@ rules:
   verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
 {{- end }}
 # Traefik Middleware permissions
-{{- if and .Values.traefik.enabled .Values.dask.enabled }}
+{{- if and .Values.dask.enabled (or .Values.traefik.enabled .Values.traefik.external) }}
 - apiGroups: ["traefik.io"]
   resources: ["middlewares"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

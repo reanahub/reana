@@ -179,6 +179,10 @@ spec:
             value: {{ .Values.components.reana_job_controller.environment | toJson | quote }}
           - name: REANA_INTERACTIVE_SESSIONS_ENVIRONMENTS
             value: {{ .Values.interactive_sessions.environments | toJson | quote }}
+          - name: TRAEFIK_ENABLED
+            value: {{ .Values.traefik.enabled | quote | default "true" }}
+          - name: TRAEFIK_EXTERNAL
+            value: {{ .Values.traefik.external | quote | default "false" }}
           - name: DASK_ENABLED
             value: {{ .Values.dask.enabled | quote }}
           {{- if .Values.dask.enabled }}
