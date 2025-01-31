@@ -207,6 +207,12 @@ def run_commands():
     help="Which directories from the Kubernetes nodes to mount inside the job pods? "
     "cluster_node_path:job_pod_mountpath, e.g /var/reana/mydata:/mydata",
 )
+@click.option(
+    "--hostport",
+    default=30443,
+    type=int,
+    help="Port number to use for cluster creation. Defaults to 30443.",
+)
 @click.option("--no-cache", is_flag=True, help="Do not use Docker image layer cache.")
 @click.option(
     "--component",
@@ -241,7 +247,6 @@ def run_commands():
 )
 @click.option(
     "--parallel",
-    "-p",
     default=1,
     type=click.IntRange(min=1),
     help="Number of docker images to build in parallel.",
@@ -256,6 +261,7 @@ def run_ci(
     exclude_components,
     mounts,
     job_mounts,
+    hostport,
     no_cache,
     component,
     admin_email,
@@ -288,6 +294,7 @@ def run_ci(
                           -c r-d-helloworld
                           --exclude-components=r-ui,r-a-krb5,r-a-rucio,r-a-vomsproxy
                           --mode debug
+                          --hostport 30443
                           --namespace myreana
                           --admin-email john.doe@example.org
                           --admin-password mysecretpassword
@@ -296,7 +303,7 @@ def run_ci(
     components = select_components(component)
     # create cluster if needed
     if not is_cluster_created():
-        cmd = "reana-dev cluster-create --mode {}".format(mode)
+        cmd = f"reana-dev cluster-create --mode {mode} --extra-ports {hostport}"
         for mount in mounts:
             cmd += " -m {}".format(mount)
         if disable_default_cni:
@@ -338,7 +345,7 @@ def run_ci(
         cmd += " -j {}".format(job_mount)
     run_command(cmd, "reana")
     # run demo examples
-    cmd = f"eval $(reana-dev client-setup-environment -n {namespace}) && reana-dev run-example"
+    cmd = f"eval $(reana-dev client-setup-environment --server-hostname https://localhost:{hostport} -n {namespace}) && reana-dev run-example"
     for component in components:
         cmd += " -c {}".format(component)
     for a_workflow_engine in workflow_engine:

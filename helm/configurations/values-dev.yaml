@@ -1,5 +1,7 @@
 # REANA components pointing to `latest`, locally built master branch
 
+reana_hostport: 30443
+
 components:
   reana_db:
     image: docker.io/library/postgres:14.10

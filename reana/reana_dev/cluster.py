@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -67,6 +67,13 @@ def cluster_commands():
 )
 @click.option("--worker-nodes", default=0, help="How many worker nodes? [default=0]")
 @click.option(
+    "--extra-ports",
+    multiple=True,
+    type=int,
+    default=(30080, 30443),
+    help="Extra ports to expose, format: hostPort (containerPort will be the same)",
+)
+@click.option(
     "--disable-default-cni",
     is_flag=True,
     help="Disable default CNI and use e.g. Calico.",
@@ -77,7 +84,7 @@ def cluster_commands():
 )
 @cluster_commands.command(name="cluster-create")
 def cluster_create(
-    mounts, mode, worker_nodes, disable_default_cni, kind_node_version
+    mounts, mode, worker_nodes, extra_ports, disable_default_cni, kind_node_version
 ):  # noqa: D301
     """Create new REANA cluster.
 
@@ -86,6 +93,7 @@ def cluster_create(
        $ reana-dev cluster-create -m /var/reana:/var/reana
                                   -m /usr/share/local/mydata:/mydata
                                   --mode debug
+                                  --extra-ports 30080 30443 30444
     """
 
     class literal_str(str):
@@ -99,6 +107,35 @@ def cluster_create(
 
     yaml.add_representer(literal_str, literal_unicode_str)
 
+    # Reserved ports mapped to their respective services
+    RESERVED_DEBUG_PORTS = {
+        "wdb": 31984,
+        "maildev": 32580,
+        "rabbitmq": 31672,
+        "postgresql": 30432,
+    }
+
+    # Get reserved port values
+    reserved_ports = set(RESERVED_DEBUG_PORTS.values())
+
+    # Detect conflicting ports
+    conflicting_ports = set(extra_ports) & reserved_ports
+    if conflicting_ports:
+        conflict_details = [
+            f"{port} ({service})"
+            for service, port in RESERVED_DEBUG_PORTS.items()
+            if port in conflicting_ports
+        ]
+        raise click.BadParameter(
+            f"The following ports are reserved for debug mode and cannot be used: {', '.join(conflict_details)}"
+        )
+
+    # Convert extra ports into mappings
+    extra_port_mappings = [
+        {"containerPort": port, "hostPort": port, "protocol": "TCP"}
+        for port in extra_ports
+    ]
+
     control_plane = {
         "role": "control-plane",
         "kubeadmConfigPatches": [
@@ -109,32 +146,15 @@ def cluster_create(
                 '    node-labels: "ingress-ready=true"\n'
             )
         ],
-        "extraPortMappings": [
-            {"containerPort": 30080, "hostPort": 30080, "protocol": "TCP"},  # HTTP
-            {"containerPort": 30443, "hostPort": 30443, "protocol": "TCP"},  # HTTPS
-        ],
+        "extraPortMappings": extra_port_mappings,  # Only user-specified ports
     }
 
-    if mode in ("debug"):
+    if mode == "debug":
         mounts.append({"hostPath": find_reana_srcdir(), "containerPath": "/code"})
         control_plane["extraPortMappings"].extend(
             [
-                {"containerPort": 31984, "hostPort": 31984, "protocol": "TCP"},  # wdb
-                {
-                    "containerPort": 32580,
-                    "hostPort": 32580,
-                    "protocol": "TCP",
-                },  # maildev
-                {
-                    "containerPort": 31672,
-                    "hostPort": 31672,
-                    "protocol": "TCP",
-                },  # rabbitmq
-                {
-                    "containerPort": 30432,
-                    "hostPort": 30432,
-                    "protocol": "TCP",
-                },  # postgresql
+                {"containerPort": port, "hostPort": port, "protocol": "TCP"}
+                for port in RESERVED_DEBUG_PORTS.values()
             ]
         )
 

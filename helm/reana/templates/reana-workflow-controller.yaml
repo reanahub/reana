@@ -199,7 +199,11 @@ spec:
           {{- end }}
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
-            value: {{ .Values.reana_hostname }}
+            value: {{ .Values.reana_hostname | quote }}
+          {{- end }}
+          {{- if .Values.reana_hostport }}
+          - name: REANA_HOSTPORT
+            value: {{ .Values.reana_hostport | quote }}
           {{- end }}
           {{- if .Values.eos.enabled }}
           - name: K8S_CERN_EOS_AVAILABLE
@@ -290,7 +294,11 @@ spec:
         {{- end }}
         {{- if .Values.reana_hostname }}
         - name: REANA_HOSTNAME
-          value: {{ .Values.reana_hostname }}
+          value: {{ .Values.reana_hostname | quote }}
+        {{- end }}
+        {{- if .Values.reana_hostport }}
+        - name: REANA_HOSTPORT
+          value: {{ .Values.reana_hostport | quote }}
         {{- end }}
         {{- if .Values.debug.enabled }}
         - name: WDB_SOCKET_SERVER

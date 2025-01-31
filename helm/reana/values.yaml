@@ -2,9 +2,13 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# reana_hostname: reana.cern.ch
+reana_hostname: localhost
 # `reana_hostname` should be set for third party integrations to work and for
-# production deployments to be secure.
+# production deployments to be secure. The default `localhost` value is used
+# in local deployment scenarios.
+
+reana_hostport: 443
+# `reana_hostport` should be set to the port number where the REANA service will be exposed for incoming SSL connections.
 
 debug:
   enabled: false
