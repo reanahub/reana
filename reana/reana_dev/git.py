@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2023, 2024 CERN.
+# Copyright (C) 2020, 2021, 2023, 2024, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -1296,7 +1296,7 @@ def git_upgrade_shared_modules(
     def _create_commit_or_amend(components):
         today = datetime.date.today().isoformat()
         for c in components:
-            commit_cmd = f'git commit -m "build(python): bump shared REANA packages as of {today}{get_commit_pr_suffix(c)}"'
+            commit_cmd = f'git commit -m "chore(master): bump shared REANA packages as of {today}{get_commit_pr_suffix(c)}"'
             if amend:
                 commit_cmd = "git commit --amend --no-edit"
 
@@ -1382,7 +1382,7 @@ def git_upgrade_requirements(ctx, component, exclude_components):  # noqa: D301
             run_command(f"git add {PYTHON_REQUIREMENTS_FILE}", component)
             today = datetime.date.today().isoformat()
             run_command(
-                f'git commit -m "build(python): bump all required packages as of {today}{get_commit_pr_suffix(component)}"',
+                f'git commit -m "chore(master): bump all required packages as of {today}{get_commit_pr_suffix(component)}"',
                 component,
             )
 
