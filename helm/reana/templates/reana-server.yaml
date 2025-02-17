@@ -115,6 +115,10 @@ spec:
             value: {{ .Values.dask.cluster_default_single_worker_memory | default "2Gi" }}
           - name: REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_MEMORY
             value: {{ .Values.dask.cluster_max_single_worker_memory | default "8Gi" }}
+          - name: REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_THREADS
+            value: !!str {{ .Values.dask.cluster_default_single_worker_threads | default 4 }}
+          - name: REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_THREADS
+            value: !!str {{ .Values.dask.cluster_max_single_worker_threads | default 8 }}
           {{- end }}
           - name: WORKSPACE_PATHS
             value: {{ .Values.workspaces.paths | toJson | quote }}

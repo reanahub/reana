@@ -196,6 +196,8 @@ dask:
   cluster_max_number_of_workers: 20
   cluster_default_single_worker_memory: "2Gi"
   cluster_max_single_worker_memory: "8Gi"
+  cluster_default_single_worker_threads: 4
+  cluster_max_single_worker_threads: 8
 
 pgbouncer:
   enabled: false
