@@ -12,9 +12,9 @@ for image in \
     docker.io/library/redis:5.0.5 \
     docker.io/reanahub/reana-job-controller:0.95.0-alpha.2 \
     docker.io/reanahub/reana-message-broker:0.95.0-alpha.1 \
-    docker.io/reanahub/reana-server:0.95.0-alpha.2 \
+    docker.io/reanahub/reana-server:0.95.0-alpha.3 \
     docker.io/reanahub/reana-ui:0.95.0-alpha.1 \
-    docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.2 \
+    docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.4 \
     docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.2 \
     docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.2 \
     docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.2 \
