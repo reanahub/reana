@@ -27,8 +27,8 @@ keywords:
   - cwl
   - reusable-science
 type: application
-version: 0.95.0-alpha.2
-kubeVersion: ">= 1.21.0-0"
+version: 0.95.0
+kubeVersion: '>= 1.21.0-0'
 dependencies:
   - name: traefik
     version: 31.1.0

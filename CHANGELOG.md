@@ -2,6 +2,44 @@
 
 # Changelog
 
+## [0.95.0](https://github.com/reanahub/reana/compare/0.9.4...0.95.0) (2025-02-24)
+
+
+### Features
+
+* **helm:** allow configuring number of threads for Dask workers ([#877](https://github.com/reanahub/reana/issues/877)) ([3e3dc24](https://github.com/reanahub/reana/commit/3e3dc24646f94f6b4ba83346e979938c83e1a0fe)), closes [#874](https://github.com/reanahub/reana/issues/874)
+* **helm:** allow only reana-server to connect to reana-cache ([#847](https://github.com/reanahub/reana/issues/847)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** collect logs from Dask pods ([#850](https://github.com/reanahub/reana/issues/850)) ([06fa887](https://github.com/reanahub/reana/commit/06fa887e1e8aa3c99058ae4c5a6c6491337cefa2))
+* **helm:** introduce `traefik.external` Helm chart value ([#866](https://github.com/reanahub/reana/issues/866)) ([b2074bc](https://github.com/reanahub/reana/commit/b2074bc7b261ec7aa7eefc40590b6dd94905cc8c)), closes [#852](https://github.com/reanahub/reana/issues/852)
+* **helm:** release check on most-supported Kubernetes version ([#848](https://github.com/reanahub/reana/issues/848)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** support password-protected rabbitmq ([#847](https://github.com/reanahub/reana/issues/847)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** support password-protected redis ([#847](https://github.com/reanahub/reana/issues/847)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **reana-dev:** add `--namespace` option to `run-ci` command ([#862](https://github.com/reanahub/reana/issues/862)) ([51c3a11](https://github.com/reanahub/reana/commit/51c3a112c0afd1adeb6f004e986369990630ff5f))
+* **scripts:** upgrade to Jupyter SciPy 7.2.2 notebook ([#846](https://github.com/reanahub/reana/issues/846)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+
+
+### Bug fixes
+
+* **helm:** allow interactive-session-cleanup job to access RWC ([#853](https://github.com/reanahub/reana/issues/853)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** harmonise REANA host name and port configurations ([#867](https://github.com/reanahub/reana/issues/867)) ([8acfb28](https://github.com/reanahub/reana/commit/8acfb287b916602f8f8f1cedf5d112b545c17300)), closes [#865](https://github.com/reanahub/reana/issues/865)
+* **reana-dev:** correctly handle missing changelog of components ([#858](https://github.com/reanahub/reana/issues/858)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **reana-dev:** use chore commit scope when bumping dependencies ([#868](https://github.com/reanahub/reana/issues/868)) ([3788789](https://github.com/reanahub/reana/commit/378878948e1fa99e3f2e336cbf5d699753aaa08d))
+
+
+### Continuous integration
+
+* **helm:** configure target branch name for helm linting ([#863](https://github.com/reanahub/reana/issues/863)) ([e2b6037](https://github.com/reanahub/reana/commit/e2b603726ea37a946d0ec09999645861c9e75ce1))
+
+
+### Documentation
+
+* **helm:** clarify secrets-related warning in README ([#847](https://github.com/reanahub/reana/issues/847)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+
+
+### Chores
+
+* **master:** release 0.95.0-alpha.1 ([251a172](https://github.com/reanahub/reana/commit/251a172977e0eb666d4335809ef43ca692fcfeab))
+
 ## [0.9.4](https://github.com/reanahub/reana/compare/0.9.3...0.9.4) (2024-12-16)
 
 ### :sparkles: What's new in REANA 0.9.4
