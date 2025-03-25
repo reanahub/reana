@@ -1120,9 +1120,15 @@ def git_fetch(component, exclude_components):  # noqa: D301
     default="",
     help="Which components to exclude? [c1,c2,c3]",
 )
+@click.option(
+    "--create-branch",
+    is_flag=True,
+    default=False,
+    help="Should the branch be created if it does not exist? [default=False]",
+)
 @git_commands.command(name="git-upgrade")
 @click_add_git_base_branch_option
-def git_upgrade(component, exclude_components, base):  # noqa: D301
+def git_upgrade(component, exclude_components, create_branch, base):  # noqa: D301
     """Upgrade REANA local source code repositories and push to GitHub origin.
 
     \b
@@ -1142,28 +1148,50 @@ def git_upgrade(component, exclude_components, base):  # noqa: D301
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param exclude_components: List of components to exclude.
+    :param create_branch: Should the branch be created if it does not exist?
     :param base: Against which git base branch are we working on? [default=master]
     :type component: str
     :type exclude_components: str
+    :type create_branch: bool
     :type base: str
     """
     if exclude_components:
         exclude_components = exclude_components.split(",")
+
     components = select_components(component, exclude_components)
     for component in components:
         if not branch_exists(component, base):
-            display_message(
-                "Missing branch {}, skipping.".format(base), component=component
-            )
+            if create_branch:
+                # Check if upstream branch exists before creating local branch
+                cmd = f"git ls-remote --heads upstream {base}"
+                if not run_command(cmd, component, display=False, return_output=True):
+                    display_message(
+                        f"Branch {base} does not exist in upstream, skipping.",
+                        component=component,
+                    )
+                    continue
+
+                run_command("git fetch upstream", component)
+                run_command(f"git checkout -b {base} upstream/{base}", component)
+                run_command(f"git push -u origin {base}", component)
+                run_command("git checkout -", component)
+                display_message(
+                    f"Branch {base} created from upstream and pushed to origin.",
+                    component=component,
+                )
+            else:
+                display_message(
+                    f"Missing branch {base}, skipping.", component=component
+                )
+
+            # Branch was just created fresh or is missing so skip the merge/push upgrade flow
             continue
-        for cmd in [
-            "git fetch upstream",
-            "git checkout {0}".format(base),
-            "git merge --ff-only upstream/{0}".format(base),
-            "git push origin {0}".format(base),
-            "git checkout -",
-        ]:
-            run_command(cmd, component)
+
+        run_command("git fetch upstream", component)
+        run_command(f"git checkout {base}", component)
+        run_command(f"git merge --ff-only upstream/{base}", component)
+        run_command(f"git push origin {base}", component)
+        run_command("git checkout -", component)
 
 
 @click.argument("range", default="")
