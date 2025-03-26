@@ -34,9 +34,10 @@ data:
     {{- end }}
 
     # Workers management
+    idle = 60
     max-requests = 1999
     max-requests-delta = 149
-    # max-worker-lifetime = 3600 # https://github.com/unbit/uwsgi/issues/1894
+    max-worker-lifetime = 3600 # https://github.com/unbit/uwsgi/issues/1894
     reload-on-rss = 250
 
     # fix up signal handling
