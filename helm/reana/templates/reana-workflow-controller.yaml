@@ -131,9 +131,33 @@ spec:
           - name: REANA_RUNTIME_SESSIONS_KUBERNETES_NODE_LABEL
             value: {{ .Values.node_label_runtimesessions }}
           {{- end }}
+          {{- if .Values.kubernetes_jobs_max_user_cpu_request }}
+          - name: REANA_KUBERNETES_JOBS_MAX_USER_CPU_REQUEST
+            value: {{ .Values.kubernetes_jobs_max_user_cpu_request | quote }}
+          {{- end }}
+          {{- if .Values.kubernetes_jobs_max_user_cpu_limit }}
+          - name: REANA_KUBERNETES_JOBS_MAX_USER_CPU_LIMIT
+            value: {{ .Values.kubernetes_jobs_max_user_cpu_limit | quote }}
+          {{- end }}
+          {{- if .Values.kubernetes_jobs_max_user_memory_request }}
+          - name: REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_REQUEST
+            value: {{ .Values.kubernetes_jobs_max_user_memory_request }}
+          {{- end }}
           {{- if .Values.kubernetes_jobs_max_user_memory_limit }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_LIMIT
             value: {{ .Values.kubernetes_jobs_max_user_memory_limit }}
+          {{- end }}
+          {{- if .Values.kubernetes_jobs_cpu_request }}
+          - name: REANA_KUBERNETES_JOBS_CPU_REQUEST
+            value: {{ .Values.kubernetes_jobs_cpu_request | quote }}
+          {{- end }}
+          {{- if .Values.kubernetes_jobs_cpu_limit }}
+          - name: REANA_KUBERNETES_JOBS_CPU_LIMIT
+            value: {{ .Values.kubernetes_jobs_cpu_limit | quote }}
+          {{- end }}
+          {{- if .Values.kubernetes_jobs_memory_request }}
+          - name: REANA_KUBERNETES_JOBS_MEMORY_REQUEST
+            value: {{ .Values.kubernetes_jobs_memory_request }}
           {{- end }}
           - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
             value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" }}
