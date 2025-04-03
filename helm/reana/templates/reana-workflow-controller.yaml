@@ -62,7 +62,10 @@ spec:
         args: ["flask run --host=0.0.0.0"]
         tty: true
         stdin: true
-        {{- end }}
+        resources:
+          {{- with .Values.components.reana_worklow_controller.rest_api.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
           - mountPath: /code
@@ -223,6 +226,10 @@ spec:
         image: {{ .Values.components.reana_workflow_controller.image }}
         imagePullPolicy: {{ .Values.components.reana_workflow_controller.imagePullPolicy }}
         command: ["flask", "consume-job-queue"]
+        resources:
+          {{- with .Values.components.reana_worklow_controller.job_status_consumer.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
           - mountPath: /code

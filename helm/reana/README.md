@@ -10,10 +10,12 @@ This Helm automatically prefixes all names using the release name to avoid colli
 |----------------------------------------------------------|--------------------------------------------------------------------------------------|-------------------------------------------------|
 | `components.reana_db.enabled`                            | Instantiate a PostgreSQL database inside the cluster                                 | true                                            |
 | `components.reana_db.image`                              | [PostgreSQL image](https://hub.docker.com/_/postgres) to use                         | `docker.io/library/postgres:12.13`              |
+| `components.reana_db.resources`                          | Kubernetes resource configuration (requests/limits) for the Database container        | `{}`                                            |                                  |
 | `components.reana_job_controller.environment`            | [REANA-Job-Controller](https://github.com/reanahub/reana-job-controller) environment variables | `{}`                                  |
 | `components.reana_job_controller.image`                  | [REANA-Job-Controller image](https://hub.docker.com/r/reanahub/reana-job-controller) to use  | `docker.io/reanahub/reana-job-controller:<chart-release-version>` |
 | `components.reana_message_broker.image`                  | [REANA-Message-Broker image](https://hub.docker.com/r/reanahub/reana-message-broker) to use | `docker.io/reanahub/reana-message-broker:<chart-release-version>` |
 | `components.reana_message_broker.imagePullPolicy`        | REANA-Message-Broker image pull policy                                               | IfNotPresent                                    |
+| `components.reana_message_broker.resources`              | Kubernetes resource configuration (requests/limits) for the Message Broker container | `{}`                                            |
 | `components.reana_server.environment`                    | REANA-Server environment variables                                                   | |
 | `components.reana_server.environment.REANA_MAX_CONCURRENT_BATCH_WORKFLOWS` | Upper limit on concurrent REANA batch workflows running in the cluster. | 30 |
 | `components.reana_server.environment.REANA_USER_EMAIL_CONFIRMATION` | Enable user to confirm their email address. | true |
@@ -26,6 +28,8 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_server.environment.REANA_RATELIMIT_SLOW` | Set API limiter config for slow endpoints that need to be protected e.g. launch endpoint. | "1/5 second" |
 | `components.reana_server.image`                          | [REANA-Server image](https://hub.docker.com/r/reanahub/reana-server) to use          | `docker.io/reanahub/reana-server:<chart-release-version>` |
 | `components.reana_server.imagePullPolicy`                | REANA-Server image pull policy                                                       | IfNotPresent                                    |
+| `components.reana_server.rest_api.resources`             | Kubernetes resource configuration (requests/limits) for the Server REST API container | `{}`                                            |
+| `components.reana_server.scheduler.resources`            | Kubernetes resource configuration (requests/limits) for the Server Scheduler container| `{}`                                            |
 | `components.reana_server.uwsgi.processes`                | Number of uWSGI processes                                                            | 6                                               |
 | `components.reana_server.uwsgi.threads`                  | Number of uWSGI threads                                                              | 4                                               |
 | `components.reana_server.uwsgi.log_all`                  | Log all HTTP requests                                                                | true                                            |
@@ -36,6 +40,7 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_ui.file_preview_size_limit`            | Maximum file size (in bytes) that can be previewed in the web interface. Default value: 5242880 bytes = 5 MiB | 5242880                |
 | `components.reana_ui.image`                              | [REANA-UI image](https://hub.docker.com/r/reanahub/reana-ui) to use                  | `docker.io/reanahub/reana-ui:<chart-release-version>`     |
 | `components.reana_ui.imagePullPolicy`                    | REANA-UI image pull policy                                                           | IfNotPresent                                    |
+| `components.reana_ui.resources`                          | Kubernetes resource configuration (requests/limits) for the UI container             | `{}`                                            |
 | `components.reana_ui.polling_secs`                       | Frequency of workflow list page reload in seconds                                    | 15                                              |
 | `components.reana_ui.client_pyvenv`                      | REANA-Client python environment to source in the welcome example.                    | None                                            |
 | `components.reana_ui.docs_url`                           | URL of documentation site (footer icon)                                              | https://docs.reana.io                           |
@@ -48,6 +53,8 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_workflow_controller.environment`       | REANA-Workflow-Controller environment variables                                      | `{SHARED_VOLUME_PATH: /var/reana}`              |
 | `components.reana_workflow_controller.image`             | [REANA-Workflow-Controller image](https://hub.docker.com/r/reanahub/reana-workflow-controller) to use | `docker.io/reanahub/reana-workflow-controller:<chart-release-version>` |
 | `components.reana_workflow_controller.imagePullPolicy`   | REANA-Workflow-Controller image pull policy                                          | IfNotPresent                                    |
+| `components.reana_workflow_controller.rest_api.resources` | Kubernetes resource configuration (requests/limits) for the Workflow Controller REST API container | `{}`                              |
+| `components.reana_workflow_controller.job_status_consumer.resources` | Kubernetes resource configuration (requests/limits) for the Workflow Controller Job Status Consumer | `{}`                    |                                           |
 | `components.reana_workflow_controller.environment.REANA_JOB_HOSTPATH_MOUNTS`   | JSON list of optional hostPath mounts, for all user jobs. Each mount object has a key `name` (name of the mount), `hostPath` (path to the directory to be mounted from the Kubernetes nodes) and `mountPath` (path inside the job containers where the `hostPath` will be mounted)            | None                                            |
 | `components.reana_workflow_controller.environment.REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES` | Keep alive Kubernetes user runtime jobs depending on status (`finished` and/or `failed`). | None |
 | `components.reana_workflow_controller.environment.REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT` | Define max number of unacknowledged deliveries that are permitted on `jobs-status` queue consumer. | 10 |

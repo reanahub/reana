@@ -59,6 +59,10 @@ spec:
               name: {{ include "reana.prefix" . }}-db-secrets
               key: password
         {{- end }}
+        resources:
+          {{- with .Values.components.reana_db.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         volumeMounts:
           - mountPath: /var/lib/postgresql/data
             subPath: db

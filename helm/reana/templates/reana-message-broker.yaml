@@ -65,6 +65,10 @@ spec:
         - "/start.sh"
         - "$(RABBIT_MQ_USER)"
         - "$(RABBIT_MQ_PASS)"
+        resources:
+          {{- with .Values.components.reana_message_broker.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         volumeMounts:
         - mountPath: /var/lib/rabbitmq/mnesia
           subPath: rabbitmq/mnesia
