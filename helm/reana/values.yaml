@@ -124,6 +124,13 @@ components:
     file_preview_size_limit: "5242880" # 5 * 1024**2 = 5 MiB
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-ui:0.95.0-alpha.4
+    resources: {} # UI pod resources.
+    #  limits:
+    #    cpu: 1.8
+    #    memory: 6G
+    #  requests:
+    #    cpu: 1.8
+    #    memory: 6G
     nginx:
       security_headers:
         hsts: "max-age=31536000; includeSubDomains"
@@ -148,6 +155,13 @@ components:
   reana_db:
     enabled: true
     image: docker.io/library/postgres:12.13
+    resources: {} # Db pod resources.
+    #  limits:
+    #    cpu: 1.8
+    #    memory: 6G
+    #  requests:
+    #    cpu: 1.8
+    #    memory: 6G
   reana_server:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-server:0.95.0-alpha.6
@@ -174,6 +188,22 @@ components:
       max_requests: 1999
       max_worker_lifetime: 0
       reload_on_rss: 250
+    rest_api:
+      resources: {} # Reana Server REST API container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G
+    scheduler:
+      resources: {} # Reana Server scheduler container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.7
@@ -194,6 +224,22 @@ components:
       max_requests: 1999
       max_worker_lifetime: 0
       reload_on_rss: 1024
+    rest_api:
+      resources: {} # Reana Workflow Controller REST API container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G
+    job_status_consumer:
+      resources: {} # Reana Workflow Controller Job Status Consumer container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G
   reana_workflow_engine_cwl:
     image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.5
     environment: {}
@@ -221,9 +267,24 @@ components:
       max_requests: 1999
       max_worker_lifetime: 0
       reload_on_rss: 250
+  reana_cache:
+    resources: {} # Cache pod resources.
+    #  limits:
+    #    cpu: 1.8
+    #    memory: 6G
+    #  requests:
+    #    cpu: 1.8
+    #    memory: 6G
   reana_message_broker:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-message-broker:0.95.0-alpha.3
+    resources: {} # Message broker pod resources.
+    #  limits:
+    #    cpu: 1.8
+    #    memory: 6G
+    #  requests:
+    #    cpu: 1.8
+    #    memory: 6G
 
 notifications:
   enabled: false
@@ -324,6 +385,13 @@ pgbouncer:
   max_client_conn: 1000
   max_db_connections: 100
   environment: {}
+  resources: {} # PgBouncer pod resources.
+  #  limits:
+  #    cpu: 1.8
+  #    memory: 6G
+  #  requests:
+  #    cpu: 1.8
+  #    memory: 6G
 
 # Quota
 quota:

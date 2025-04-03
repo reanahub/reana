@@ -60,6 +60,10 @@ spec:
         - name: {{ $key }}
           value: {{ $value | quote }}
         {{- end }}
+        resources:
+          {{- with .Values.pgbouncer.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
       {{- if .Values.node_label_infrastructuredb }}
       {{- $full_label := split "=" .Values.node_label_infrastructuredb }}
       nodeSelector:
