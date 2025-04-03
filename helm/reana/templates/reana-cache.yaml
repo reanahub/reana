@@ -79,6 +79,10 @@ spec:
           - "~*"
           - "&*"
           - "+@all"
+        resources:
+          {{- with .Values.components.reana_cache.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         ports:
         - containerPort: 6379
       {{- if .Values.node_label_infrastructure }}
