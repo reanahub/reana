@@ -13,6 +13,7 @@ sources:
   - https://github.com/reanahub/reana-workflow-engine-yadage
   - https://github.com/reanahub/reana-workflow-engine-snakemake
   - https://github.com/reanahub/reana-workflow-validator
+  - https://github.com/reanahub/reana-dask-kubernetes-operator
   - https://github.com/reanahub/reana-job-controller
   - https://github.com/reanahub/reana-commons
   - https://github.com/reanahub/reana-db
@@ -45,7 +46,7 @@ dependencies:
     repository: https://fluent.github.io/helm-charts
     condition: fluent-bit.enabled
   - name: dask-kubernetes-operator
-    version: 2024.8.0
+    version: 2025.4.3
     repository: https://helm.dask.org
     condition: dask.enabled
     tags:

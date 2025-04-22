@@ -34,6 +34,8 @@ components:
     image: docker.io/reanahub/reana-message-broker
   reana_ui:
     image: docker.io/reanahub/reana-ui
+  reana_dask_kubernetes_operator:
+    image: docker.io/reanahub/reana-dask-kubernetes-operator
 
 pgbouncer:
   enabled: true
@@ -79,3 +81,15 @@ fluent-bit:
     tlsCaFile: ""
   extraVolumes: []
   extraVolumeMounts: []
+
+dask-kubernetes-operator:
+  image:
+    name: docker.io/reanahub/reana-dask-kubernetes-operator
+    tag: latest
+  volumeMounts:
+    - mountPath: /code/
+      name: reana-code
+  volumes:
+    - name: reana-code
+      hostPath:
+        path: /code/reana-dask-kubernetes-operator
