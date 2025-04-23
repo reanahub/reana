@@ -1,5 +1,5 @@
 # This file is part of REANA.
-# Copyright (C) 2020, 2024 CERN.
+# Copyright (C) 2020, 2024, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -10,7 +10,7 @@ on: [push, pull_request]
 
 jobs:
   lint-commitlint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -36,7 +36,7 @@ jobs:
           ./run-tests.sh --check-commitlint ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} ${{ github.event.pull_request.head.sha }} ${{ github.event.pull_request.number }}
 
   lint-shellcheck:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -47,7 +47,7 @@ jobs:
           ./run-tests.sh --check-shellcheck
 
   lint-black:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -63,7 +63,7 @@ jobs:
           ./run-tests.sh --check-black
 
   lint-flake8:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -80,7 +80,7 @@ jobs:
           ./run-tests.sh --check-flake8
 
   lint-pydocstyle:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -96,7 +96,7 @@ jobs:
           ./run-tests.sh --check-pydocstyle
 
   lint-check-manifest:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -112,7 +112,7 @@ jobs:
           ./run-tests.sh --check-manifest
 
   docs-sphinx:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -137,10 +137,10 @@ jobs:
         run: ./run-tests.sh --check-sphinx
 
   python-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -167,7 +167,7 @@ jobs:
           files: coverage.xml
 
   lint-helm:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
