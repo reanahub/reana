@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -20,6 +20,7 @@ from reana.reana_dev.utils import (
     find_reana_srcdir,
     find_standard_component_name,
     get_srcdir,
+    print_colima_start_help,
     run_command,
     validate_mode_option,
 )
@@ -71,8 +72,16 @@ def cluster_commands():
     is_flag=True,
     help="Disable default CNI and use e.g. Calico.",
 )
+@click.option(
+    "--kubernetes",
+    "-k",
+    default="kind",
+    help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
+)
 @cluster_commands.command(name="cluster-create")
-def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D301
+def cluster_create(
+    mounts, mode, worker_nodes, disable_default_cni, kubernetes
+):  # noqa: D301
     """Create new REANA cluster.
 
     \b
@@ -81,102 +90,120 @@ def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D3
                                   -m /usr/share/local/mydata:/mydata
                                   --mode debug
     """
+    if kubernetes == "colima/k3s":
+        print_colima_start_help()
+        sys.exit(1)
+    elif kubernetes == "kind":
 
-    class literal_str(str):
-        pass
-
-    def literal_unicode_str(dumper, data):
-        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
-
-    def add_volume_mounts(node):
-        """Add needed volumes mounts to the provided node."""
-
-    yaml.add_representer(literal_str, literal_unicode_str)
-
-    control_plane = {
-        "role": "control-plane",
-        "kubeadmConfigPatches": [
-            literal_str(
-                "kind: InitConfiguration\n"
-                "nodeRegistration:\n"
-                "  kubeletExtraArgs:\n"
-                '    node-labels: "ingress-ready=true"\n'
-            )
-        ],
-        "extraPortMappings": [
-            {"containerPort": 30080, "hostPort": 30080, "protocol": "TCP"},  # HTTP
-            {"containerPort": 30443, "hostPort": 30443, "protocol": "TCP"},  # HTTPS
-        ],
-    }
-
-    if mode in ("debug"):
-        mounts.append({"hostPath": find_reana_srcdir(), "containerPath": "/code"})
-        control_plane["extraPortMappings"].extend(
-            [
-                {"containerPort": 31984, "hostPort": 31984, "protocol": "TCP"},  # wdb
-                {
-                    "containerPort": 32580,
-                    "hostPort": 32580,
-                    "protocol": "TCP",
-                },  # maildev
-                {
-                    "containerPort": 31672,
-                    "hostPort": 31672,
-                    "protocol": "TCP",
-                },  # rabbitmq
-            ]
-        )
-
-    # check whether we mount shared volume for multi-node deployments:
-    if worker_nodes > 0:
-        mount_targets = [x["containerPath"].strip("/") for x in mounts]
-        if "var/reana" in mount_targets or "var" in mount_targets:
+        class literal_str(str):
             pass
-        else:
-            click.echo(
-                "[ERROR] For multi-node deployments, one has to use a shared storage volume for cluster nodes."
-            )
-            click.echo(
-                "[ERROR] Example: reana-dev cluster-create -m /var/reana:/var/reana --worker-nodes 2."
-            )
-            sys.exit(1)
 
-    nodes = [{"role": "worker"} for _ in range(worker_nodes)] + [control_plane]
-    for node in nodes:
-        node["extraMounts"] = mounts
+        def literal_unicode_str(dumper, data):
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
 
-    cluster_config = {
-        "kind": "Cluster",
-        "apiVersion": "kind.x-k8s.io/v1alpha4",
-        "nodes": nodes,
-    }
+        def add_volume_mounts(node):
+            """Add needed volumes mounts to the provided node."""
 
-    if disable_default_cni:
-        cluster_config["networking"] = {
-            "disableDefaultCNI": True,
-            "podSubnet": "192.168.0.0/16",
+        yaml.add_representer(literal_str, literal_unicode_str)
+
+        control_plane = {
+            "role": "control-plane",
+            "kubeadmConfigPatches": [
+                literal_str(
+                    "kind: InitConfiguration\n"
+                    "nodeRegistration:\n"
+                    "  kubeletExtraArgs:\n"
+                    '    node-labels: "ingress-ready=true"\n'
+                )
+            ],
+            "extraPortMappings": [
+                {"containerPort": 30080, "hostPort": 30080, "protocol": "TCP"},  # HTTP
+                {"containerPort": 30443, "hostPort": 30443, "protocol": "TCP"},  # HTTPS
+            ],
         }
 
-    # detect user container technology (Docker vs Podman)
-    kind_provider = ""
-    docker_version_output = run_command("docker version", return_output=True)
-    if docker_version_output and "Podman Engine" in docker_version_output:
-        kind_provider = "KIND_EXPERIMENTAL_PROVIDER=podman"
+        if mode in ("debug"):
+            mounts.append({"hostPath": find_reana_srcdir(), "containerPath": "/code"})
+            control_plane["extraPortMappings"].extend(
+                [
+                    {
+                        "containerPort": 31984,
+                        "hostPort": 31984,
+                        "protocol": "TCP",
+                    },  # wdb
+                    {
+                        "containerPort": 32580,
+                        "hostPort": 32580,
+                        "protocol": "TCP",
+                    },  # maildev
+                    {
+                        "containerPort": 31672,
+                        "hostPort": 31672,
+                        "protocol": "TCP",
+                    },  # rabbitmq
+                ]
+            )
 
-    # create cluster
-    cluster_create = "cat <<EOF | {kind_provider} kind create cluster --config=-\n{cluster_config}\nEOF"
-    cluster_create = cluster_create.format(
-        kind_provider=kind_provider, cluster_config=yaml.dump(cluster_config)
-    )
-    run_command(cluster_create, "reana")
+        # check whether we mount shared volume for multi-node deployments:
+        if worker_nodes > 0:
+            mount_targets = [x["containerPath"].strip("/") for x in mounts]
+            if "var/reana" in mount_targets or "var" in mount_targets:
+                pass
+            else:
+                click.echo(
+                    "[ERROR] For multi-node deployments, one has to use a shared storage volume for cluster nodes."
+                )
+                click.echo(
+                    "[ERROR] Example: reana-dev cluster-create -m /var/reana:/var/reana --worker-nodes 2."
+                )
+                sys.exit(1)
+
+        nodes = [{"role": "worker"} for _ in range(worker_nodes)] + [control_plane]
+        for node in nodes:
+            node["extraMounts"] = mounts
+
+        cluster_config = {
+            "kind": "Cluster",
+            "apiVersion": "kind.x-k8s.io/v1alpha4",
+            "nodes": nodes,
+        }
+
+        if disable_default_cni:
+            cluster_config["networking"] = {
+                "disableDefaultCNI": True,
+                "podSubnet": "192.168.0.0/16",
+            }
+
+        # detect user container technology (Docker vs Podman)
+        kind_provider = ""
+        docker_version_output = run_command("docker version", return_output=True)
+        if docker_version_output and "Podman Engine" in docker_version_output:
+            kind_provider = "KIND_EXPERIMENTAL_PROVIDER=podman"
+
+        # create cluster
+        cluster_create = "cat <<EOF | {kind_provider} kind create cluster --config=-\n{cluster_config}\nEOF"
+        cluster_create = cluster_create.format(
+            kind_provider=kind_provider, cluster_config=yaml.dump(cluster_config)
+        )
+        run_command(cluster_create, "reana")
+    else:
+        display_message(
+            f"[ERROR] Unsupported --kubernetes option value '{kubernetes}'. Must be 'kind' [default] or 'colima/k3s'. Exiting.",
+            "reana",
+        )
+        sys.exit(1)
 
     # pull Docker images
     if mode in ("releasepypi", "latest", "debug"):
         for cmd in [
             "reana-dev docker-pull -c reana",
-            "reana-dev kind-load-docker-image -c reana",
         ]:
             run_command(cmd, "reana")
+        if kubernetes == "kind":
+            for cmd in [
+                "reana-dev kind-load-docker-image -c reana",
+            ]:
+                run_command(cmd, "reana")
 
 
 @click.option(
@@ -205,9 +232,15 @@ def cluster_create(mounts, mode, worker_nodes, disable_default_cni):  # noqa: D3
     type=click.IntRange(min=1),
     help="Number of docker images to build in parallel.",
 )
+@click.option(
+    "--kubernetes",
+    "-k",
+    default="kind",
+    help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
+)
 @cluster_commands.command(name="cluster-build")
 def cluster_build(
-    build_arg, mode, exclude_components, no_cache, skip_load, parallel
+    build_arg, mode, exclude_components, no_cache, skip_load, parallel, kubernetes
 ):  # noqa: D301
     """Build REANA cluster.
 
@@ -236,10 +269,11 @@ def cluster_build(
     cmds.append(cmd)
     if not skip_load and mode in ("releasepypi", "latest", "debug"):
         # load built Docker images into cluster
-        cmd = "reana-dev kind-load-docker-image -c CLUSTER"
-        if exclude_components:
-            cmd += " --exclude-components {}".format(exclude_components)
-        cmds.append(cmd)
+        if kubernetes == "kind":
+            cmd = "reana-dev kind-load-docker-image -c CLUSTER"
+            if exclude_components:
+                cmd += " --exclude-components {}".format(exclude_components)
+            cmds.append(cmd)
     # execute commands
     for cmd in cmds:
         run_command(cmd, "reana")
@@ -382,7 +416,13 @@ def cluster_deploy(
     default="reana",
     help="REANA instance name",
 )
-def cluster_undeploy(namespace, instance_name):  # noqa: D301
+@click.option(
+    "--kubernetes",
+    "-k",
+    default="kind",
+    help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
+)
+def cluster_undeploy(namespace, instance_name, kubernetes):  # noqa: D301
     """Undeploy REANA cluster."""
     helm_releases = run_command(
         f"helm ls --short -n {namespace}", "reana", return_output=True
@@ -391,40 +431,115 @@ def cluster_undeploy(namespace, instance_name):  # noqa: D301
         for cmd in [
             f"helm uninstall {instance_name} -n {namespace}",
             f"kubectl get secrets -n {namespace} -o custom-columns=':metadata.name' | grep {instance_name} | xargs kubectl delete secret -n {namespace}",
-            "docker exec -i -t kind-control-plane sh -c '/bin/rm -rf /var/reana/*'",
         ]:
             run_command(cmd, "reana")
+        if kubernetes == "colima/k3s":
+            for cmd in [
+                "colima exec -- sh -c 'sudo /bin/rm -rf /var/reana/*'",
+            ]:
+                run_command(cmd, "reana")
+        elif kubernetes == "kind":
+            for cmd in [
+                "docker exec -i -t kind-control-plane sh -c '/bin/rm -rf /var/reana/*'",
+            ]:
+                run_command(cmd, "reana")
+        else:
+            display_message(
+                f"[ERROR] Unsupported --kubernetes option value '{kubernetes}'. Must be 'kind' [default] or 'colima/k3s'. Exiting.",
+                "reana",
+            )
+            sys.exit(1)
     else:
         msg = "No REANA cluster to undeploy."
         display_message(msg, "reana")
 
 
+@click.option(
+    "--kubernetes",
+    "-k",
+    default="kind",
+    help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
+)
 @cluster_commands.command(name="cluster-stop")
-def cluster_stop():
+def cluster_stop(kubernetes):
     """Stop currently running REANA cluster."""
-    cmd = "docker stop kind-control-plane"
-    run_command(cmd, "reana")
+    if kubernetes == "colima/k3s":
+        pass  # not necessary
+    elif kubernetes == "kind":
+        cmd = "docker stop kind-control-plane"
+        run_command(cmd, "reana")
+    else:
+        display_message(
+            f"[ERROR] Unsupported --kubernetes option value '{kubernetes}'. Must be 'kind' [default] or 'colima/k3s'. Exiting.",
+            "reana",
+        )
+        sys.exit(1)
 
 
+@click.option(
+    "--kubernetes",
+    "-k",
+    default="kind",
+    help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
+)
 @cluster_commands.command(name="cluster-start")
-def cluster_start():
+def cluster_start(kubernetes):
     """Start previously stopped REANA cluster."""
-    cmd = "docker start kind-control-plane"
-    run_command(cmd, "reana")
+    if kubernetes == "colima/k3s":
+        pass  # not necessary
+    elif kubernetes == "kind":
+        cmd = "docker start kind-control-plane"
+        run_command(cmd, "reana")
+    else:
+        display_message(
+            f"[ERROR] Unsupported --kubernetes option value '{kubernetes}'. Must be 'kind' [default] or 'colima/k3s'. Exiting.",
+            "reana",
+        )
+        sys.exit(1)
 
 
+@click.option(
+    "--kubernetes",
+    "-k",
+    default="kind",
+    help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
+)
 @cluster_commands.command(name="cluster-pause")
-def cluster_pause():
+def cluster_pause(kubernetes):
     """Pause all processes within REANA cluster."""
-    cmd = "docker pause kind-control-plane"
-    run_command(cmd, "reana")
+    if kubernetes == "colima/k3s":
+        pass  # not necessary
+    elif kubernetes == "kind":
+        cmd = "docker pause kind-control-plane"
+        run_command(cmd, "reana")
+    else:
+        display_message(
+            f"[ERROR] Unsupported --kubernetes option value '{kubernetes}'. Must be 'kind' [default] or 'colima/k3s'. Exiting.",
+            "reana",
+        )
+        sys.exit(1)
 
 
+@click.option(
+    "--kubernetes",
+    "-k",
+    default="kind",
+    help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
+)
 @cluster_commands.command(name="cluster-unpause")
-def cluster_unpause():
+def cluster_unpause(kubernetes):
     """Unpause all processes within REANA cluster."""
-    cmd = "docker unpause kind-control-plane"
-    run_command(cmd, "reana")
+    if kubernetes == "colima/k3s":
+        pass  # not necessary
+    elif kubernetes == "kind":
+        cmd = "docker unpause kind-control-plane"
+        run_command(cmd, "reana")
+    else:
+        display_message(
+            f"[ERROR] Unsupported --kubernetes option value '{kubernetes}'. Must be 'kind' [default] or 'colima/k3s'. Exiting.",
+            "reana",
+        )
+        sys.exit(1)
 
 
 @click.option(
@@ -434,8 +549,14 @@ def cluster_unpause():
     multiple=True,
     help="Which local path directories are to be deleted? [local_path:cluster_node_path]",
 )
+@click.option(
+    "--kubernetes",
+    "-k",
+    default="kind",
+    help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
+)
 @cluster_commands.command(name="cluster-delete")
-def cluster_delete(mounts):  # noqa: D301
+def cluster_delete(mounts, kubernetes):  # noqa: D301
     """Delete REANA cluster.
 
     \b
@@ -444,12 +565,32 @@ def cluster_delete(mounts):  # noqa: D301
     """
     cmds = []
     # delete cluster
-    cmds.append("kind delete cluster")
+    if kubernetes == "colima/k3s":
+        pass  # not necessary
+    elif kubernetes == "kind":
+        cmds.append("kind delete cluster")
+    else:
+        display_message(
+            f"[ERROR] Unsupported --kubernetes option value '{kubernetes}'. Must be 'kind' [default] or 'colima/k3s'. Exiting.",
+            "reana",
+        )
+        sys.exit(1)
     # remove only local paths where cluster path starts with /var/reana for safety
     for mount in mounts:
         local_path, cluster_node_path = mount.split(":")
         if cluster_node_path.startswith("/var/reana"):
-            cmds.append("sudo rm -rf {}/*".format(local_path))
+            if kubernetes == "colima/k3s":
+                cmds.append(
+                    "colima exec -- sh -c 'sudo /bin/rm -rf {}/*'".format(local_path)
+                )
+            elif kubernetes == "kind":
+                cmds.append("sudo /bin/rm -rf {}/*".format(local_path))
+            else:
+                display_message(
+                    f"[ERROR] Unsupported --kubernetes option value '{kubernetes}'. Must be 'kind' [default] or 'colima/k3s'. Exiting.",
+                    "reana",
+                )
+                sys.exit(1)
         else:
             msg = "Directory {} will not be deleted for safety reasons.".format(
                 local_path

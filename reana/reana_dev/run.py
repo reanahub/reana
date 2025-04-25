@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -28,18 +28,50 @@ from reana.config import (
 from reana.reana_dev.utils import (
     display_message,
     get_srcdir,
+    print_colima_start_help,
     run_command,
     select_components,
     validate_mode_option,
 )
 
 
-def is_cluster_created():
-    """Return True/False based on whether there is a cluster created already."""
-    cmd = "kind get clusters"
-    output = run_command(cmd, "reana", return_output=True)
-    if "kind" in output:
-        return True
+def is_cluster_created(kubernetes="kind"):
+    """Return True/False based on whether there is a cluster created already.
+
+    :param kubernetes: What Kubernetes cluster to use? (kind, colima/k3s) [default=kind]
+    :return: True/False
+    """
+    if kubernetes == "colima/k3s":
+        cmd = "colima status --json"
+        try:
+            output = run_command(cmd, "reana", return_output=True, exit_on_error=False)
+        except subprocess.CalledProcessError:
+            display_message(
+                "[ERROR] Colima does not seem to be running. Exiting.",
+                "reana",
+            )
+            print_colima_start_help()
+            sys.exit(1)
+        if '"kubernetes":false' in output:
+            display_message(
+                "[ERROR] Colima is running without '--kubernetes' option. Exiting.",
+                "reana",
+            )
+            print_colima_start_help(),
+            sys.exit(1)
+        elif '"kubernetes":true' in output:
+            return True
+    elif kubernetes == "kind":
+        cmd = "kind get clusters"
+        output = run_command(cmd, "reana", return_output=True)
+        if "kind" in output:
+            return True
+    else:
+        display_message(
+            f"[ERROR] Unsupported --kubernetes option value '{kubernetes}'. Must be 'kind' [default] or 'colima/k3s'. Exiting.",
+            "reana",
+        )
+        sys.exit(1)
     return False
 
 
@@ -273,6 +305,12 @@ def run_commands():
     type=click.IntRange(min=1),
     help="Number of docker images to build in parallel.",
 )
+@click.option(
+    "--kubernetes",
+    "-k",
+    default="kind",
+    help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
+)
 @run_commands.command(name="run-ci")
 def run_ci(
     build_arg,
@@ -287,6 +325,7 @@ def run_ci(
     workflow_engine,
     disable_default_cni,
     parallel,
+    kubernetes,
 ):  # noqa: D301
     """Run CI build.
 
@@ -317,8 +356,8 @@ def run_ci(
     # parse arguments
     components = select_components(component)
     # create cluster if needed
-    if not is_cluster_created():
-        cmd = "reana-dev cluster-create --mode {}".format(mode)
+    if not is_cluster_created(kubernetes):
+        cmd = f"reana-dev cluster-create --kubernetes {kubernetes} --mode {mode}"
         for mount in mounts:
             cmd += " -m {}".format(mount)
         if disable_default_cni:
@@ -329,18 +368,22 @@ def run_ci(
         for component in components:
             for cmd in [
                 "reana-dev docker-pull -c {}".format(component),
-                "reana-dev kind-load-docker-image -c {}".format(component),
             ]:
                 run_command(cmd, "reana")
+            if kubernetes == "kind":
+                for cmd in [
+                    "reana-dev kind-load-docker-image -c {}".format(component),
+                ]:
+                    run_command(cmd, "reana")
     # undeploy cluster and install latest client
     for cmd in [
-        "reana-dev cluster-undeploy",
+        f"reana-dev cluster-undeploy --kubernetes {kubernetes}",
         "reana-dev client-install",
     ]:
         run_command(cmd, "reana")
     # build cluster
     if mode in ("releasepypi", "latest", "debug"):
-        cmd = "reana-dev cluster-build --mode {}".format(mode)
+        cmd = f"reana-dev cluster-build --kubernetes {kubernetes} --mode {mode}"
         if exclude_components:
             cmd += " --exclude-components {}".format(exclude_components)
         for arg in build_arg:
