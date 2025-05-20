@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.9.5](https://github.com/reanahub/reana/compare/0.9.4...0.9.5) (2025-05-20)
+
+
+### Features
+
+* **helm:** increase default rate limit to 40 requests per second ([#890](https://github.com/reanahub/reana/issues/890)) ([e377407](https://github.com/reanahub/reana/commit/e377407a85329d2b609900bd8457b1d92eee7299))
+* **helm:** introduce `node_label_infrastructurewc` Helm value ([#885](https://github.com/reanahub/reana/issues/885)) ([4aac8f4](https://github.com/reanahub/reana/commit/4aac8f49419ba452679cd48cd5027c3597c94df5))
+* **helm:** introduce resource requests and limits for job pods ([#888](https://github.com/reanahub/reana/issues/888)) ([15ca171](https://github.com/reanahub/reana/commit/15ca1719594830a90f45002208e050b3c9f99102)), closes [#883](https://github.com/reanahub/reana/issues/883)
+* **reana-dev:** allow using Colima/K3s as an alternative to Kind ([#894](https://github.com/reanahub/reana/issues/894)) ([ad4cd09](https://github.com/reanahub/reana/commit/ad4cd09078b4f32907d1f22a1a7c86e013f96cde))
+
+
+### Continuous integration
+
+* **helm:** configure target branch name for helm linting ([#885](https://github.com/reanahub/reana/issues/885)) ([823f9fc](https://github.com/reanahub/reana/commit/823f9fc80a880176dbbc52d6d3622fb3a12ded8e))
+* **runners:** upgrade CI runners to Ubuntu 22.04 ([#890](https://github.com/reanahub/reana/issues/890)) ([dc0cad7](https://github.com/reanahub/reana/commit/dc0cad72aad4fc668beabc67ba57db7901c5e639))
+
 ## [0.9.4](https://github.com/reanahub/reana/compare/0.9.3...0.9.4) (2024-12-16)
 
 ### :sparkles: What's new in REANA 0.9.4
