@@ -80,9 +80,23 @@ components:
     file_preview_size_limit: 5242880  # 5 * 1024**2 = 5 MiB
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-ui:0.9.4
+    resources: {} # UI pod resources.
+    #  limits:
+    #    cpu: 1.8
+    #    memory: 6G
+    #  requests:
+    #    cpu: 1.8
+    #    memory: 6G
   reana_db:
     enabled: true
     image: docker.io/library/postgres:12.13
+    resources: {} # Db pod resources.
+    #  limits:
+    #    cpu: 1.8
+    #    memory: 6G
+    #  requests:
+    #    cpu: 1.8
+    #    memory: 6G
   reana_server:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-server:0.9.4
@@ -102,12 +116,44 @@ components:
       log_all: true
       log_4xx: true
       log_5xx: true
+    rest_api:
+      resources: {} # Reana Server REST API container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G 
+    scheduler:
+      resources: {} # Reana Server scheduler container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G 
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-workflow-controller:0.9.4
     environment:
       SHARED_VOLUME_PATH: /var/reana
       REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 10
+    rest_api:
+      resources: {} # Reana Workflow Controller REST API container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G 
+    job_status_consumer:
+      resources: {} # Reana Workflow Controller Job Status Consumer container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G 
   reana_workflow_engine_cwl:
     image: docker.io/reanahub/reana-workflow-engine-cwl:0.9.4
     environment: {}
@@ -126,6 +172,13 @@ components:
   reana_message_broker:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-message-broker:0.9.3
+    resources: {} # Message broker pod resources.
+    #  limits:
+    #    cpu: 1.8
+    #    memory: 6G
+    #  requests:
+    #    cpu: 1.8
+    #    memory: 6G
 
 notifications:
   enabled: false

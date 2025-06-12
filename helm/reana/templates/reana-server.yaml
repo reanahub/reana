@@ -46,6 +46,10 @@ spec:
         # do not use "/bin/sh -c" here as that breaks signal propagation
         command: ["uwsgi", "--ini", "/var/reana/uwsgi/uwsgi.ini"]
         {{- end }}
+        resources:
+          {{- with .Values.components.reana_server.scheduler.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
           - mountPath: /code/
@@ -255,6 +259,10 @@ spec:
         image: {{ .Values.components.reana_server.image }}
         imagePullPolicy: {{ .Values.components.reana_server.imagePullPolicy }}
         command: ["flask", "start-scheduler"]
+        resources:
+          {{- with .Values.components.reana_server.scheduler.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
           - mountPath: /code/
