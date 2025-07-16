@@ -37,6 +37,12 @@ interactive_sessions:
 compute_backends:
   - kubernetes
 
+# When enabled, users can only run workflows that use container
+# images specified in the `allowlist`
+vetted_container_images:
+  enabled: false # Toggle container image vetting
+  allowlist: [] # List of authorized container images
+
 shared_storage:
   backend: hostpath # hostpath | cephfs | nfs
   volume_size: 200
