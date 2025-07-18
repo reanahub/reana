@@ -94,6 +94,17 @@ components:
   reana_db:
     enabled: true
     image: docker.io/library/postgres:12.13
+    environment:
+      SQLALCHEMY_MAX_OVERFLOW: 2
+      SQLALCHEMY_POOL_PRE_PING: false
+      SQLALCHEMY_POOL_RECYCLE: 3600
+      SQLALCHEMY_POOL_SIZE: 5
+      SQLALCHEMY_POOL_TIMEOUT: 30
+      REANA_SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://reana:reana@reana-db:5432/reana"
+      REANA_DEFAULT_QUOTA_CPU_LIMIT: 0
+      REANA_DEFAULT_QUOTA_DISK_LIMIT: 0
+      REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY: ""
+      REANA_PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY: false
   reana_server:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-server:0.95.0-alpha.3
@@ -107,6 +118,22 @@ components:
       REANA_RATELIMIT_GUEST_USER: "40 per second"
       REANA_RATELIMIT_AUTHENTICATED_USER: "40 per second"
       REANA_RATELIMIT_SLOW: "1/5 second"
+      SHARED_VOLUME_PATH: "/var/reana"
+      CERN_BASE_URL: "https://auth.cern.ch/auth/realms/cern"
+      CERN_TOKEN_URL: "https://auth.cern.ch/auth/realms/cern/protocol/openid-connect/token"
+      CERN_AUTH_URL: "https://auth.cern.ch/auth/realms/cern/protocol/openid-connect/auth"
+      CERN_USERINFO_URL: "https://auth.cern.ch/auth/realms/cern/protocol/openid-connect/userinfo"
+      DASK_AUTOSCALER_ENABLED: true
+      REANA_DASK_CLUSTER_MAX_MEMORY_LIMIT: "16Gi"
+      REANA_DASK_CLUSTER_DEFAULT_NUMBER_OF_WORKERS: 2
+      REANA_DASK_CLUSTER_MAX_NUMBER_OF_WORKERS: 20
+      REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_MEMORY: "2Gi"
+      REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_MEMORY: "8Gi"
+      REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_THREADS: 4
+      REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_THREADS: 8
+      ACCOUNTS_USERINFO_HEADERS: False
+      PROXYFIX_CONFIG: '{"x_proto":1}'
+      APP_DEFAULT_SECURE_HEADERS: "{}"
     uwsgi:
       processes: 6
       threads: 4
@@ -117,30 +144,94 @@ components:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.4
     environment:
-      SHARED_VOLUME_PATH: /var/reana
+      SHARED_VOLUME_PATH: "/var/reana"
+      SHARED_VOLUME_PATH_ROOT: "/var/reana"
       REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 10
       REANA_OPENSEARCH_ENABLED: false
       REANA_OPENSEARCH_USE_SSL: true
       REANA_OPENSEARCH_CA_CERTS: "/code/certs/ca.crt"
-      REANA_OPENSEARCH_USER: reana
+      REANA_OPENSEARCH_USER: "reana"
+      VOMSPROXY_CONTAINER_IMAGE: "docker.io/reanahub/reana-auth-vomsproxy:1.3.1"
+      RUCIO_CONTAINER_IMAGE: "docker.io/reanahub/reana-auth-rucio:1.1.1"
+      REANA_RUNTIME_BATCH_TERMINATION_GRACE_PERIOD: 120
+      WORKSPACE_DISPLAY_FILE_LIMIT: 100000
+      FORCE_GARBAGE_COLLECTION: []
+      SECRET_KEY: "CHANGE_ME"
+      SQLALCHEMY_TRACK_MODIFICATIONS: "false"
+      MQ_CONNECTION_STRING: ""
+      REANA_OPENSEARCH_HOST: "reana-opensearch-master"
+      REANA_OPENSEARCH_PORT: 9200
+      REANA_OPENSEARCH_URL_PREFIX: ""
+      REANA_OPENSEARCH_PASSWORD: "admin"
+      REANA_INGRESS_CLASS_NAME: ""
+      IMAGE_PULL_SECRETS: ""
+      DASK_AUTOSCALER_ENABLED: true
+      REANA_DASK_CLUSTER_MAX_MEMORY_LIMIT: "16Gi"
+      REANA_DASK_CLUSTER_DEFAULT_NUMBER_OF_WORKERS: 2
+      REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_MEMORY: "2Gi"
+      REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_MEMORY: "8Gi"
+      REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_THREADS: 4
   reana_workflow_engine_cwl:
     image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.2
-    environment: {}
+    environment:
+      SHARED_VOLUME_PATH: "/var/reana"
+      REANA_MOUNT_CVMFS: false
+      REANA_WORKFLOW_KERBEROS: false
   reana_workflow_engine_yadage:
     image: docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.2
-    environment: {}
+    environment:
+      REANA_MOUNT_CVMFS: false
+      REANA_WORKFLOW_KERBEROS: false
   reana_workflow_engine_serial:
     image: docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.2
-    environment: {}
+    environment:
+      REANA_MOUNT_CVMFS: false
+      POLLING_INTERVAL: 3
+      REANA_WORKFLOW_KERBEROS: false
   reana_workflow_engine_snakemake:
     image: docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.2
-    environment: {}
+    environment:
+      REANA_MOUNT_CVMFS: false
+      REANA_WORKFLOW_KERBEROS: false
+      SNAKEMAKE_MAX_PARALLEL_JOBS: 300
   reana_workflow_validator:
     image: docker.io/reanahub/reana-workflow-validator:0.95.0
     environment: {}
   reana_job_controller:
     image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.2
-    environment: {}
+    environment:
+      KRB5_CONTAINER_IMAGE: "docker.io/reanahub/reana-auth-krb5:1.0.3"
+      REANA_DB_CLOSE_POOL_CONNECTIONS: false
+      DASK_SCHEDULER_URI: "tcp://127.0.0.1:8080"
+      SHARED_VOLUME_PATH_ROOT: "/var/reana"
+      COMPUTE_BACKENDS: "kubernetes"
+      VOMSPROXY_CONTAINER_IMAGE: "docker.io/reanahub/reana-auth-vomsproxy:1.3.1"
+      VOMSPROXY_CONTAINER_NAME: "voms-proxy"
+      VOMSPROXY_CERT_CACHE_LOCATION: "/vomsproxy_cache/"
+      VOMSPROXY_CERT_CACHE_FILENAME: "x509up_proxy"
+      RUCIO_CONTAINER_IMAGE: "docker.io/reanahub/reana-auth-rucio:1.1.1"
+      RUCIO_CONTAINER_NAME: "reana-auth-rucio"
+      RUCIO_CACHE_LOCATION: "/rucio_cache/"
+      RUCIO_CFG_CACHE_FILENAME: "rucio.cfg"
+      RUCIO_CERN_BUNDLE_CACHE_FILENAME: "CERN-bundle.pem"
+      IMAGE_PULL_SECRETS: ""
+      SLURM_HEADNODE_HOSTNAME: "hpc-batch.cern.ch"
+      SLURM_HEADNODE_PORT: 22
+      SLURM_PARTITION: "inf-short"
+      SLURM_JOB_TIMELIMIT: 60
+      SLURM_SSH_TIMEOUT: 60
+      SLURM_SSH_BANNER_TIMEOUT: 60
+      SLURM_SSH_AUTH_TIMEOUT: 60
+      REANA_USER_ID: ""
+      C4P_LOGIN_NODE_HOSTNAME: "c4p-login.gridka.de"
+      C4P_LOGIN_NODE_PORT: 22
+      C4P_SSH_TIMEOUT: 60
+      C4P_SSH_BANNER_TIMEOUT: 60
+      C4P_SSH_AUTH_TIMEOUT: 60
+      C4P_CPU_CORES: 8
+      C4P_MEMORY_LIMIT: 20000
+      C4P_ADDITIONAL_REQUIREMENTS: ""
+      C4P_REANA_REL_WORKFLOW_PATH: "reana/workflows"
   reana_message_broker:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-message-broker:0.95.0-alpha.1
