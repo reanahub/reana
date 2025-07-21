@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023, 2024 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -63,6 +63,7 @@ REPO_LIST_ALL = [
     "reana-workflow-engine-yadage",
     "reana-workflow-engine-snakemake",
     "reana-workflow-validator",
+    "reana-dask-kubernetes-operator",
     "www.reana.io",
 ] + REPO_LIST_DEMO_ALL
 """All REANA git repositories."""
@@ -83,6 +84,7 @@ REPO_LIST_CLUSTER_INFRASTRUCTURE = [
     "reana-message-broker",
     "reana-server",
     "reana-workflow-controller",
+    "reana-dask-kubernetes-operator",
 ]
 """List of git repositories related to infrastructure cluster components."""
 
@@ -126,6 +128,7 @@ REPO_LIST_PYTHON_REQUIREMENTS = [
     "reana-workflow-engine-yadage",
     "reana-workflow-engine-snakemake",
     "reana-workflow-validator",
+    "reana-dask-kubernetes-operator",
 ]
 """List of cluster components that have a Python requirements file."""
 
@@ -144,6 +147,7 @@ COMPONENT_PODS = {
     "reana-server": "reana-server",
     "reana-workflow-controller": "reana-workflow-controller",
     "reana-ui": "reana-ui",
+    "reana-dask-kubernetes-operator": "reana-dask-kubernetes-operator",
 }
 """Component pods by repository name."""
 
@@ -216,6 +220,7 @@ COMPONENTS_USING_SHARED_MODULE_COMMONS = [
     "reana-workflow-engine-yadage",
     "reana-workflow-engine-snakemake",
     "reana-workflow-validator",
+    "reana-dask-kubernetes-operator",
 ]
 """List of components which use the module REANA-Commons."""
 
@@ -223,6 +228,7 @@ COMPONENTS_USING_SHARED_MODULE_DB = [
     "reana-job-controller",
     "reana-server",
     "reana-workflow-controller",
+    "reana-dask-kubernetes-operator",
 ]
 """List of components which use the module REANA-DB."""
 

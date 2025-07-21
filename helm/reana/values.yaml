@@ -199,6 +199,41 @@ dask:
   cluster_default_single_worker_threads: 4
   cluster_max_single_worker_threads: 8
 
+dask-kubernetes-operator:
+  image:
+    name: docker.io/reanahub/reana-dask-kubernetes-operator
+    tag: 0.95.0
+  serviceAccount:
+    create: false
+    # Change the reana prefix if you opted another prefix in your cluster
+    name: reana-infrastructure
+  extraEnv:
+    - name: REANA_DB_NAME
+      valueFrom:
+        configMapKeyRef:
+          name: reana-database-config
+          key: REANA_DB_NAME
+    - name: REANA_DB_HOST
+      valueFrom:
+        configMapKeyRef:
+          name: reana-database-config
+          key: REANA_DB_HOST
+    - name: REANA_DB_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: reana-database-config
+          key: REANA_DB_PORT
+    - name: REANA_DB_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: reana-db-secrets
+          key: user
+    - name: REANA_DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: reana-db-secrets
+          key: password
+
 pgbouncer:
   enabled: false
   image: docker.io/bitnami/pgbouncer:1.23.1
