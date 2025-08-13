@@ -188,6 +188,9 @@ traefik:
     enabled: true
     isDefaultClass: true
 
+kueue:
+  enabled: false
+
 dask:
   enabled: false
   autoscaler_enabled: true

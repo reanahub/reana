@@ -15,6 +15,7 @@ organisation on GitHub, in alphabetical order:
 - [Audrius Mecionis](https://orcid.org/0000-0002-3759-1663)
 - [Bruno Rosendo](https://orcid.org/0000-0002-0923-3148)
 - [Burt Holzman](https://orcid.org/0000-0001-5235-6314)
+- [Cameron McClymont](https://orcid.org/0009-0002-0176-5251)
 - [Camila Diaz](https://orcid.org/0000-0001-5543-797X)
 - [Chris Hollowell](https://orcid.org/0000-0003-1239-111X)
 - [Clemens Lange](https://orcid.org/0000-0002-3632-3157)
@@ -55,3 +56,4 @@ organisation on GitHub, in alphabetical order:
 - [Tibor Simko](https://orcid.org/0000-0001-7202-5803)
 - [Vladyslav Moisieienkov](https://orcid.org/0000-0001-9717-0775)
 - [Volodymyr Savchenko](https://github.com/volodymyrss)
+- [Xavier Tintin](https://orcid.org/0000-0002-3150-9112)
