@@ -12,6 +12,9 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+CLUSTER_MODE="local"
+KUBECONFIG_FLAG=""
+
 # Default config for configure command
 BATCH_CPU=2
 BATCH_MEMORY=3Gi
@@ -55,7 +58,7 @@ run_cmd() {
 
 # Check if Kueue is installed
 is_kueue_installed() {
-    kubectl get namespace kueue-system &>/dev/null
+    kubectl ${KUBECONFIG_FLAG} get namespace kueue-system &>/dev/null
 }
 
 # Wait for resource cleanup with timeout
@@ -67,7 +70,7 @@ wait_for_cleanup() {
 
     print_info "Waiting for $resource_type cleanup..."
     while [ $count -lt $timeout ]; do
-        if [ "$(kubectl get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | wc -l)" -eq 0 ]; then
+        if [ "$(kubectl ${KUBECONFIG_FLAG} get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | wc -l)" -eq 0 ]; then
             return 0
         fi
         sleep 1
@@ -81,11 +84,11 @@ delete_resources() {
     local resource_type="$1"
 
     # Delete all resources of this type
-    kubectl get "$resource_type" --no-headers 2>/dev/null | while read -r resource_name rest; do
+    kubectl ${KUBECONFIG_FLAG} get "$resource_type" --no-headers 2>/dev/null | while read -r resource_name rest; do
         echo "Resource name: $resource_name"
 
         echo -e "${BLUE}   - Deleting $resource_type $resource_name...${NC}"
-        kubectl delete "$resource_type" "$resource_name" --all-namespaces --ignore-not-found=true --timeout=20s
+        kubectl ${KUBECONFIG_FLAG} delete "$resource_type" "$resource_name" --all-namespaces --ignore-not-found=true --timeout=20s
     done
 }
 
@@ -95,7 +98,7 @@ force_delete_resources() {
     local namespace_flag="$2"
 
     print_info "Force deleting $resource_type resources..."
-    kubectl get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | while read -r namespace_or_name name_or_rest rest; do
+    kubectl ${KUBECONFIG_FLAG} get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | while read -r namespace_or_name name_or_rest rest; do
         if [[ "$namespace_flag" == "-A" ]]; then
             local ns="-n $namespace_or_name"
             local name="$name_or_rest"
@@ -104,8 +107,8 @@ force_delete_resources() {
             local name="$namespace_or_name"
         fi
 
-        kubectl patch "$resource_type" "$name" "$ns" --type merge --patch '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
-        kubectl delete "$resource_type" "$name" "$ns" --force --grace-period=0 --ignore-not-found=true 2>/dev/null || true
+        kubectl ${KUBECONFIG_FLAG} patch "$resource_type" "$name" "$ns" --type merge --patch '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
+        kubectl ${KUBECONFIG_FLAG} delete "$resource_type" "$name" "$ns" --force --grace-period=0 --ignore-not-found=true 2>/dev/null || true
     done
 }
 
@@ -116,7 +119,7 @@ count_and_display_resources() {
     local display_name="$3"
 
     local raw_count
-    raw_count=$(kubectl get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | wc -l)
+    raw_count=$(kubectl ${KUBECONFIG_FLAG} "${KUBECONFIG_FLAG}" get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | wc -l)
 
     # Trim the raw count output
     local count
@@ -124,7 +127,7 @@ count_and_display_resources() {
 
     if [ "$count" -gt 0 ]; then
         echo -e "${BLUE} - $display_name ($count found):${NC}"
-        kubectl get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | while read -r line; do
+        kubectl ${KUBECONFIG_FLAG} "${KUBECONFIG_FLAG}" get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | while read -r line; do
             echo -e "${YELLOW}   • $line${NC}"
         done
         return 0 # Success - resources found
@@ -164,15 +167,91 @@ verify_kueue_resources() {
     fi
 
     # Return whether resources were found
-    if [ "$has_resources" = "true" ]; then
+    if [ "$has_resources" = "true" ] && [ "$mode" = "final" ]; then
         return 0 # Resources found
     else
         return 1 # No resources found
     fi
 }
 
+create_cluster() {
+    # Configuration
+    local colima_profile="multikueue-manager"
+    local manager_cluster_name="manager"
+    local manager_cluster_config="../etc/manager-config.yaml"
+
+    # Check for existence of manager-config.yaml
+    if [ ! -f "$manager_cluster_config" ]; then
+        print_error "$manager_cluster_config file not found. Please pull it from the GitHub repo."
+        exit 1
+    fi
+
+    # Check prerequisites
+    echo -e "${BLUE}📋 Checking prerequisites...${NC}"
+
+    # Check if Homebrew is installed
+    if ! command -v brew &>/dev/null; then
+        print_error "Homebrew is not installed. Please install it first: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+        exit 1
+    fi
+    print_status "Homebrew is installed"
+
+    # Install required tools
+    echo -e "${BLUE}🔧 Installing required tools...${NC}"
+
+    tools=("colima" "kubectl" "kind" "helm")
+    for tool in "${tools[@]}"; do
+        if ! command -v "$tool" &>/dev/null; then
+            echo "Installing $tool..."
+            run_cmd brew install "$tool"
+            print_status "$tool installed"
+        else
+            print_status "$tool already installed"
+        fi
+    done
+
+    # Delete any existing manager Colima profile for a clean start
+    echo -e "${BLUE}🗑️  Deleting any existing manager Colima profile...${NC}"
+    run_cmd colima delete --profile $colima_profile --force 2>/dev/null || true
+    print_status "Existing manager Colima profile deleted"
+
+    # Start Colima with adequate resources and network access
+    echo -e "${BLUE}🐋 Starting Colima with profile: $colima_profile${NC}"
+    run_cmd colima start --profile $colima_profile \
+        --cpu 4 \
+        --memory 8 \
+        --disk 50 \
+        --network-address \
+        --kubernetes=false \
+        --runtime docker
+
+    print_status "Colima started with profile: $colima_profile"
+
+    # Wait for Colima to be ready
+    echo "Waiting for Colima to be ready..."
+    sleep 10
+
+    # Create manager cluster (no custom network needed in separate VM setup)
+    echo -e "${BLUE}🏗️  Creating manager cluster: $manager_cluster_name${NC}"
+    run_cmd kind create cluster --config "$manager_cluster_config"
+
+    print_status "Manager cluster '$manager_cluster_name' created"
+
+    # Verify cluster
+    echo -e "${BLUE}🔍 Verifying manager cluster context...${NC}"
+    run_cmd kubectl config use-context kind-$manager_cluster_name
+    run_cmd kubectl get nodes
+}
+
 # Install Kueue
 install_kueue() {
+    # Check for Kind cluster
+    # shellcheck disable=SC2086
+    if ! kubectl ${KUBECONFIG_FLAG} get nodes | grep -q "Ready"; then
+        print_error "Could not find Kind cluster."
+        exit 1
+    fi
+
     if is_kueue_installed; then
         print_status "Kueue is already installed"
         return 0
@@ -183,13 +262,14 @@ install_kueue() {
         --version=0.13.2 \
         --namespace kueue-system \
         --create-namespace \
+        ${KUBECONFIG_FLAG} \
         --wait --timeout 300s
 
     # Use `check_crds_installed "false"` to verify installation
     if check_crds_installed "check"; then
         print_status "Kueue installed successfully"
     else
-        print_error "Kueue was installed, but some CRDs are missing. Please run '$0 remove' and try installing again."
+        print_error "There were problems while installing Kueue. It may not be installed or some CRDs may be missing. Run '$0 status' to check. If only CRDs are missing, please run '$0 remove' and try installing again."
     fi
 }
 
@@ -204,7 +284,7 @@ configure_kueue() {
     print_info "Batch : ${BATCH_CPU} CPU | ${BATCH_MEMORY} memory"
     print_info "Job   : ${JOB_CPU} CPU | ${JOB_MEMORY} memory"
 
-    cat <<EOF | kubectl apply -f -
+    cat <<EOF | kubectl ${KUBECONFIG_FLAG} apply -f -
 ---
 apiVersion: kueue.x-k8s.io/v1beta1
 kind: ResourceFlavor
@@ -225,6 +305,8 @@ metadata:
   name: "cluster-queue-reana-run-batch"
 spec:
   namespaceSelector: {}
+  admissionChecks:
+    - remote-multikueue-admission-check
   resourceGroups:
   - coveredResources: ["cpu", "memory"]
     flavors:
@@ -249,6 +331,8 @@ metadata:
   name: "cluster-queue-reana-run-job"
 spec:
   namespaceSelector: {}
+  admissionChecks:
+    - remote-multikueue-admission-check
   resourceGroups:
   - coveredResources: ["cpu", "memory"]
     flavors:
@@ -261,15 +345,16 @@ spec:
 EOF
 
     print_status "ClusterQueue, LocalQueue, and ResourceFlavor applied"
-    sleep 2
+    print_info "Verifying resources..."
+    sleep 3
+
     verify_kueue_resources "check"
-    print_status "Kueue resources verified"
 }
 
 # Handle workload removal/preservation
 remove_workloads() {
     local workload_count
-    workload_count=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l)
+    workload_count=$(kubectl ${KUBECONFIG_FLAG} get workloads -A --no-headers 2>/dev/null | wc -l)
 
     print_section "🚧 Removing active Kueue workloads and associated jobs..."
 
@@ -279,15 +364,15 @@ remove_workloads() {
 
         # First, find and remove the associated Jobs to prevent workload recreation
         print_info "Identifying and removing parent Jobs..."
-        kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace) \(.metadata.name)"' | while read -r namespace job_name; do
+        kubectl ${KUBECONFIG_FLAG} get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace) \(.metadata.name)"' | while read -r namespace job_name; do
             if [ -n "$namespace" ] && [ -n "$job_name" ]; then
                 echo -e "${BLUE}   - Deleting Job $job_name in namespace $namespace...${NC}"
-                kubectl delete job "$job_name" -n "$namespace" --ignore-not-found=true --timeout=30s
+                kubectl ${KUBECONFIG_FLAG} delete job "$job_name" -n "$namespace" --ignore-not-found=true --timeout=30s
             fi
         done
 
         # Also remove any jobs that might have workloads associated (broader search)
-        kubectl get workloads -A --no-headers 2>/dev/null | while read -r namespace workload_name rest; do
+        kubectl ${KUBECONFIG_FLAG} get workloads -A --no-headers 2>/dev/null | while read -r namespace workload_name rest; do
             # Extract potential job name from workload name (workloads are often named after their jobs)
             # Common pattern: job-<jobname>-<hash> becomes workload job-<jobname>-<hash>-<suffix>
             local potential_job_name
@@ -300,9 +385,9 @@ remove_workloads() {
             fi
 
             # Check if a job with this name exists
-            if kubectl get job "$potential_job_name" -n "$namespace" &>/dev/null; then
+            if kubectl ${KUBECONFIG_FLAG} get job "$potential_job_name" -n "$namespace" &>/dev/null; then
                 echo -e "${BLUE}   - Deleting associated Job $potential_job_name in namespace $namespace...${NC}"
-                kubectl delete job "$potential_job_name" -n "$namespace" --ignore-not-found=true --timeout=30s
+                kubectl ${KUBECONFIG_FLAG} delete job "$potential_job_name" -n "$namespace" --ignore-not-found=true --timeout=30s
             fi
         done
 
@@ -316,9 +401,9 @@ remove_workloads() {
         local count=0
         while [ $count -lt $cleanup_timeout ]; do
             local remaining_workloads
-            remaining_workloads=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l)
+            remaining_workloads=$(kubectl ${KUBECONFIG_FLAG} get workloads -A --no-headers 2>/dev/null | wc -l)
             local remaining_kueue_jobs
-            remaining_kueue_jobs=$(kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null)' 2>/dev/null | jq -s length 2>/dev/null || echo "0")
+            remaining_kueue_jobs=$(kubectl ${KUBECONFIG_FLAG} get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null)' 2>/dev/null | jq -s length 2>/dev/null || echo "0")
 
             if [ "$remaining_workloads" -eq 0 ] && [ "$remaining_kueue_jobs" -eq 0 ]; then
                 break
@@ -334,26 +419,26 @@ remove_workloads() {
 
         # Force cleanup if needed
         local remaining
-        remaining=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l)
+        remaining=$(kubectl ${KUBECONFIG_FLAG} get workloads -A --no-headers 2>/dev/null | wc -l)
 
         if [ "$remaining" -gt 0 ]; then
             print_warning "Some workloads still exist, forcing deletion..."
             force_delete_resources "workloads" "-A"
 
             # Force delete any remaining Kueue jobs
-            kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace) \(.metadata.name)"' | while read -r namespace job_name; do
+            kubectl ${KUBECONFIG_FLAG} get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace) \(.metadata.name)"' | while read -r namespace job_name; do
                 if [ -n "$namespace" ] && [ -n "$job_name" ]; then
                     echo -e "${BLUE}   - Force deleting Job $job_name in namespace $namespace...${NC}"
-                    kubectl patch job "$job_name" -n "$namespace" --type merge --patch '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
-                    kubectl delete job "$job_name" -n "$namespace" --force --grace-period=0 --ignore-not-found=true 2>/dev/null || true
+                    kubectl ${KUBECONFIG_FLAG} patch job "$job_name" -n "$namespace" --type merge --patch '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
+                    kubectl ${KUBECONFIG_FLAG} delete job "$job_name" -n "$namespace" --force --grace-period=0 --ignore-not-found=true 2>/dev/null || true
                 fi
             done
         fi
 
         # Final check
-        remaining=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l)
+        remaining=$(kubectl ${KUBECONFIG_FLAG} get workloads -A --no-headers 2>/dev/null | wc -l)
         local remaining_jobs
-        remaining_jobs=$(kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null)' 2>/dev/null | jq -s length 2>/dev/null || echo "0")
+        remaining_jobs=$(kubectl ${KUBECONFIG_FLAG} get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null)' 2>/dev/null | jq -s length 2>/dev/null || echo "0")
 
         if [ "$remaining" -eq 0 ] && [ "$remaining_jobs" -eq 0 ]; then
             print_status "All workloads and associated jobs removed"
@@ -361,11 +446,11 @@ remove_workloads() {
             print_warning "$remaining workloads and $remaining_jobs Kueue jobs still exist after cleanup"
             if [ "$remaining" -gt 0 ]; then
                 print_info "Remaining workloads:"
-                kubectl get workloads -A 2>/dev/null || true
+                kubectl ${KUBECONFIG_FLAG} get workloads -A 2>/dev/null || true
             fi
             if [ "$remaining_jobs" -gt 0 ]; then
                 print_info "Remaining Kueue jobs:"
-                kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace)\t\(.metadata.name)"' 2>/dev/null || true
+                kubectl ${KUBECONFIG_FLAG} get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace)\t\(.metadata.name)"' 2>/dev/null || true
             fi
         fi
     else
@@ -523,9 +608,9 @@ check_crds_installed() {
     local crd_count=0
 
     for crd in "${kueue_crds[@]}"; do
-        if kubectl get crd "$crd" &>/dev/null; then
+        if kubectl ${KUBECONFIG_FLAG} get crd "$crd" &>/dev/null; then
             local version
-            version=$(kubectl get crd "$crd" -o jsonpath='{.spec.versions[0].name}' 2>/dev/null || echo "unknown")
+            version=$(kubectl ${KUBECONFIG_FLAG} get crd "$crd" -o jsonpath='{.spec.versions[0].name}' 2>/dev/null || echo "unknown")
             if [ "$print_output" = "true" ]; then
                 print_status "$crd (version: $version)"
             fi
@@ -544,26 +629,131 @@ check_crds_installed() {
     fi
 }
 
+connect_remote_cluster() {
+    # Configure Kueue to work with minimal workload types only.
+    # This seems to be required for MultiKueue to work?
+    echo -e "${BLUE}⚙️  Configuring Kueue for minimal workload types...${NC}"
+
+    # Create ConfigMap to disable external integrations validation
+    echo -e "${YELLOW}$ kubectl create configmap kueue-manager-config -n kueue-system --from-literal=controller_manager_config.yaml='<YAML_CONFIG>' --dry-run=client -o yaml | kubectl apply -f -${NC}"
+    kubectl create configmap kueue-manager-config -n kueue-system --from-literal=controller_manager_config.yaml='
+    apiVersion: config.kueue.x-k8s.io/v1beta1
+    kind: Configuration
+    namespace: kueue-system
+    health:
+      healthProbeBindAddress: :8081
+    metrics:
+      bindAddress: :8080
+    webhook:
+      port: 9443
+    leaderElection:
+      leaderElect: true
+      resourceName: c1f6bfd2.kueue.x-k8s.io
+    controller:
+      groupKindConcurrency:
+        Job.batch: 5
+        Pod.v1: 5
+        Workload.kueue.x-k8s.io: 5
+        LocalQueue.kueue.x-k8s.io: 1
+        ClusterQueue.kueue.x-k8s.io: 1
+        ResourceFlavor.kueue.x-k8s.io: 1
+    integrations:
+      frameworks:
+        - "batch/job"
+      podOptions:
+        namespaceSelector:
+          matchExpressions:
+          - key: kubernetes.io/metadata.name
+            operator: NotIn
+            values: [ kube-system, kueue-system ]
+    ' --dry-run=client -o yaml | kubectl apply -f -
+
+    # Restart Kueue controller to pick up the new config
+    run_cmd kubectl rollout restart deployment/kueue-controller-manager -n kueue-system
+
+    print_status "Kueue configured for minimal workload types (Jobs only)"
+
+    print_section "🔗 Connecting to Remote Cluster..."
+    # Use the kubeconfig file name (without the file extension) as the secret name
+    local kubeconfig_name
+    kubeconfig_name="$(basename "$REMOTE_KUBECONFIG" .yaml)"
+
+    local secret_name="remote-secret-$kubeconfig_name"
+
+    # Check if secret already exists
+    if kubectl get secret "$secret_name" -n kueue-system &>/dev/null; then
+        print_warning "Secret $secret_name already exists. Overwriting..."
+    else
+        print_info "Creating secret $secret_name"
+    fi
+
+    kubectl create secret generic "$secret_name" -n kueue-system \
+        --from-file=kubeconfig="$REMOTE_KUBECONFIG" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    print_status "Remote cluster secret created in manager cluster."
+
+    run_cmd kubectl apply -f - <<EOF
+---
+# MultiKueueCluster for remote worker
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: MultiKueueCluster
+metadata:
+  name: remote-cluster-$kubeconfig_name
+  namespace: kueue-system
+spec:
+  kubeConfig:
+    locationType: Secret
+    location: $secret_name
+---
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: MultiKueueConfig
+metadata:
+  name: remote-multikueue-config-$kubeconfig_name
+  namespace: kueue-system
+spec:
+  clusters:
+  - remote-cluster-$kubeconfig_name
+---
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: AdmissionCheck
+metadata:
+  name: remote-multikueue-admission-check
+  namespace: kueue-system
+spec:
+  controllerName: kueue.x-k8s.io/multikueue
+  parameters:
+    apiGroup: kueue.x-k8s.io
+    kind: MultiKueueConfig
+    name: remote-multikueue-config-$kubeconfig_name
+EOF
+
+    print_status "MultiKueueCluster connection created using kubeconfig: $REMOTE_KUBECONFIG"
+}
+
 # Status check for Kueue
 status_kueue() {
     print_section "📊 Kueue Status Report"
     echo ""
 
     # Check if Kueue is enabled in values.yaml
-    print_section "⚙️  Configuration Check"
-    local values_file="helm/reana/values.yaml"
-    local kueue_enabled_in_config=false
-    if [[ -f "$values_file" ]]; then
-        if grep -q "kueue:" "$values_file" && grep -A1 "kueue:" "$values_file" | grep -q "enabled: true"; then
-            print_status "Kueue is enabled in values.yaml"
-            kueue_enabled_in_config=true
+    if [ "$CLUSTER_MODE" = "local" ]; then
+        print_section "⚙️  Configuration Check"
+        local values_file
+        values_file="$(dirname "$0")/../helm/reana/values.yaml"
+        local kueue_enabled_in_config=false
+        if [[ -f "$values_file" ]]; then
+            if grep -q "kueue:" "$values_file" && grep -A1 "kueue:" "$values_file" | grep -q "enabled: true"; then
+                print_status "Kueue is enabled in values.yaml"
+                kueue_enabled_in_config=true
+            else
+                print_warning "Kueue is not enabled in values.yaml"
+            fi
         else
-            print_warning "Kueue is not enabled in values.yaml"
+            print_error "values.yaml file not found at $values_file"
         fi
-    else
-        print_error "values.yaml file not found at $values_file"
+        echo ""
     fi
-    echo ""
 
     # Check Kueue installation
     print_section "🔧 Installation Status"
@@ -576,12 +766,12 @@ status_kueue() {
             version=$(helm list -n kueue-system -o json | jq -r '.[] | select(.name=="kueue") | .app_version' 2>/dev/null || echo "unknown")
             print_info "Helm release found (version: $version)"
         else
-            print_warning "Kueue namespace exists but Helm release not found"
+            print_warning "Kueue namespace exists but Helm release not found (maybe Kueue was installed via kubectl?)"
         fi
 
         # Check pod status in kueue-system namespace
         print_info "Pod status in kueue-system:"
-        kubectl get pods -n kueue-system --no-headers 2>/dev/null | while read -r name ready status age; do
+        kubectl ${KUBECONFIG_FLAG} get pods -n kueue-system --no-headers 2>/dev/null | while read -r name ready status age; do
             if [[ "$status" == "Running" ]]; then
                 echo -e "${GREEN}   ✅ $name: $status ($ready ready)${NC}"
             else
@@ -605,11 +795,11 @@ status_kueue() {
     # Check ResourceFlavors
     print_section "🎨 ResourceFlavors"
     local rf_count
-    rf_count=$(kubectl get resourceflavors --no-headers 2>/dev/null | wc -l)
+    rf_count=$(kubectl ${KUBECONFIG_FLAG} get resourceflavors --no-headers 2>/dev/null | wc -l)
 
     if [ "$rf_count" -gt 0 ]; then
         print_info "Found $rf_count ResourceFlavor(s):"
-        kubectl get resourceflavors --no-headers 2>/dev/null | while read -r name age; do
+        kubectl ${KUBECONFIG_FLAG} get resourceflavors --no-headers 2>/dev/null | while read -r name age; do
             echo -e "${BLUE}   • $name (age: $age)${NC}"
         done
     else
@@ -620,18 +810,18 @@ status_kueue() {
     # Check ClusterQueues
     print_section "🏢 ClusterQueues"
     local cq_count
-    cq_count=$(kubectl get clusterqueues --no-headers 2>/dev/null | wc -l)
+    cq_count=$(kubectl ${KUBECONFIG_FLAG} get clusterqueues --no-headers 2>/dev/null | wc -l)
 
     if [ "$cq_count" -gt 0 ]; then
         print_info "Found $cq_count ClusterQueue(s):"
-        kubectl get clusterqueues -o custom-columns="NAME:.metadata.name,COHORT:.spec.cohort,PENDING:.status.pendingWorkloads,ADMITTED:.status.admittedWorkloads" --no-headers 2>/dev/null | while read -r line; do
+        kubectl ${KUBECONFIG_FLAG} get clusterqueues -o custom-columns="NAME:.metadata.name,COHORT:.spec.cohort,PENDING:.status.pendingWorkloads,ADMITTED:.status.admittedWorkloads" --no-headers 2>/dev/null | while read -r line; do
             echo -e "${BLUE}   • $line${NC}"
         done
 
         # Show resource quotas for each ClusterQueue
         echo ""
         print_info "Resource quotas per ClusterQueue:"
-        kubectl get clusterqueues -o json 2>/dev/null | jq -r '.items[] | "\(.metadata.name): " + (.spec.resourceGroups[0].flavors[0].resources | map("\(.name)=\(.nominalQuota)") | join(", "))' | while read -r line; do
+        kubectl ${KUBECONFIG_FLAG} get clusterqueues -o json 2>/dev/null | jq -r '.items[] | "\(.metadata.name): " + (.spec.resourceGroups[0].flavors[0].resources | map("\(.name)=\(.nominalQuota)") | join(", "))' | while read -r line; do
             echo -e "${NC}   📊 $line${NC}"
         done
     else
@@ -642,11 +832,11 @@ status_kueue() {
     # Check LocalQueues
     print_section "🏪 LocalQueues"
     local lq_count
-    lq_count=$(kubectl get localqueues -A --no-headers 2>/dev/null | wc -l)
+    lq_count=$(kubectl ${KUBECONFIG_FLAG} get localqueues -A --no-headers 2>/dev/null | wc -l)
 
     if [ "$lq_count" -gt 0 ]; then
         print_info "Found $lq_count LocalQueue(s):"
-        kubectl get localqueues -A -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,CLUSTERQUEUE:.spec.clusterQueue,PENDING:.status.pendingWorkloads,ADMITTED:.status.admittedWorkloads" --no-headers 2>/dev/null | while read -r line; do
+        kubectl ${KUBECONFIG_FLAG} get localqueues -A -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,CLUSTERQUEUE:.spec.clusterQueue,PENDING:.status.pendingWorkloads,ADMITTED:.status.admittedWorkloads" --no-headers 2>/dev/null | while read -r line; do
             echo -e "${BLUE}   • $line${NC}"
         done
     else
@@ -657,11 +847,11 @@ status_kueue() {
     # Check active Workloads
     print_section "⚡ Active Workloads"
     local workload_count
-    workload_count=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l)
+    workload_count=$(kubectl ${KUBECONFIG_FLAG} get workloads -A --no-headers 2>/dev/null | wc -l)
 
     if [ "$workload_count" -gt 0 ]; then
         print_info "Found $workload_count active workload(s):"
-        kubectl get workloads -A -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,QUEUE:.spec.queueName,ADMITTED:.status.conditions[?(@.type=='Admitted')].status" --no-headers 2>/dev/null | while read -r line; do
+        kubectl ${KUBECONFIG_FLAG} get workloads -A -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,QUEUE:.spec.queueName,ADMITTED:.status.conditions[?(@.type=='Admitted')].status" --no-headers 2>/dev/null | while read -r line; do
             if [[ "$line" == *"True"* ]]; then
                 echo -e "${GREEN}   ✅ $line${NC}"
             else
@@ -676,11 +866,11 @@ status_kueue() {
     # Check Kueue-managed Jobs
     print_section "🎯 Kueue-managed Jobs"
     local kueue_jobs
-    kueue_jobs=$(kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null)' 2>/dev/null | jq -s length 2>/dev/null || echo "0")
+    kueue_jobs=$(kubectl ${KUBECONFIG_FLAG} get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null)' 2>/dev/null | jq -s length 2>/dev/null || echo "0")
 
     if [ "$kueue_jobs" -gt 0 ]; then
         print_info "Found $kueue_jobs Kueue-managed job(s):"
-        kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace) \(.metadata.name) \(.metadata.labels["kueue.x-k8s.io/queue-name"] // .metadata.annotations["kueue.x-k8s.io/queue-name"] // "N/A") \(.status.conditions[-1].type // "Unknown")"' 2>/dev/null | while read -r namespace name queue status; do
+        kubectl ${KUBECONFIG_FLAG} get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace) \(.metadata.name) \(.metadata.labels["kueue.x-k8s.io/queue-name"] // .metadata.annotations["kueue.x-k8s.io/queue-name"] // "N/A") \(.status.conditions[-1].type // "Unknown")"' 2>/dev/null | while read -r namespace name queue status; do
             if [[ "$status" == "Complete" ]]; then
                 echo -e "${GREEN}   ✅ $namespace/$name (queue: $queue, status: $status)${NC}"
             elif [[ "$status" == "Failed" ]]; then
@@ -697,7 +887,7 @@ status_kueue() {
     # Check recent Kueue events
     print_section "📰 Recent Kueue Events (last 10)"
     local events
-    events=$(kubectl get events -A --field-selector reason=Admitted,reason=QuotaReserved,reason=Preempted,reason=Evicted --sort-by='.lastTimestamp' 2>/dev/null | tail -10)
+    events=$(kubectl ${KUBECONFIG_FLAG} get events -A --field-selector reason=Admitted,reason=QuotaReserved,reason=Preempted,reason=Evicted --sort-by='.lastTimestamp' 2>/dev/null | tail -10)
 
     if [[ -n "$events" && "$events" != *"No resources found"* ]]; then
         echo "$events" | while IFS= read -r line; do
@@ -716,20 +906,40 @@ status_kueue() {
     fi
     echo ""
 
+    # Check connections to remote clusters
+    if [ "$CLUSTER_MODE" = "local" ]; then
+        print_section "🌍 Remote Cluster Connections"
+
+        local remote_clusters
+        remote_clusters=$(kubectl get multikueueconfigs -n kueue-system --no-headers 2>/dev/null | wc -l)
+
+        if [ "$remote_clusters" -gt 0 ]; then
+            print_info "Found $remote_clusters remote cluster(s):"
+            kubectl get multikueueconfigs -n kueue-system --no-headers 2>/dev/null | while read -r line; do
+                # Remove leading 'remote-multikueue-config-' from each line
+                line=${line#remote-multikueue-config-}
+                echo -e "${BLUE}   • $line${NC}"
+            done
+        else
+            print_info "No remote clusters connected"
+        fi
+        echo ""
+    fi
+
     # Summary
     print_section "📝 Summary"
     if is_kueue_installed; then
         local rf_count cq_count lq_count wl_count
-        rf_count=$(kubectl get resourceflavors --no-headers 2>/dev/null | wc -l || echo 0)
+        rf_count=$(kubectl ${KUBECONFIG_FLAG} get resourceflavors --no-headers 2>/dev/null | wc -l || echo 0)
         rf_count=$(echo "$rf_count" | tr -d '[:space:]')
 
-        cq_count=$(kubectl get clusterqueues --no-headers 2>/dev/null | wc -l || echo 0)
+        cq_count=$(kubectl ${KUBECONFIG_FLAG} get clusterqueues --no-headers 2>/dev/null | wc -l || echo 0)
         cq_count=$(echo "$cq_count" | tr -d '[:space:]')
 
-        lq_count=$(kubectl get localqueues -A --no-headers 2>/dev/null | wc -l || echo 0)
+        lq_count=$(kubectl ${KUBECONFIG_FLAG} get localqueues -A --no-headers 2>/dev/null | wc -l || echo 0)
         lq_count=$(echo "$lq_count" | tr -d '[:space:]')
 
-        wl_count=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l || echo 0)
+        wl_count=$(kubectl ${KUBECONFIG_FLAG} get workloads -A --no-headers 2>/dev/null | wc -l || echo 0)
         wl_count=$(echo "$wl_count" | tr -d '[:space:]')
 
         if [ "$rf_count" -gt 0 ] && [ "$cq_count" -gt 0 ] && [ "$lq_count" -gt 0 ]; then
@@ -749,7 +959,60 @@ status_kueue() {
         fi
     else
         print_error "Kueue is not installed"
-        print_info "Run '$0 install' to install Kueue"
+        print_info "Run '$0 install$(if [ "$CLUSTER_MODE" = "remote" ]; then echo " --remote"; fi)' to install Kueue"
+    fi
+}
+
+check_remote_cluster_connection() {
+    local errors_present=false
+    print_section "Checking Remote MultiKueue Setup"
+
+    # Test connection to remote cluster
+    print_info "Testing connection to remote cluster..."
+    if ! run_cmd kubectl --kubeconfig="$REMOTE_KUBECONFIG" get namespaces >/dev/null 2>&1; then
+        print_error "Cannot connect to remote cluster. Please check your kubeconfig."
+        errors_present=true
+    else
+        print_status "Connected to remote cluster."
+
+        # Verify that the same namespace exists here and on the remote cluster
+        print_info "Verifying Namespace setup..."
+        if ! kubectl get namespace default >/dev/null 2>&1; then
+            print_error "Namespace 'default' not found on manager cluster."
+            errors_present=true
+        fi
+        if ! kubectl --kubeconfig="$REMOTE_KUBECONFIG" get namespace default >/dev/null 2>&1; then
+            print_error "Namespace 'default' not found on remote cluster."
+            errors_present=true
+        fi
+
+        # Verify that the same LocalQueue exists here and on the remote cluster
+        print_info "Verifying LocalQueue setup..."
+        if ! kubectl get localqueue local-queue-batch >/dev/null 2>&1; then
+            print_error "LocalQueue 'local-queue-batch' not found on manager cluster."
+            errors_present=true
+        fi
+        if ! kubectl --kubeconfig="$REMOTE_KUBECONFIG" get localqueue local-queue-batch >/dev/null 2>&1; then
+            print_error "LocalQueue 'local-queue-batch' not found on remote cluster."
+            errors_present=true
+        fi
+        if ! kubectl get localqueue local-queue-job >/dev/null 2>&1; then
+            print_error "LocalQueue 'local-queue-job' not found on manager cluster."
+            errors_present=true
+        fi
+        if ! kubectl --kubeconfig="$REMOTE_KUBECONFIG" get localqueue local-queue-job >/dev/null 2>&1; then
+            print_error "LocalQueue 'local-queue-job' not found on remote cluster."
+            errors_present=true
+        fi
+
+        print_status "Remote MultiKueue configuration verified."
+        echo ""
+    fi
+
+    if [ "$errors_present" = "true" ]; then
+        return 1
+    else
+        return 0
     fi
 }
 
@@ -762,16 +1025,16 @@ monitor_kueue() {
         echo "========================================"
         echo
         echo "=== Kueue Workloads ==="
-        kubectl get workloads -A 2>/dev/null || echo "No workloads found"
+        kubectl ${KUBECONFIG_FLAG} get workloads -A 2>/dev/null || echo "No workloads found"
         echo
         echo "=== Jobs with Kueue Labels/Annotations ==="
-        kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace)\t\(.metadata.name)\t\(.metadata.labels["kueue.x-k8s.io/queue-name"] // .metadata.annotations["kueue.x-k8s.io/queue-name"] // "N/A")"' 2>/dev/null || echo "No Kueue-managed jobs"
+        kubectl ${KUBECONFIG_FLAG} get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace)\t\(.metadata.name)\t\(.metadata.labels["kueue.x-k8s.io/queue-name"] // .metadata.annotations["kueue.x-k8s.io/queue-name"] // "N/A")"' 2>/dev/null || echo "No Kueue-managed jobs"
         echo
         echo "=== Queue Status ==="
-        kubectl get localqueues,clusterqueues -A 2>/dev/null
+        kubectl ${KUBECONFIG_FLAG} get localqueues,clusterqueues -A 2>/dev/null
         echo
         echo "=== Recent Events (Kueue-related) ==="
-        kubectl get events -A --field-selector reason=Admitted,reason=QuotaReserved,reason=Preempted --sort-by='.lastTimestamp' 2>/dev/null | tail -5
+        kubectl ${KUBECONFIG_FLAG} get events -A --field-selector reason=Admitted,reason=QuotaReserved,reason=Preempted --sort-by='.lastTimestamp' 2>/dev/null | tail -5
         sleep "${MONITOR_REFRESH_INTERVAL_SECS}s"
     done
 }
@@ -901,6 +1164,16 @@ usage() {
         echo "    - Cluster: 5 nodes × 8 CPUs each = 40 total CPUs"
         echo "    - Allocation: 3 CPUs for batch jobs, 30 CPUs for regular jobs, (7 reserved for system)"
         ;;
+    connect-remote)
+        echo "USAGE:"
+        echo "  $0 connect-remote [--help]"
+        echo ""
+        echo "DESCRIPTION:"
+        echo "  Connect to remote cluster (requires REMOTE_KUBECONFIG environment variable to be set)"
+        echo ""
+        echo "OPTIONS:"
+        echo "  --help, -h           : Display this help message"
+        ;;
     monitor)
         echo "USAGE:"
         echo "  $0 monitor [OPTIONS] [--help]"
@@ -926,6 +1199,26 @@ usage() {
         echo "  --workloads          : Remove active workloads only"
         echo "  --help, -h           : Display this help message"
         ;;
+    status)
+        echo "USAGE:"
+        echo "  $0 status [--help]"
+        echo ""
+        echo "DESCRIPTION:"
+        echo "  Check Kueue installation status"
+        echo ""
+        echo "OPTIONS:"
+        echo "  --help, -h           : Display this help message"
+        ;;
+    test-remote)
+        echo "USAGE:"
+        echo "  $0 test-remote [--help]"
+        echo ""
+        echo "DESCRIPTION:"
+        echo "  Test MultiKueue setup with remote cluster using a sample job"
+        echo ""
+        echo "OPTIONS:"
+        echo "  --help, -h           : Display this help message"
+        ;;
     *)
         echo "USAGE:"
         echo "  $0 <command> [options]"
@@ -933,10 +1226,15 @@ usage() {
         echo "COMMANDS:"
         echo "  install              : Install Kueue via Helm"
         echo "  configure            : Configure queues, quotas, and flavors"
+        echo "  connect-remote       : Connect to remote cluster (requires REMOTE_KUBECONFIG environment variable to be set)"
         echo "  monitor              : Monitor active Kueue workloads and jobs"
         echo "  remove               : Remove Kueue components"
+        echo "  status               : Check Kueue installation status"
+        echo "  test-remote          : Test MultiKueue setup with remote cluster using a sample job"
         echo ""
         echo "GLOBAL OPTIONS:"
+        echo "  --local              : Operate on local cluster (default)"
+        echo "  --remote             : Operate on remote cluster (requires REMOTE_KUBECONFIG environment variable to be set)"
         echo "  --help, -h           : Show help for command or general usage"
         echo ""
         echo "EXAMPLES:"
@@ -970,6 +1268,31 @@ HELP_REQUESTED=false
 # Parse options based on command
 while [[ $# -gt 0 ]]; do
     case $1 in
+    --local)
+        CLUSTER_MODE="local"
+        ;;
+    --remote)
+        if [ "$COMMAND" = "create-manager-cluster" ] || [ "$COMMAND" = "connect-remote" ] || [ "$COMMAND" = "test-remote" ]; then
+            print_error "--remote is not valid for the '$COMMAND' command"
+            VALIDATION_ERRORS=1
+        fi
+
+        # Check if REMOTE_KUBECONFIG is provided
+        if [ -z "${REMOTE_KUBECONFIG:-}" ]; then
+            print_error "REMOTE_KUBECONFIG environment variable must be set"
+            print_info "Usage: export REMOTE_KUBECONFIG=/path/to/kubeconfig"
+            exit 1
+        fi
+
+        # Verify kubeconfig file exists
+        if [ ! -f "$REMOTE_KUBECONFIG" ]; then
+            print_error "Kubeconfig file not found: $REMOTE_KUBECONFIG"
+            exit 1
+        fi
+
+        CLUSTER_MODE="remote"
+        KUBECONFIG_FLAG="--kubeconfig=$REMOTE_KUBECONFIG"
+        ;;
     --batch-cpu)
         if [[ "$COMMAND" != "configure" ]]; then
             print_error "--batch-cpu is only valid for the 'configure' command"
@@ -1110,11 +1433,17 @@ fi
 
 # Execute command
 case $COMMAND in
+create-manager-cluster)
+    create_cluster
+    ;;
 install)
     install_kueue
     ;;
 configure)
     configure_kueue
+    ;;
+connect-remote)
+    connect_remote_cluster
     ;;
 monitor)
     monitor_kueue
@@ -1123,7 +1452,19 @@ remove)
     handle_remove
     ;;
 status)
+    if [[ "$CLUSTER_MODE" = "remote" ]]; then
+        check_remote_cluster_connection
+    fi
     status_kueue
+    ;;
+test-remote)
+    # Only continue if no errors in check_remote_cluster_connection
+    if ! check_remote_cluster_connection; then
+        print_error "Remote cluster connection check failed. Aborting test."
+        exit 1
+    fi
+
+    ./test-remote-multikueue.sh
     ;;
 help | h | --help | -h)
     usage
