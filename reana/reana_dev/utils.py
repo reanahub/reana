@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023, 2024 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -1071,3 +1071,29 @@ def get_commit_pr_suffix(component):
     except Exception as e:
         display_message(f"Could not find next available PR number: {e}", component)
     return pr_number_suffix
+
+
+def print_colima_start_help():
+    """Print information how to start Colima with K3s."""
+    print(
+        """
+Please start a Colima VM with Kubernetes option and with appropriate
+architecture, disk, memory, etc options for your laptop.
+
+Here is an example for macOS:
+
+$ colima start \\
+    --activate \\
+    --arch aarch64 \\
+    --cpu 8 \\
+    --disk 300 \\
+    --kubernetes \\
+    --memory 18 \\
+    --mount-type virtiofs \\
+    --profile default \\
+    --verbose \\
+    --vm-type vz \\
+    --vz-rosetta
+
+This script does not do this automatically. Exiting."""
+    )

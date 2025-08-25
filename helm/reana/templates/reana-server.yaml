@@ -219,6 +219,17 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-db-secrets
                 key: password
+          {{- if .Values.kueue.enabled }}
+          - name: KUEUE_ENABLED
+            value: "True"
+          - name: KUEUE_AVAILABLE_QUEUES
+            value: {{ .Values.kueue.queues | toJson | quote }}
+          {{- end }}
+          # Only if defaultNode and defaultQueue are both defined
+          {{- if and .Values.kueue.enabled .Values.kueue.defaultNode .Values.kueue.defaultQueue }}
+          - name: KUEUE_DEFAULT_QUEUE
+            value: {{ .Values.kueue.defaultNode }}-{{ .Values.kueue.defaultQueue }}
+          {{- end }}
           - name: REANA_NOTIFICATIONS_ENABLED
             value: "{{ .Values.notifications.enabled }}"
           {{- if .Values.notifications.enabled }}

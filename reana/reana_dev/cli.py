@@ -17,6 +17,7 @@ from reana.reana_dev.git import git_commands_list
 from reana.reana_dev.helm import helm_commands_list
 from reana.reana_dev.kind import kind_commands_list
 from reana.reana_dev.kubectl import kubectl_commands_list
+from reana.reana_dev.kueue import kueue_commands_list
 from reana.reana_dev.python import python_commands_list
 from reana.reana_dev.release import release_commands_list
 from reana.reana_dev.run import run_commands_list
@@ -199,6 +200,7 @@ for cmd in (
     + docker_commands_list
     + kind_commands_list
     + kubectl_commands_list
+    + kueue_commands_list
     + git_commands_list
     + python_commands_list
     + run_commands_list

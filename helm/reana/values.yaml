@@ -190,6 +190,12 @@ traefik:
 
 kueue:
   enabled: false
+  defaultNode: local
+  defaultQueue: default
+  queues:
+    - name: default
+      node: local
+      description: "CERN default queue"
 
 dask:
   enabled: false
