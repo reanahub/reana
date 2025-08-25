@@ -189,7 +189,7 @@ traefik:
     isDefaultClass: true
 
 kueue:
-  enabled: false
+  enabled: true
 
 dask:
   enabled: false

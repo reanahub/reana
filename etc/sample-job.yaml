@@ -1,0 +1,57 @@
+---
+# Sample Job for testing MultiKueue functionality
+# This job can be submitted to different queues for testing various clusters
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: remote-test-job
+  namespace: default
+  labels:
+    kueue.x-k8s.io/queue-name: job
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    spec:
+      nodeSelector:
+        site: somewhere
+      containers:
+        - name: test-container
+          image: busybox:latest
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "==================================="
+              echo "🚀 MultiKueue Test Job Started!"
+              echo "==================================="
+              echo ""
+              echo "🎯 Hello from MultiKueue cluster!"
+              echo ""
+              echo "Execution Info:"
+              echo "- Hostname: $(hostname)"
+              echo "- Current time: $(date)"
+              echo "- Namespace: $KUBERNETES_NAMESPACE"
+              echo ""
+              echo "Performing some work simulation..."
+              for i in $(seq 1 10); do
+                echo "Processing item $i/10..."
+                sleep 3
+              done
+              echo ""
+              echo "==================================="
+              echo "✅ MultiKueue Test Job Completed!"
+              echo "==================================="
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          env:
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      restartPolicy: Never
+  backoffLimit: 3
