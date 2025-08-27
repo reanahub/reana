@@ -274,7 +274,7 @@ opensearch:
   singleNode: true # advanced storage configuration needed if set to false
   config:
     opensearch.yml: |
-      cluster.name: reana-opensearch
+      cluster.name: {{ include "reana.prefix" . }}-opensearch
       network.host: 0.0.0.0
       plugins:
         security:
@@ -461,7 +461,7 @@ fluent-bit:
     inputs: |
       [INPUT]
           Name tail
-          Path /var/log/containers/reana-run-job-*
+          Path /var/log/containers/{{ include "reana.prefix" . }}-run-job-*
           multiline.parser docker, cri
           Tag kube.*
           Skip_Long_Lines {{ .Values.inputConfig.skipLongLines }}
@@ -471,7 +471,7 @@ fluent-bit:
 
       [INPUT]
           Name tail
-          Path /var/log/containers/reana-run-batch-*
+          Path /var/log/containers/{{ include "reana.prefix" . }}-run-batch-*
           multiline.parser docker, cri
           Tag kube.*
           Skip_Long_Lines {{ .Values.inputConfig.skipLongLines }}
@@ -503,7 +503,7 @@ fluent-bit:
 
       [FILTER]
           Name parser
-          Match kube.var.log.containers.reana-run-batch-*job-controller*
+          Match kube.var.log.containers.{{ include "reana.prefix" . }}-run-batch-*job-controller*
           Key_name log
           Parser reana-capture
           Reserve_Data On
@@ -511,7 +511,7 @@ fluent-bit:
 
       [FILTER]
           Name grep
-          Match kube.var.log.containers.reana-run-batch-*job-controller*
+          Match kube.var.log.containers.{{ include "reana.prefix" . }}-run-batch-*job-controller*
           Logical_Op or
           Regex level ERROR
           Regex level WARNING
@@ -553,19 +553,19 @@ fluent-bit:
 
       [FILTER]
           Name record_modifier
-          Match kube.var.log.containers.reana-run-job-*
-          Remove_key kubernetes.labels.reana-run-batch-workflow-uuid
+          Match kube.var.log.containers.{{ include "reana.prefix" . }}-run-job-*
+          Remove_key kubernetes.labels.{{ include "reana.prefix" . }}-run-batch-workflow-uuid
 
       [FILTER]
           Name record_modifier
-          Match kube.var.log.containers.reana-run-batch-*
+          Match kube.var.log.containers.{{ include "reana.prefix" . }}-run-batch-*
           Remove_key kubernetes.labels.job-name
 
     ## https://docs.fluentbit.io/manual/pipeline/outputs
     outputs: |
       [OUTPUT]
           Name opensearch
-          Match kube.var.log.containers.reana-run-job-*
+          Match kube.var.log.containers.{{ include "reana.prefix" . }}-run-job-*
           Host {{ .Values.outputConfig.host }}
           {{- if .Values.outputConfig.httpPasswd }}
           HTTP_User {{ .Values.outputConfig.httpUser }}
@@ -583,7 +583,7 @@ fluent-bit:
 
       [OUTPUT]
           Name opensearch
-          Match kube.var.log.containers.reana-run-batch-*
+          Match kube.var.log.containers.{{ include "reana.prefix" . }}-run-batch-*
           Host {{ .Values.outputConfig.host }}
           {{- if .Values.outputConfig.httpPasswd }}
           HTTP_User {{ .Values.outputConfig.httpUser }}
