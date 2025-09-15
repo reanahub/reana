@@ -248,6 +248,10 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-db-secrets
                 key: password
+          {{- if .Values.kueue.enabled }}
+          - name: KUEUE_ENABLED
+            value: "True"
+          {{- end }}
           - name: RABBIT_MQ_USER
             valueFrom:
               secretKeyRef:
