@@ -239,7 +239,7 @@ dask-kubernetes-operator:
 
 pgbouncer:
   enabled: false
-  image: docker.io/bitnami/pgbouncer:1.23.1
+  image: docker.io/bitnamilegacy/pgbouncer:1.24.1
   pool_mode: transaction
   max_client_conn: 1000
   max_db_connections: 100
