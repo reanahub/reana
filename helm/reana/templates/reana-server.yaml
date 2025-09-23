@@ -96,6 +96,8 @@ spec:
             value: {{ .Values.interactive_sessions.maximum_inactivity_period | default "forever" | quote }}
           - name: REANA_INTERACTIVE_SESSIONS_ENVIRONMENTS
             value: {{ .Values.interactive_sessions.environments | toJson | quote }}
+          - name: REANA_VETTED_CONTAINER_IMAGES
+            value: {{ .Values.vetted_container_images | toJson | quote }}
           - name: REANA_KUBERNETES_JOBS_TIMEOUT_LIMIT
             value: !!str {{ .Values.kubernetes_jobs_timeout_limit | default 604800 }}  # 604800 seconds = 7 days
           - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
