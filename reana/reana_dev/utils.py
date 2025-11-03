@@ -107,6 +107,27 @@ def find_standard_component_name(component_name):
     return standard_component_name
 
 
+def find_component_directory_from_current_dir():
+    """Find the component root directory by walking up until .git is found.
+
+    Starting from the current directory, walk up the directory tree until
+    a .git directory is found. This allows detection of the component name
+    even when in nested subdirectories.
+
+    :return: component root directory (the directory containing .git)
+    :rtype: str
+
+    :raise: exception in case .git directory is not found
+    """
+    current = os.getcwd()
+    while current != os.path.dirname(current):  # Stop at filesystem root
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        current = os.path.dirname(current)
+
+    raise Exception("Cannot find .git directory starting from {0}.".format(os.getcwd()))
+
+
 def find_reana_srcdir():
     """Find directory where REANA sources are checked out.
 
@@ -123,14 +144,19 @@ def find_reana_srcdir():
     if os.path.exists(srcdir + os.sep + "reana" + os.sep + ".git" + os.sep + "config"):
         return srcdir
     # second, try from the parent of git toplevel:
-    toplevel = (
-        subprocess.check_output("git rev-parse --show-toplevel", shell=True)
-        .decode()
-        .rstrip("\r\n")
-    )
-    srcdir = toplevel.rsplit(os.sep, 1)[0]
-    if os.path.exists(srcdir + os.sep + "reana" + os.sep + ".git" + os.sep + "config"):
-        return srcdir
+    try:
+        toplevel = (
+            subprocess.check_output("git rev-parse --show-toplevel", shell=True)
+            .decode()
+            .rstrip("\r\n")
+        )
+        srcdir = toplevel.rsplit(os.sep, 1)[0]
+        if os.path.exists(
+            srcdir + os.sep + "reana" + os.sep + ".git" + os.sep + "config"
+        ):
+            return srcdir
+    except subprocess.CalledProcessError:
+        pass
     # fail if not found
     raise Exception(
         "Cannot find REANA component source directory " "in {0}.".format(srcdir)
@@ -219,8 +245,10 @@ def select_components(components, exclude_components=None):
             for repo in REPO_LIST_CLUSTER_RUNTIME_BATCH:
                 output.add(repo)
         elif component == ".":
-            cwd = os.path.basename(os.getcwd())
-            output.add(cwd)
+            # Find the git root directory to get the actual component name
+            component_dir = find_component_directory_from_current_dir()
+            component_name = os.path.basename(component_dir)
+            output.add(component_name)
         elif component in REPO_LIST_ALL:
             output.add(component)
         elif component in short_component_names:
