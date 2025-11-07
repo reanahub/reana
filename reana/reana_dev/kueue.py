@@ -17,7 +17,10 @@ from typing import Optional, Tuple
 import click
 import yaml
 
+KUEUE_VERSION = "0.14.4"
 KUEUE_RESOURCES_FILE = os.getenv("KUEUE_RESOURCES_FILE") or "kueue-resources.yaml"
+KUEUE_SYSTEM_NAMESPACE = "kueue-system"
+KUBE_SYSTEM_NAMESPACE = "kube-system"
 MULTIKUEUE_CONFIG_NAME = "multikueue-config"
 ADMIN_USER_ID = "00000000-0000-0000-0000-000000000000"
 BATCH_QUEUE = {
@@ -240,8 +243,15 @@ class KueueResources:
         Returns:
             Tuple[list[KueueFlavor], list[KueueNode]]: Tuple containing the list of flavors and nodes.
         """
-        with open(resources_file) as file:
+        ensure_kueue_resources_file_exists(resources_file)
+
+        with open(resources_file, "r") as file:
             data = yaml.safe_load(file.read())
+
+            # Validate namespace section
+            assert (
+                "namespace" in data
+            ), "Resources file must specify a 'namespace' to use."
 
             # Validate flavors section
             assert "flavors" in data, "Resources file must contain 'flavors' section."
@@ -349,6 +359,17 @@ class KueueResources:
                 for node in data["nodes"]
             ]
 
+    def get_kubeconfigs(self) -> list[str | None]:
+        """Return a list of all kubeconfigs referenced in the resources file.
+
+        Returns:
+            list[str | None]: List of kubeconfigs. None represents the local cluster.
+        """
+        return [
+            get_kubeconfig_file(node.name) if node.name != "local" else None
+            for node in self.nodes
+        ]
+
     def __eq__(self, other):
         """Check if two KueueResources objects are equal.
 
@@ -404,16 +425,114 @@ def run_cmd(
         return subprocess.call(cmd, shell=True, **kwargs)
 
 
-def ensure_kueue_resources_file_exists():
-    """Ensure that the Kueue resources file exists.
+def ensure_kueue_resources_file_exists(resources_file: str = KUEUE_RESOURCES_FILE):
+    """Ensure that the resources file exists and is valid.
+
+    Args:
+        resources_file: Path to the resources file.
 
     Raises:
-        click.ClickException: If the resources file does not exist.
+        click.ClickException: If the resources file does not exist or is invalid.
     """
-    if not os.path.exists(KUEUE_RESOURCES_FILE):
+    if not os.path.exists(resources_file):
         raise click.ClickException(
-            f"Resources file {KUEUE_RESOURCES_FILE} does not exist. Please create it or run this from a directory where it exists. You can also set the KUEUE_RESOURCES_FILE environment variable to point to your custom resources file."
+            f"Resources file {resources_file} does not exist in the current directory. Please create it, run the command from a different directory, or use `kueue-generate-resources` to create a template."
         )
+
+    with open(resources_file) as file:
+        data = yaml.safe_load(file.read())
+        NAMESPACE = data.get("namespace")
+        if not NAMESPACE:
+            raise click.ClickException(
+                f"Namespace is not defined in {resources_file}. Please specify a namespace where Kueue resources should be managed."
+            )
+
+        if NAMESPACE == KUEUE_SYSTEM_NAMESPACE:
+            raise click.ClickException(
+                f"Namespace '{KUEUE_SYSTEM_NAMESPACE}' is reserved for Kueue system resources. Please use a different namespace."
+            )
+
+        if NAMESPACE == KUBE_SYSTEM_NAMESPACE:
+            raise click.ClickException(
+                f"Namespace '{KUBE_SYSTEM_NAMESPACE}' is reserved for Kubernetes system resources. Please use a different namespace."
+            )
+
+
+def get_namespace_from_resources_file() -> str:
+    """Extract the namespace from the resources file.
+
+    Returns:
+        str: Namespace specified in the resources file.
+    """
+    ensure_kueue_resources_file_exists()
+
+    with open(KUEUE_RESOURCES_FILE, "r") as file:
+        data = yaml.safe_load(file.read())
+        return data["namespace"]
+
+
+def check_namespace_exists(
+    dry_run: bool, namespace: str, kubeconfig: Optional[str] = None
+):
+    """Check if a namespace exists.
+
+    Args:
+        dry_run: If True, does not actually check.
+        namespace: Name of the namespace to check.
+        kubeconfig: Optional path to kubeconfig file. If None, uses default cluster.
+
+    Returns:
+        bool: True if the namespace exists, False otherwise.
+    """
+    try:
+        cmd = kubectl(f"get namespace {namespace}", kubeconfig)
+        result = run_cmd(cmd, dry_run, capture_output=True).split("\n")
+        return len(result) >= 2 and "Active" in result[1]
+    except subprocess.CalledProcessError:
+        return False
+
+
+def ensure_namespaces_exist(
+    dry_run: bool,
+    kueue_resources: KueueResources,
+    remote: Optional[str] = None,
+    local_only: bool = False,
+):
+    """Ensure that the namespace specified in the resources file exists.
+
+    Args:
+        dry_run: If True, does not actually create the namespace.
+        kueue_resources: KueueResources object containing the desired state.
+        remote: Optional name of the remote cluster. If None, checks all clusters.
+        local_only: If True, only checks the local cluster.
+    """
+    for kubeconfig in [None, *kueue_resources.get_kubeconfigs()]:
+        if local_only and kubeconfig:
+            # Skip remote nodes if only checking local namespace
+            continue
+
+        if (
+            remote
+            and kubeconfig
+            and get_remote_name_from_kubeconfig_file(kubeconfig) != remote
+        ):
+            # If the --remote option is given, skip any other nodes
+            continue
+
+        # Check if namespace already exists
+        namespace = get_namespace_from_resources_file()
+        if not check_namespace_exists(dry_run, namespace, kubeconfig):
+            # Create namespace
+            click.secho(
+                f"Namespace '{namespace}' does not yet exist on node '{get_remote_name_from_kubeconfig_file(kubeconfig) if kubeconfig else 'local'}'. Creating...",
+                fg="green",
+            )
+            cmd = kubectl(f"create namespace {namespace}", kubeconfig)
+            try:
+                run_cmd(cmd, dry_run, check=True)
+            except subprocess.CalledProcessError:
+                # Namespace already exists
+                pass
 
 
 def get_files_in_current_dir():
@@ -441,21 +560,12 @@ def get_remote_name_from_kubeconfig_file(kubeconfig_file: str) -> str:
     """Extract the remote name from a kubeconfig filename.
 
     Args:
-        kubeconfig_file: Kubeconfig filename (e.g., 'myremote-kubeconfig.yaml').
+        kubeconfig_file: Kubeconfig filename (e.g., 'my-remote-kubeconfig.yaml').
 
     Returns:
         str: Remote name extracted from the filename.
     """
     return "-".join(kubeconfig_file.split("-")[:-1])
-
-
-def get_kubeconfigs():
-    """Return a list of all kubeconfig files in the current directory.
-
-    Returns:
-        list[str]: List of kubeconfig filenames ending with '-kubeconfig.yaml'.
-    """
-    return [f for f in get_files_in_current_dir() if f.endswith("-kubeconfig.yaml")]
 
 
 def get_remotes():
@@ -467,8 +577,9 @@ def get_remotes():
         list[str]: List of remote cluster names.
     """
     return [
-        get_remote_name_from_kubeconfig_file(kubeconfig)
-        for kubeconfig in get_kubeconfigs()
+        get_remote_name_from_kubeconfig_file(f)
+        for f in get_files_in_current_dir()
+        if f.endswith("-kubeconfig.yaml")
     ]
 
 
@@ -513,7 +624,7 @@ def ensure_remote_reachable(dry_run: bool, kubeconfig: str):
         raise click.ClickException(f"Remote {remote} is not reachable.")
 
 
-def ensure_kueue_set_up_on_nodes(dry_run: bool, kubeconfigs: list[str | None] = None):
+def ensure_kueue_set_up_on_nodes(dry_run: bool, kubeconfigs: list[str | None]):
     """
     Ensure that Kueue is set up on all nodes (local and remote clusters).
 
@@ -521,8 +632,7 @@ def ensure_kueue_set_up_on_nodes(dry_run: bool, kubeconfigs: list[str | None] = 
         dry_run: If True, does not actually check or modify anything.
         kubeconfigs: List of kubeconfig files to check (can include None for local cluster).
     """
-    kubeconfigs_to_check = kubeconfigs if kubeconfigs else get_kubeconfigs()
-    for kubeconfig in kubeconfigs_to_check:
+    for kubeconfig in kubeconfigs:
         node_name = (
             get_remote_name_from_kubeconfig_file(kubeconfig) if kubeconfig else "local"
         )
@@ -573,31 +683,20 @@ def get_resources_files():
     return [f for f in get_files_in_current_dir() if f.endswith("-resources.yaml")]
 
 
-def ensure_resources_file_exists(resources_file: str):
-    """Ensure that the given resources file exists.
-
-    Args:
-        resources_file: Path to the resources file.
-
-    Raises:
-        click.ClickException: If the resources file does not exist.
-    """
-    if not os.path.exists(resources_file):
-        raise click.ClickException(
-            f"Resources file {resources_file} does not exist. Please create it first."
-        )
-
-
-def kubectl(cmd: str, kubeconfig: Optional[str] = None):
+def kubectl(
+    cmd: str, kubeconfig: Optional[str] = None, namespace: Optional[str] = None
+):
     """Run kubectl command with the given kubeconfig.
 
     :param cmd: kubectl command to run
     :param kubeconfig: kubeconfig file to use
+    :param namespace: namespace to use (defaults to the namespace specified in the resources file)
     """
+    namespace = namespace or get_namespace_from_resources_file()
     if kubeconfig:
-        return f"kubectl --kubeconfig={kubeconfig} {cmd}"
+        return f"kubectl --kubeconfig={kubeconfig} --namespace {namespace} {cmd}"
     else:
-        return f"kubectl {cmd}"
+        return f"kubectl --namespace {namespace} {cmd}"
 
 
 def helm(cmd: str, kubeconfig: Optional[str] = None):
@@ -607,9 +706,35 @@ def helm(cmd: str, kubeconfig: Optional[str] = None):
     :param kubeconfig: kubeconfig file to use
     """
     if kubeconfig:
-        return f"helm --kubeconfig={kubeconfig} {cmd}"
+        return (
+            f"helm --kubeconfig={kubeconfig} --namespace {KUEUE_SYSTEM_NAMESPACE} {cmd}"
+        )
     else:
-        return f"helm {cmd}"
+        return f"helm {cmd} --namespace {KUEUE_SYSTEM_NAMESPACE}"
+
+
+def check_kubernetes_cluster_reachable(dry_run: bool, kubeconfig: Optional[str] = None):
+    """Check if Kubernetes cluster is reachable.
+
+    Args:
+        dry_run: If True, does not actually check.
+        kubeconfig: Path to the kubeconfig file.
+
+    Raises:
+        click.ClickException: If the Kubernetes cluster is not reachable.
+    """
+    cmd = f"{kubectl("get nodes", kubeconfig)}"
+    try:
+        run_cmd(
+            cmd,
+            dry_run,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 
 def check_kueue_installed(
@@ -627,16 +752,22 @@ def check_kueue_installed(
         quiet: If True, does not print any messages.
         expect_installed: If True, raises an exception if Kueue is not installed.
     """
+    # Check if Kubernetes cluster is reachable
+    if not check_kubernetes_cluster_reachable(dry_run, kubeconfig):
+        if not quiet:
+            click.secho("Kubernetes cluster is not reachable.", fg="red")
+        return False
+
     # Check if namespace exists
-    cmd = f"{helm("list -n kueue-system", kubeconfig)} | grep -q kueue"
+    cmd = f"{helm("list", kubeconfig)} | grep -q kueue"
     namespace_exists = run_cmd(cmd, dry_run) == 0
 
     # Check version
-    cmd = f"{helm("list -n kueue-system -o json", kubeconfig)} | jq -r '.[] | select(.name==\"kueue\") | .app_version' 2>/dev/null"
+    cmd = f"{helm("list -o json", kubeconfig)} | jq -r '.[] | select(.name==\"kueue\") | .app_version' 2>/dev/null"
     version = run_cmd(cmd, dry_run, capture_output=True)
 
     # Check if Kueue CRDs are installed
-    crds_installed = check_kueue_crds_installed(dry_run, kubeconfig, quiet=quiet)
+    crds_installed, _ = check_kueue_crds_installed(dry_run, kubeconfig, quiet=quiet)
 
     if namespace_exists and version and crds_installed:
         if not quiet:
@@ -651,19 +782,24 @@ def check_kueue_installed(
         errors.append("namespace does not exist")
 
     if not version:
-        errors.append("version is unknown (maybe Kueue was installed via kubectl?)")
+        errors.append("Helm release not found or version is unknown")
 
     if not crds_installed:
         errors.append("some CRDs are missing")
 
+    node_name = (
+        "local" if not kubeconfig else get_remote_name_from_kubeconfig_file(kubeconfig)
+    )
+    error_msg = f"Kueue is not fully installed on node '{node_name}': {'; '.join(errors)}. Run 'reana-dev kueue-install{f' --remote {node_name}' if kubeconfig else ''}' to install."
+
+    if expect_installed:
+        raise click.ClickException(error_msg)
+
     if not quiet:
-        if expect_installed:
-            raise click.ClickException("Kueue is not installed.")
-        else:
-            click.secho(
-                f"Kueue is not fully installed ({",".join(errors)})",
-                fg="red",
-            )
+        click.secho(
+            error_msg,
+            fg="red",
+        )
 
     return False
 
@@ -672,7 +808,7 @@ def check_kueue_crds_installed(
     dry_run: bool,
     kubeconfig: Optional[str] = None,
     quiet: bool = False,
-) -> bool:
+) -> Tuple[bool, bool]:
     """
     Check if Kueue CRDs are installed.
 
@@ -682,7 +818,11 @@ def check_kueue_crds_installed(
         quiet: If True, does not print any messages.
 
     Returns:
-        bool: True if all Kueue CRDs are installed, False otherwise.
+        Tuple[bool, bool]: Tuple containing:
+
+            - all_crds_present (bool): True if all expected CRDs are installed.
+
+            - any_crds_present (bool): True if any of the expected CRDs are installed.
     """
     expected_crds = {
         "clusterqueues.kueue.x-k8s.io",
@@ -695,6 +835,7 @@ def check_kueue_crds_installed(
     }
 
     all_crds_present = True
+    any_crds_present = False
     for crd in expected_crds:
         cmd = kubectl(f"get crd {crd}", kubeconfig)
         crd_missing = run_cmd(
@@ -709,6 +850,7 @@ def check_kueue_crds_installed(
             if not quiet:
                 click.secho(f"Kueue CRD is missing: {crd}", fg="yellow")
         else:
+            any_crds_present = True
             if not quiet:
                 click.secho(f"Kueue CRD found: {crd}", fg="green")
 
@@ -718,7 +860,7 @@ def check_kueue_crds_installed(
             fg="green" if all_crds_present else "red",
         )
 
-    return all_crds_present
+    return all_crds_present, any_crds_present
 
 
 def ensure_reana_client_working(dry_run: bool):
@@ -820,7 +962,8 @@ def build_resource_flavor_crd(flavor: KueueFlavor):
 apiVersion: kueue.x-k8s.io/v1beta1
 kind: ResourceFlavor
 metadata:
-  name: {flavor.name}
+  name: "{flavor.name}"
+  namespace: "{get_namespace_from_resources_file()}"
 """
 
 
@@ -883,17 +1026,19 @@ def apply_batch_queues(dry_run: bool):
     click.echo(
         f"Applying batch queue '{BATCH_QUEUE['name']}' and flavor '{BATCH_QUEUE['flavor']}'..."
     )
+    namespace = get_namespace_from_resources_file()
     batch_crds = f"""---
 apiVersion: kueue.x-k8s.io/v1beta1
 kind: ResourceFlavor
 metadata:
   name: "{BATCH_QUEUE['flavor']}"
+  namespace: "{namespace}"
 ---
 apiVersion: kueue.x-k8s.io/v1beta1
 kind: LocalQueue
 metadata:
-  namespace: "default"
   name: "{BATCH_QUEUE['name']}"
+  namespace: "{namespace}"
 spec:
   clusterQueue: "{BATCH_QUEUE['name']}"
 ---
@@ -901,6 +1046,7 @@ apiVersion: kueue.x-k8s.io/v1beta1
 kind: ClusterQueue
 metadata:
   name: "{BATCH_QUEUE['name']}"
+  namespace: "{namespace}"
 spec:
   namespaceSelector: {{}}
   resourceGroups:
@@ -936,14 +1082,15 @@ def apply_job_queue(
     node_name = (
         get_remote_name_from_kubeconfig_file(kubeconfig) if kubeconfig else "local"
     )
+    namespace = get_namespace_from_resources_file()
     click.echo(f"Applying job queue '{queue.name}' to node '{node_name}'...")
     job_crds = f"""
 ---
 apiVersion: kueue.x-k8s.io/v1beta1
 kind: LocalQueue
 metadata:
-  namespace: "default"
   name: "{queue.name}"
+  namespace: "{namespace}"
 spec:
   clusterQueue: "{queue.name}"
 ---
@@ -951,6 +1098,7 @@ apiVersion: kueue.x-k8s.io/v1beta1
 kind: ClusterQueue
 metadata:
   name: "{queue.name}"
+  namespace: "{namespace}"
 spec:
   namespaceSelector: {{}}
   resourceGroups:
@@ -1007,6 +1155,7 @@ apiVersion: kueue.x-k8s.io/v1beta1
 kind: AdmissionCheck
 metadata:
   name: "{get_admission_check_name(queue.name)}"
+  namespace: "{get_namespace_from_resources_file()}"
 spec:
   controllerName: "kueue.x-k8s.io/multikueue"
   parameters:
@@ -1063,15 +1212,19 @@ def connect_remote_cluster(dry_run: bool, remote: str):
         dry_run: If True, does not actually apply the resources.
         remote: Name of the remote cluster to connect.
     """
-    # Configure LOCAL cluster
+    # Configure local cluster
+    click.secho("Configuring Kueue for minimal workload types on local cluster...")
     configure_kueue_minimal(dry_run)
 
-    # Configure REMOTE cluster
+    # Configure remote cluster
+    click.secho(
+        f"Configuring Kueue for minimal workload types on remote cluster '{remote}'..."
+    )
     configure_kueue_minimal(dry_run, remote)
 
     # Create secret and MultiKueueCluster
     secret_name = get_secret_name(remote)
-    cmd = f"{kubectl(f'create secret generic {secret_name} -n kueue-system --from-file=kubeconfig=\"{get_kubeconfig_file(remote)}\" --dry-run=client -o yaml')} | {kubectl('apply -f -')}"
+    cmd = f"{kubectl(f'create secret generic {secret_name} --from-file=kubeconfig=\"{get_kubeconfig_file(remote)}\" --dry-run=client -o yaml', namespace=KUEUE_SYSTEM_NAMESPACE)} | {kubectl('apply -f -', namespace=KUEUE_SYSTEM_NAMESPACE)}"
     run_cmd(cmd, dry_run, check=True)
 
     create_multikueue_cluster(dry_run, remote)
@@ -1082,11 +1235,11 @@ def configure_kueue_minimal(dry_run: bool, remote: str = None):
 
     Args:
         dry_run: If True, does not actually apply the configuration.
-        remote: If provided, configure the remote cluster. Otherwise configure local.
+        remote: If provided, configure the remote cluster. Otherwise, configure local.
     """
-    config = """apiVersion: config.kueue.x-k8s.io/v1beta1
+    config = f"""apiVersion: config.kueue.x-k8s.io/v1beta1
 kind: Configuration
-namespace: kueue-system
+namespace: {KUEUE_SYSTEM_NAMESPACE}
 health:
   healthProbeBindAddress: :8081
 metrics:
@@ -1113,30 +1266,24 @@ integrations:
       matchExpressions:
       - key: kubernetes.io/metadata.name
         operator: NotIn
-        values: [ kube-system, kueue-system ]
+        values: [ {KUBE_SYSTEM_NAMESPACE}, {KUEUE_SYSTEM_NAMESPACE} ]
 """
-
-    kubectl_cmd = (
-        kubectl
-        if remote is None
-        else lambda x: f"kubectl --kubeconfig={get_kubeconfig_file(remote)} {x}"
-    )
-
-    cmd = f"{kubectl_cmd(f'create configmap kueue-manager-config -n kueue-system --from-literal=controller_manager_config.yaml={shlex.quote(config)} --dry-run=client -o yaml')} | {kubectl_cmd('apply -f -')}"
+    kubeconfig = get_kubeconfig_file(remote) if remote else None
+    cmd = f"{kubectl(f'create configmap kueue-manager-config --from-literal=controller_manager_config.yaml={shlex.quote(config)} --dry-run=client -o yaml', kubeconfig=kubeconfig, namespace=KUEUE_SYSTEM_NAMESPACE)} | {kubectl('apply -f -', kubeconfig=kubeconfig, namespace=KUEUE_SYSTEM_NAMESPACE)}"
     run_cmd(cmd, dry_run, check=True)
 
-    cmd = kubectl_cmd(
-        "rollout restart deployment/kueue-controller-manager -n kueue-system"
+    cmd = kubectl(
+        "rollout restart deployment/kueue-controller-manager",
+        namespace=KUEUE_SYSTEM_NAMESPACE,
     )
     run_cmd(cmd, dry_run, check=True)
 
-    if dry_run:
-        return
-
-    click.secho(
-        f"✓ Kueue configured for minimal workload types on {'remote cluster ' + remote if remote else 'local cluster'}",
-        fg="green",
-    )
+    if not dry_run:
+        time.sleep(2)
+        click.secho(
+            f"Kueue configured for minimal workload types on {f'remote cluster {remote}' if remote else 'local cluster'}",
+            fg="green",
+        )
 
 
 def create_multikueue_cluster(dry_run: bool, remote: str):
@@ -1155,7 +1302,7 @@ apiVersion: kueue.x-k8s.io/v1beta1
 kind: MultiKueueCluster
 metadata:
   name: {mk_cluster_name}
-  namespace: kueue-system
+  namespace: {KUEUE_SYSTEM_NAMESPACE}
 spec:
   kubeConfig:
     locationType: Secret
@@ -1169,7 +1316,9 @@ spec:
 
     # Check if multikueueconfig exists, create if not
     cmd = kubectl(
-        f"get multikueueconfig {MULTIKUEUE_CONFIG_NAME} -n kueue-system", None
+        f"get multikueueconfig {MULTIKUEUE_CONFIG_NAME}",
+        None,
+        namespace=KUEUE_SYSTEM_NAMESPACE,
     )
     if run_cmd(cmd, dry_run, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL):
         # Create multikueueconfig
@@ -1180,7 +1329,7 @@ apiVersion: kueue.x-k8s.io/v1beta1
 kind: MultiKueueConfig
 metadata:
   name: {MULTIKUEUE_CONFIG_NAME}
-  namespace: kueue-system
+  namespace: {KUEUE_SYSTEM_NAMESPACE}
 spec:
   clusters:
   - {mk_cluster_name}
@@ -1189,12 +1338,13 @@ spec:
         run_cmd(cmd, dry_run, check=True)
     else:
         # Check if node already exists in multikueueconfig
-        cmd = f"{kubectl(f"get multikueueconfig {MULTIKUEUE_CONFIG_NAME} -n kueue-system -o jsonpath='{{.spec.clusters}}'")} | grep -q {mk_cluster_name}"
+        cmd = f"{kubectl(f"get multikueueconfig {MULTIKUEUE_CONFIG_NAME} -o jsonpath='{{.spec.clusters}}'", namespace=KUEUE_SYSTEM_NAMESPACE)} | grep -q {mk_cluster_name}"
         if run_cmd(cmd, dry_run):
             # Patch multikueueconfig
             click.secho("MultiKueueConfig already exists. Patching...")
             cmd = kubectl(
-                f'patch multikueueconfig {MULTIKUEUE_CONFIG_NAME} -n kueue-system --type=\'json\' -p \'[{{"op": "add", "path": "/spec/clusters/-", "value": "{mk_cluster_name}"}}]\''
+                f'patch multikueueconfig {MULTIKUEUE_CONFIG_NAME} --type=\'json\' -p \'[{{"op": "add", "path": "/spec/clusters/-", "value": "{mk_cluster_name}"}}]\'',
+                namespace=KUEUE_SYSTEM_NAMESPACE,
             )
             run_cmd(cmd, dry_run, check=True)
         else:
@@ -1235,15 +1385,18 @@ def disconnect_remote_cluster(dry_run: bool, remote: str):
 
     # Remove multikueuecluster
     force_delete_resources(
-        dry_run, "multikueuecluster", mk_cluster_name, namespace="kueue-system"
+        dry_run, "multikueuecluster", mk_cluster_name, namespace=KUEUE_SYSTEM_NAMESPACE
     )
 
     # Remove secret
-    force_delete_resources(dry_run, "secret", secret_name, namespace="kueue-system")
+    force_delete_resources(
+        dry_run, "secret", secret_name, namespace=KUEUE_SYSTEM_NAMESPACE
+    )
 
     # Remove from multikueueconfig
     cmd = kubectl(
-        f'patch multikueueconfig {MULTIKUEUE_CONFIG_NAME} -n kueue-system --type=\'json\' -p \'[{{"op": "remove", "path": "/spec/clusters", "value": ["{mk_cluster_name}"]}}]\''
+        f'patch multikueueconfig {MULTIKUEUE_CONFIG_NAME} --type=\'json\' -p \'[{{"op": "remove", "path": "/spec/clusters", "value": ["{mk_cluster_name}"]}}]\'',
+        namespace=KUEUE_SYSTEM_NAMESPACE,
     )
     run_cmd(cmd, dry_run, check=True)
 
@@ -1268,20 +1421,23 @@ def force_delete_resources(
         namespace: Optional namespace for namespaced resources.
         kubeconfig: Optional path to kubeconfig file. If None, uses default cluster.
     """
-    if name:
-        # Single resource delete
-        cmd = f"{kubectl(f"patch {kind} {name} {f'--namespace {namespace}' if namespace else ''} --type merge -p '{{\"metadata\":{{\"finalizers\":[]}}}}'", kubeconfig)}"
-        run_cmd(cmd, dry_run, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        cmd = f"{kubectl(f"delete {kind} {name} {f'--namespace {namespace}' if namespace else ''} --force --grace-period=0 --ignore-not-found=true --wait=false", kubeconfig)}"
-        run_cmd(cmd, dry_run, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    else:
-        # Delete all resources of that kind
-        cmd = f"{kubectl(f"get {kind} {f'--namespace {namespace}' if namespace else ''} -o name", kubeconfig)}"
-        resources = run_cmd(cmd, dry_run, capture_output=True).split("\n")
-        resources = [r for r in resources if "kueue" in r]
+    try:
+        if name:
+            # Single resource delete
+            cmd = f"{kubectl(f"patch {kind} {name} --type merge -p '{{\"metadata\":{{\"finalizers\":[]}}}}'", kubeconfig, namespace)}"
+            run_cmd(cmd, dry_run, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            cmd = f"{kubectl(f"delete {kind} {name} --force --grace-period=0 --ignore-not-found=true --wait=false", kubeconfig, namespace)}"
+            run_cmd(cmd, dry_run, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            # Delete all resources of that kind
+            cmd = f"{kubectl(f"get {kind} -o name", kubeconfig)}"
+            resources = run_cmd(cmd, dry_run, capture_output=True).split("\n")
+            resources = [r for r in resources if "kueue" in r]
 
-        for resource in resources:
-            force_delete_resources(dry_run, kind, resource, namespace, kubeconfig)
+            for resource in resources:
+                force_delete_resources(dry_run, kind, resource, namespace, kubeconfig)
+    except subprocess.CalledProcessError:
+        pass
 
 
 def get_connected_remotes(dry_run: bool) -> list[str]:
@@ -1297,7 +1453,8 @@ def get_connected_remotes(dry_run: bool) -> list[str]:
         list[str]: List of remote cluster names.
     """
     cmd = kubectl(
-        "get multikueueclusters -n kueue-system -o jsonpath='{.items[*].metadata.name}'"
+        "get multikueueclusters -o jsonpath='{.items[*].metadata.name}'",
+        namespace=KUEUE_SYSTEM_NAMESPACE,
     )
     multikueue_clusters = run_cmd(cmd, dry_run, capture_output=True).split()
     return [name.rsplit("-", maxsplit=2)[0] for name in multikueue_clusters]
@@ -1631,7 +1788,7 @@ def calc_resource_diff(
             - queues_removed_by_node (dict[str, list[KueueQueue]]): Removed queues per node.
     """
     click.echo(
-        f"\n--- Diff between {KUEUE_RESOURCES_FILE} and the installed resources ---",
+        "\n-------------------------------------------------------------\n",
     )
 
     resources_snapshot = get_resources_snapshot(dry_run)
@@ -1650,6 +1807,10 @@ def calc_resource_diff(
             flavors_removed,
             nodes_removed,
         )
+    )
+
+    click.echo(
+        "\n-------------------------------------------------------------",
     )
 
     return (
@@ -1697,7 +1858,9 @@ def find_duplicate_flavors(kueue_resources: KueueResources) -> dict[str, list[st
     return duplicate_flavors
 
 
-def uninstall_kueue(dry_run: bool, remote: Optional[str] = None):
+def uninstall_kueue(
+    dry_run: bool, remote: Optional[str] = None, delete_namespace: bool = False
+):
     """Uninstall Kueue from a cluster.
 
     Removes all Kueue resources and the Kueue Helm release from the specified
@@ -1706,31 +1869,38 @@ def uninstall_kueue(dry_run: bool, remote: Optional[str] = None):
     Args:
         dry_run: If True, shows what would be changed without applying changes.
         remote: Optional name of the remote cluster. If None, uninstalls from local cluster.
+        delete_namespace: If True, also deletes the namespace specified in the resources file.
     """
     kubeconfig = get_kubeconfig_file(remote) if remote else None
+    namespace = get_namespace_from_resources_file()
+
     if kubeconfig:
         click.secho(f"Ensuring remote '{remote}' is reachable...")
         ensure_kubeconfig_exists(kubeconfig)
         ensure_remote_reachable(dry_run, kubeconfig)
 
-    if check_kueue_crds_installed(dry_run, kubeconfig, quiet=True):
+    _, any_crds_present = check_kueue_crds_installed(dry_run, kubeconfig, quiet=True)
+    if any_crds_present:
         if not dry_run:
-            click.secho("Removing all Kueue resources...")
+            click.secho(f"Removing Kueue resources from namespace '{namespace}'...")
 
         force_delete_resources(dry_run, "clusterqueue", kubeconfig=kubeconfig)
         force_delete_resources(dry_run, "admissioncheck", kubeconfig=kubeconfig)
         force_delete_resources(dry_run, "resourceflavor", kubeconfig=kubeconfig)
         force_delete_resources(dry_run, "localqueue", kubeconfig=kubeconfig)
         force_delete_resources(
-            dry_run, "secret", namespace="kueue-system", kubeconfig=kubeconfig
+            dry_run, "secret", namespace=KUEUE_SYSTEM_NAMESPACE, kubeconfig=kubeconfig
         )
         force_delete_resources(
-            dry_run, "multikueueconfig", namespace="kueue-system", kubeconfig=kubeconfig
+            dry_run,
+            "multikueueconfig",
+            namespace=KUEUE_SYSTEM_NAMESPACE,
+            kubeconfig=kubeconfig,
         )
         force_delete_resources(
             dry_run,
             "multikueuecluster",
-            namespace="kueue-system",
+            namespace=KUEUE_SYSTEM_NAMESPACE,
             kubeconfig=kubeconfig,
         )
 
@@ -1738,23 +1908,47 @@ def uninstall_kueue(dry_run: bool, remote: Optional[str] = None):
         click.secho("Uninstalling Kueue...")
 
     if run_cmd(
-        f"{helm("uninstall kueue -n kueue-system --wait --timeout 10s", kubeconfig)}",
+        f"{helm("uninstall kueue --wait --timeout 20s", kubeconfig)}",
         dry_run,
     ):
         click.secho(
             "Something went wrong (the Kueue release may already be gone)", fg="yellow"
         )
 
-    force_delete_resources(dry_run, "namespace", "kueue-system", kubeconfig=kubeconfig)
+    if check_namespace_exists(dry_run, namespace, kubeconfig):
+        click.secho(f"Removing '{KUEUE_SYSTEM_NAMESPACE}' namespace...")
+        force_delete_resources(
+            dry_run, "namespace", name=KUEUE_SYSTEM_NAMESPACE, kubeconfig=kubeconfig
+        )
+        click.secho(f"Namespace '{KUEUE_SYSTEM_NAMESPACE}' removed.", fg="green")
+    else:
+        click.secho(f"Namespace '{KUEUE_SYSTEM_NAMESPACE}' already gone.", fg="green")
+
+    if delete_namespace:
+        if check_namespace_exists(dry_run, namespace, kubeconfig):
+            click.secho(f"Removing '{namespace}' namespace...")
+            force_delete_resources(
+                dry_run, "namespace", name=namespace, kubeconfig=kubeconfig
+            )
+            click.secho(f"Namespace '{namespace}' removed.", fg="green")
+        else:
+            click.secho(f"Namespace '{namespace}' already gone.", fg="green")
 
     if dry_run:
         return
 
+    click.secho("Waiting for resources to be removed...", fg="blue")
     time.sleep(5)
     click.secho(
         f"Kueue uninstalled from node '{get_remote_name_from_kubeconfig_file(kubeconfig) if kubeconfig else 'local'}'.",
         fg="green",
     )
+
+    if not delete_namespace:
+        click.secho(
+            f"Namespace '{namespace}' was not deleted. Please delete it manually if you no longer need it.",
+            fg="yellow",
+        )
 
 
 def compare_values_yaml_with_resources(
@@ -1783,18 +1977,19 @@ def compare_values_yaml_with_resources(
             if q["node"] not in [n.name for n in resources.nodes]
         ]
         click.secho(
-            f"Not all nodes listed in values.yaml are defined in {resources_src}: {', '.join(set(missing_nodes))}",
+            f"Not all nodes listed in values.yaml are defined in {resources_src} (or values.yaml is undeployed). Missing: {', '.join(set(missing_nodes))}",
             fg="yellow",
         )
         any_problems = True
 
     # Check if all nodes in resources snapshot are defined in values.yaml
-    if not all([n.name in [q["node"] for q in listed_queues] for n in resources.nodes]):
-        click.secho(
-            f"Not all nodes defined in {resources_src} are listed in values.yaml.",
-            fg="yellow",
-        )
-        any_problems = True
+    for node in resources.nodes:
+        if node.name not in [q["node"] for q in listed_queues]:
+            click.secho(
+                f"Node '{node.name}' is defined in {resources_src} but not in values.yaml (or values.yaml is undeployed).",
+                fg="yellow",
+            )
+            any_problems = True
 
     for node in resources.nodes:
         # Check if the queues in each node in values.yaml match the resources snapshot
@@ -1806,7 +2001,7 @@ def compare_values_yaml_with_resources(
         for queue in node.queues:
             if queue.name not in queues_in_node:
                 click.secho(
-                    f"Queue '{queue.name}' is defined in {resources_src} but not in values.yaml.",
+                    f"Queue '{queue.name}' is defined in {resources_src} but not in values.yaml (or values.yaml is undeployed).",
                     fg="yellow",
                 )
                 any_problems = True
@@ -1815,7 +2010,7 @@ def compare_values_yaml_with_resources(
         for queue in queues_in_node:
             if queue not in [q.name for q in node.queues]:
                 click.secho(
-                    f"Queue '{queue}' is defined in values.yaml but not in {resources_src}.",
+                    f"Queue '{queue}' is defined in values.yaml but not in {resources_src} (or values.yaml is undeployed).",
                     fg="yellow",
                 )
                 any_problems = True
@@ -1827,9 +2022,13 @@ def validate_kueue_values_yaml(dry_run: bool) -> bool:
     """Validate the Kueue configuration in the REANA Helm values.yaml file.
 
     Checks that:
+
     - Kueue is properly configured and enabled
+
     - Default node and queue are set correctly
+
     - Listed queues match the resources file and installed resources
+
     - All referenced nodes and queues exist
 
     Args:
@@ -1838,24 +2037,39 @@ def validate_kueue_values_yaml(dry_run: bool) -> bool:
     Returns:
         bool: True if all checks pass, False otherwise.
     """
-    file_path = os.path.join(
-        os.path.dirname(__file__), "..", "..", "helm", "reana", "values.yaml"
-    )
-    if not os.path.exists(file_path):
-        click.secho(f"File {file_path} does not exist.", fg="red")
+    cmd = "reana-client info --json"
+    try:
+        output = run_cmd(cmd, dry_run, check=True, capture_output=True)
+    except subprocess.CalledProcessError:
+        click.secho(
+            "Could not validate values.yaml as REANA client is not working. Please check your REANA access token and server URL.",
+            fg="red",
+        )
         return False
 
-    with open(file_path, "r") as f:
-        file_content = f.read()
-        kueue_config = yaml.safe_load(file_content).get("kueue", None)
+    deployment_info = json.loads(output)
+    kueue_enabled = deployment_info.get("kueue_enabled", {}).get("value")
+    default_node_and_queue = deployment_info.get("kueue_default_queue", {}).get("value")
+    default_node = (
+        default_node_and_queue.split("-")[0] if default_node_and_queue else None
+    )
+    default_queue = (
+        default_node_and_queue.split("-")[1] if default_node_and_queue else None
+    )
+    available_nodes_and_queues = deployment_info.get("kueue_available_queues", {}).get(
+        "value", []
+    )
+    available_queues = [
+        {"node": nq.rsplit("-", maxsplit=1)[0], "name": nq.split("-")[-1]}
+        for nq in available_nodes_and_queues
+    ]
 
-    if not kueue_config:
+    if kueue_enabled is None:
         click.secho("Kueue is not configured in values.yaml.", fg="red")
         return False
 
     all_valid = True
-    enabled = kueue_config.get("enabled", False)
-    if enabled:
+    if kueue_enabled:
         click.secho("Kueue is enabled in values.yaml.", fg="green")
     else:
         all_valid = False
@@ -1863,9 +2077,6 @@ def validate_kueue_values_yaml(dry_run: bool) -> bool:
             "Kueue is not enabled in values.yaml or the format is invalid.",
             fg="red",
         )
-
-    default_node = kueue_config.get("defaultNode", None)
-    default_queue = kueue_config.get("defaultQueue", None)
 
     if default_node and not default_queue:
         all_valid = False
@@ -1881,12 +2092,10 @@ def validate_kueue_values_yaml(dry_run: bool) -> bool:
             fg="red",
         )
 
-    listed_queues = kueue_config.get("queues", [])
-
     if default_node and default_queue:
         # Check if default node is one of the listed nodes
-        if any([queue["node"] == default_node for queue in listed_queues]):
-            click.secho(f"Default node: '{default_node}'", fg="green")
+        if any([queue["node"] == default_node for queue in available_queues]):
+            click.secho(f"Default node: '{default_node}'")
         else:
             all_valid = False
             click.secho(
@@ -1895,8 +2104,8 @@ def validate_kueue_values_yaml(dry_run: bool) -> bool:
             )
 
         # Check if default queue is one of the listed queues
-        if any([queue["name"] == default_queue for queue in listed_queues]):
-            click.secho(f"Default queue: '{default_queue}'", fg="green")
+        if any([queue["name"] == default_queue for queue in available_queues]):
+            click.secho(f"Default queue: '{default_queue}'")
         else:
             all_valid = False
             click.secho(
@@ -1904,41 +2113,44 @@ def validate_kueue_values_yaml(dry_run: bool) -> bool:
                 fg="red",
             )
 
-    if enabled and not default_node and not default_queue:
+    if kueue_enabled and not default_node and not default_queue:
         click.secho(
             "Kueue is enabled but no default queue is set in values.yaml. Jobs that do not specify a kubernetes_queue will not run properly.",
             fg="yellow",
         )
 
-    if listed_queues:
+    if available_queues:
         click.secho("Available queues:")
-        for queue in listed_queues:
+        for queue in available_queues:
             click.echo(f"- {queue['node']}: '{queue['name']}'")
     else:
         click.secho("No queues are listed in values.yaml.", fg="red")
 
-    any_problems = compare_values_yaml_with_resources(
-        get_resources_snapshot(dry_run),
-        "currently installed resources",
-        listed_queues,
-    )
-    if any_problems:
-        # If the currently installed resources do not match values.yaml, this isn't a problem,
-        # it just means the user needs to run kueue-sync
-        click.secho(
-            "Kueue resources in values.yaml do not match the installed resources. Run 'reana-dev kueue-sync' to apply the changes.",
-            fg="yellow",
+    click.echo()
+
+    if check_kueue_installed(dry_run, quiet=True):
+        any_problems = compare_values_yaml_with_resources(
+            get_resources_snapshot(dry_run),
+            "currently installed resources",
+            available_queues,
         )
-    else:
-        click.secho("Currently installed resources match values.yaml.", fg="green")
+        if any_problems:
+            # If the currently installed resources do not match values.yaml, this isn't a problem,
+            # it just means the user needs to run kueue-sync
+            click.secho(
+                "Kueue resources in values.yaml do not match the installed resources. Run 'reana-dev kueue-sync' to apply the changes.",
+                fg="yellow",
+            )
+        else:
+            click.secho("Currently installed resources match values.yaml.", fg="green")
 
     any_problems = compare_values_yaml_with_resources(
-        KueueResources(), KUEUE_RESOURCES_FILE, listed_queues
+        KueueResources(), KUEUE_RESOURCES_FILE, available_queues
     )
     if any_problems:
         all_valid = False
         click.secho(
-            "There are problems with the Kueue configuration in your values.yaml. Please fix them before using Kueue.",
+            "There are problems with the Kueue configuration in your values.yaml. Please fix them before using Kueue. After fixing your values.yaml, remember to redeploy the REANA cluster to apply the changes.",
             fg="red",
         )
     else:
@@ -2028,6 +2240,7 @@ def sync_resource_flavors(
     kueue_resources: KueueResources,
     flavors_removed: list[KueueFlavor],
     remote: Optional[str] = None,
+    local_only: bool = False,
 ):
     """
     Sync the resource flavors to the given remote.
@@ -2037,9 +2250,10 @@ def sync_resource_flavors(
         kueue_resources: The resources to apply.
         flavors_removed: The flavors to remove.
         remote: Optional name of the remote cluster. If None, applies to all clusters.
+        local_only: If True, only applies to the local cluster.
     """
     # Apply new/modified resource flavors to all nodes
-    for kubeconfig in [None, *get_kubeconfigs()]:
+    for kubeconfig in kueue_resources.get_kubeconfigs():
         if (
             remote
             and kubeconfig
@@ -2048,8 +2262,38 @@ def sync_resource_flavors(
             # If the --remote option is given, skip any other nodes
             continue
 
+        if local_only and kubeconfig:
+            # Skip remote nodes if only syncing local resources
+            continue
+
         apply_resource_flavors(dry_run, kueue_resources.flavors, kubeconfig)
         remove_resource_flavors(dry_run, flavors_removed, kubeconfig)
+
+
+def check_remote_in_resources_file_exist(kueue_resources: KueueResources):
+    """Check if all remotes referenced in the resources file have a corresponding kubeconfig file.
+
+    Args:
+        kueue_resources: The resources to check.
+
+    Returns:
+        bool: True if all remotes exist, False otherwise.
+    """
+    all_exist = True
+
+    available_remotes = get_remotes()
+    for node in kueue_resources.nodes:
+        if node.name == "local":
+            continue
+
+        if node.name not in available_remotes:
+            all_exist = False
+            click.secho(
+                f"Remote '{node.name}' is referenced in {KUEUE_RESOURCES_FILE}, but there are only kubeconfigs for these remotes: {', '.join(available_remotes)}",
+                fg="red",
+            )
+
+    return all_exist
 
 
 @click.group()
@@ -2067,50 +2311,60 @@ def kueue_validate(strict: bool = False):
     """Validate the Kueue resources file and values.yaml configuration.
 
     Performs comprehensive validation including:
+
     - Checking the syntax and structure of the resources file
+
     - Validating values.yaml Kueue configuration
+
     - Comparing resources file with installed resources
+
     - Detecting duplicate flavor definitions
 
     Args:
-        strict: If True, fails if there are any differences between the resources file and the installed resources.
+        strict: If True, returns False if there are any differences between the resources file and the installed resources.
 
     Returns:
         bool: True if all checks pass, False otherwise.
     """
-    ensure_kueue_resources_file_exists()
+    click.secho(f"\nValidating {KUEUE_RESOURCES_FILE}...", fg="blue")
+    kueue_resources = KueueResources()
+
+    all_exist = check_remote_in_resources_file_exist(kueue_resources)
+    if all_exist:
+        click.secho("Kueue resources file is valid.", fg="green")
 
     click.secho("\nValidating values.yaml...", fg="blue")
     all_valid = validate_kueue_values_yaml(dry_run=False)
 
-    click.secho(f"\nValidating {KUEUE_RESOURCES_FILE}...", fg="blue")
-    kueue_resources = KueueResources()
-    click.secho("Kueue resources file is valid.", fg="green")
+    if check_kueue_installed(dry_run=False, quiet=True):
+        resources_snapshot = get_resources_snapshot(dry_run=False)
+        if kueue_resources != resources_snapshot:
+            if strict:
+                all_valid = False
 
-    resources_snapshot = get_resources_snapshot(dry_run=False)
-    if kueue_resources != resources_snapshot:
-        if strict:
+            click.secho(
+                "There are differences between the resources file and the installed resources. Run 'reana-dev kueue-diff' to compare.",
+                fg="yellow",
+            )
+
+        # Check for duplicate flavor names
+        click.secho("\nChecking for duplicate flavor names...", fg="blue")
+
+        duplicate_flavors = find_duplicate_flavors(resources_snapshot)
+        if duplicate_flavors:
             all_valid = False
-        click.secho(
-            "There are differences between the resources file and the installed resources. Run 'reana-dev kueue-diff' to compare.",
-            fg="yellow",
-        )
 
-    # Check for duplicate flavor names
-    click.secho("\nChecking for duplicate flavor names...", fg="blue")
-    duplicate_flavors = find_duplicate_flavors(resources_snapshot)
-    if duplicate_flavors:
-        all_valid = False
-        click.secho(
-            "Some installed resource flavors with the same name are defined differently in different places:",
-            fg="red",
-        )
-        for duplicate_flavor, locations in duplicate_flavors.items():
-            click.secho(f"'{duplicate_flavor}':", fg="red")
-            for location in locations:
-                click.secho(f"- {location}", fg="red")
-    elif strict:
-        click.secho("Currently installed resources are valid.", fg="green")
+            click.secho(
+                "Some installed resource flavors with the same name are defined differently in different places:",
+                fg="red",
+            )
+
+            for duplicate_flavor, locations in duplicate_flavors.items():
+                click.secho(f"'{duplicate_flavor}':", fg="red")
+                for location in locations:
+                    click.secho(f"- {location}", fg="red")
+        elif strict:
+            click.secho("Currently installed resources are valid.", fg="green")
 
     return all_valid
 
@@ -2130,12 +2384,8 @@ def kueue_validate(strict: bool = False):
 def kueue_install(dry_run: bool, remote: Optional[str] = None):
     """Install Kueue on a cluster using Helm.
 
-    Installs Kueue version 0.13.2 from the official OCI registry. Verifies that
+    Installs Kueue from the official OCI registry. Verifies that
     the cluster is reachable and that Kueue is not already installed before proceeding.
-
-    Args:
-        dry_run: If True, shows what would be changed without applying changes.
-        remote: Optional name of the remote cluster. If None, installs on local cluster.
     """
     kubeconfig = get_kubeconfig_file(remote) if remote else None
     if kubeconfig:
@@ -2154,13 +2404,13 @@ def kueue_install(dry_run: bool, remote: Optional[str] = None):
         click.secho("Kueue is already installed.", fg="green")
         return
 
-    cmd = f"{helm("list -n kueue-system", kubeconfig)} | grep -q kueue"
+    cmd = f"{helm("list", kubeconfig)} | grep -q kueue"
     namespace_exists = run_cmd(cmd, dry_run) == 0
     if namespace_exists and not dry_run:
         raise click.ClickException("Cannot install Kueue: namespace already exists.")
 
     cmd = helm(
-        "install kueue https://github.com/kubernetes-sigs/kueue/releases/download/v0.14.3/kueue-0.14.3.tgz --namespace kueue-system --create-namespace --wait --timeout 300s",
+        f"install kueue https://github.com/kubernetes-sigs/kueue/releases/download/v{KUEUE_VERSION}/kueue-{KUEUE_VERSION}.tgz --create-namespace --wait --timeout 300s",
         kubeconfig,
     )
     run_cmd(cmd, dry_run, check=True)
@@ -2168,9 +2418,10 @@ def kueue_install(dry_run: bool, remote: Optional[str] = None):
     if not dry_run:
         time.sleep(15 if remote else 5)
 
-    if not check_kueue_crds_installed(dry_run, kubeconfig) and not dry_run:
+    all_crds_installed, _ = check_kueue_crds_installed(dry_run, kubeconfig)
+    if not all_crds_installed and not dry_run:
         raise click.ClickException(
-            "There were problems while installing Kueue. It may not be installed or some CRDs may be missing."
+            f"There were problems while installing Kueue. It may not be installed or some CRDs may be missing. Please run 'reana-dev kueue-uninstall{f' --remote {remote}' if remote else ''}' and try again."
         )
 
     if dry_run:
@@ -2188,7 +2439,6 @@ def kueue_diff():
     change if a sync operation were performed.
     """
     check_kueue_installed(dry_run=False, expect_installed=True)
-    ensure_kueue_resources_file_exists()
     kueue_resources = KueueResources()
     calc_resource_diff(dry_run=False, kueue_resources=kueue_resources)
 
@@ -2205,36 +2455,46 @@ def kueue_diff():
     help=f"The remote to sync resources with {get_available_remotes_str()}",
 )
 @click.option(
+    "--local-only",
+    "-l",
+    is_flag=True,
+    help="Only sync resources to the local cluster.",
+)
+@click.option(
     "--force",
     "-f",
     is_flag=True,
     help="Force sync even if there are no changes.",
 )
 @kueue_commands.command(name="kueue-sync")
-def kueue_sync(dry_run: bool, remote: Optional[str] = None, force: bool = False):
+def kueue_sync(
+    dry_run: bool,
+    remote: Optional[str] = None,
+    local_only: bool = False,
+    force: bool = False,
+):
     """Synchronize Kueue resources from the resources file to the cluster.
 
     Applies all changes needed to make the cluster state match the resources file,
     including:
-    - Adding, modifying, or removing resource flavors
-    - Adding or removing nodes (remote clusters)
-    - Adding, modifying, or removing queues
-    - Setting up MultiKueue connections for remote clusters
 
-    Args:
-        dry_run: If True, shows what would be changed without applying changes.
-        remote: Optional name of the remote cluster to sync. If None, syncs all clusters.
-        force: If True, applies changes even if no differences are detected.
+    - Adding, modifying, or removing resource flavors
+
+    - Adding or removing nodes (remote clusters)
+
+    - Adding, modifying, or removing queues
+
+    - Setting up MultiKueue connections for remote clusters
     """
+    # Check if remote is valid
     if remote and remote not in get_remotes():
         raise click.ClickException(
             f"Remote {remote} is not in the list of available remotes: {get_available_remotes_str()}"
         )
 
-    check_kueue_installed(dry_run, expect_installed=True)
-    ensure_kueue_resources_file_exists()
     kueue_resources = KueueResources()
 
+    ensure_kueue_set_up_on_nodes(dry_run, [None])
     if kueue_resources == get_resources_snapshot(dry_run) and not force:
         click.secho("No changes to sync.", fg="green")
         return
@@ -2261,9 +2521,14 @@ def kueue_sync(dry_run: bool, remote: Optional[str] = None, force: bool = False)
         ):
             return
 
-    # Ensure Kueue is set up on all nodes
+    ensure_namespaces_exist(dry_run, kueue_resources, remote, local_only)
     ensure_kueue_set_up_on_nodes(
-        dry_run, [None, get_kubeconfig_file(remote)] if remote else None
+        dry_run,
+        (
+            [None, get_kubeconfig_file(remote)]
+            if remote
+            else [None] if local_only else kueue_resources.get_kubeconfigs()
+        ),
     )
 
     # Ensure batch queues are applied to the manager
@@ -2285,8 +2550,10 @@ def kueue_sync(dry_run: bool, remote: Optional[str] = None, force: bool = False)
             if node != "local":
                 remove_admission_check(dry_run, queue)
 
-    sync_resource_flavors(dry_run, kueue_resources, flavors_removed, remote)
-    sync_multikueue_config(dry_run, kueue_resources, nodes_removed, remote)
+    sync_resource_flavors(dry_run, kueue_resources, flavors_removed, remote, local_only)
+
+    if not local_only:
+        sync_multikueue_config(dry_run, kueue_resources, nodes_removed, remote)
 
     if dry_run:
         return
@@ -2294,6 +2561,12 @@ def kueue_sync(dry_run: bool, remote: Optional[str] = None, force: bool = False)
     click.secho("All resources synced successfully.", fg="green")
 
 
+@click.option(
+    "--dry-run",
+    "-d",
+    is_flag=True,
+    help="Only print the commands to be executed without executing them.",
+)
 @click.option(
     "--remote",
     "-r",
@@ -2305,25 +2578,21 @@ def kueue_sync(dry_run: bool, remote: Optional[str] = None, force: bool = False)
     help=f"Uninstall Kueue from all nodes: {get_available_remotes_str()}",
 )
 @click.option(
-    "--dry-run",
-    "-d",
+    "--delete-namespace",
     is_flag=True,
-    help="Only print the commands to be executed without executing them.",
+    help="Also delete the namespace specified in your resources file.",
 )
 @kueue_commands.command(name="kueue-uninstall")
 def kueue_uninstall(
-    dry_run: bool, remote: Optional[str] = None, all_nodes: bool = False
+    dry_run: bool,
+    remote: Optional[str] = None,
+    all_nodes: bool = False,
+    delete_namespace: bool = False,
 ):
     """Uninstall Kueue from one or more clusters.
 
     Removes all Kueue resources and the Kueue Helm release. Can uninstall from
     a specific remote cluster, the local cluster, or all clusters at once.
-
-    Args:
-        dry_run: If True, shows what would be changed without applying changes.
-        remote: Optional name of the remote cluster to uninstall from.
-                If None, uninstalls from the local cluster.
-        all_nodes: If True, uninstalls from all clusters (local and all remotes).
     """
     if all_nodes:
         if not dry_run and not click.confirm(
@@ -2333,11 +2602,10 @@ def kueue_uninstall(
             return
 
         for remote in [None, *get_remotes()]:
-            click.echo(f"Uninstalling Kueue from {remote or 'local'}...")
-            uninstall_kueue(dry_run, remote)
-        return
-
-    uninstall_kueue(dry_run, remote)
+            click.secho(f"\nUninstalling Kueue from {remote or 'local'}...", fg="blue")
+            uninstall_kueue(dry_run, remote, delete_namespace)
+    else:
+        uninstall_kueue(dry_run, remote, delete_namespace)
 
 
 @click.option(
@@ -2350,16 +2618,21 @@ def kueue_status(remote: Optional[str] = None):
     """Check the status of Kueue installation and resources.
 
     Displays comprehensive status information including:
+
     - Installation status and version
     - Resource flavors
-    - Local and cluster queues
-    - Available remote clusters
-    - Kueue configuration in values.yaml
 
-    Args:
-        remote: Optional name of the remote cluster to check.
-                If None, checks the local cluster.
+    - Local and cluster queues
+
+    - Available remote clusters
+
+    - Kueue configuration in values.yaml
     """
+    if remote and remote not in get_remotes():
+        raise click.ClickException(
+            f"Remote {remote} is not in the list of available remotes: {get_available_remotes_str()}"
+        )
+
     kubeconfig = get_kubeconfig_file(remote) if remote else None
 
     # Check installation status
@@ -2390,24 +2663,30 @@ def kueue_status(remote: Optional[str] = None):
     validate_kueue_values_yaml(dry_run=False)
 
 
+@click.option(
+    "--name",
+    "-n",
+    help="Name of the resources file to generate.",
+)
 @kueue_commands.command(name="kueue-generate-resources")
-def kueue_generate_resources():
+def kueue_generate_resources(name: Optional[str] = None):
     """Generate a default kueue-resources.yaml template file.
 
     Creates a sample resources file with example flavors, nodes, and queues
     that can be customized for your specific setup.
-
-    Raises:
-        click.ClickException: If the resources file already exists.
     """
     if os.path.exists(KUEUE_RESOURCES_FILE):
-        raise click.ClickException(
-            f"File {KUEUE_RESOURCES_FILE} already exists. Please remove it first."
-        )
+        if not click.confirm(
+            f"File {KUEUE_RESOURCES_FILE} already exists. Overwrite?", default=False
+        ):
+            return
 
-    with open(KUEUE_RESOURCES_FILE, "w") as f:
+    with open(f"{name}.yaml" if name else KUEUE_RESOURCES_FILE, "w") as f:
         f.write(
-            """flavors:
+            """---
+namespace: my-kueue-namespace
+
+flavors:
   - name: small
     cpu: 1
     memory: 1Gi

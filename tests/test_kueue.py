@@ -15,7 +15,6 @@ from reana.reana_dev.kueue import (
     KueueNode,
     KueueResources,
     run_cmd,
-    ensure_kueue_resources_file_exists,
 )
 
 
@@ -357,22 +356,6 @@ class TestRunCmd:
         mock_check_call.assert_not_called()
 
 
-class TestEnsureKueueResourcesFileExists:
-    @patch("reana.reana_dev.kueue.os.path.exists")
-    def test_file_exists(self, mock_exists):
-        mock_exists.return_value = True
-        # Should not raise an exception
-        ensure_kueue_resources_file_exists()
-
-    @patch("reana.reana_dev.kueue.os.path.exists")
-    def test_file_does_not_exist(self, mock_exists):
-        from click import ClickException
-
-        mock_exists.return_value = False
-        with pytest.raises(ClickException):
-            ensure_kueue_resources_file_exists()
-
-
 class TestHelperFunctions:
     def test_get_kubeconfig_file(self):
         from reana.reana_dev.kueue import get_kubeconfig_file
@@ -457,60 +440,46 @@ class TestKubectlAndHelm:
     def test_kubectl_without_kubeconfig(self):
         from reana.reana_dev.kueue import kubectl
 
-        assert kubectl("get pods") == "kubectl get pods"
-        assert kubectl("apply -f file.yaml") == "kubectl apply -f file.yaml"
+        assert (
+            kubectl("get pods", namespace="test") == "kubectl --namespace test get pods"
+        )
+        assert (
+            kubectl("apply -f file.yaml", namespace="test")
+            == "kubectl --namespace test apply -f file.yaml"
+        )
 
     def test_kubectl_with_kubeconfig(self):
         from reana.reana_dev.kueue import kubectl
 
         assert (
-            kubectl("get pods", "remote1-kubeconfig.yaml")
-            == "kubectl --kubeconfig=remote1-kubeconfig.yaml get pods"
+            kubectl("get pods", "remote1-kubeconfig.yaml", namespace="test")
+            == "kubectl --kubeconfig=remote1-kubeconfig.yaml --namespace test get pods"
         )
         assert (
-            kubectl("apply -f file.yaml", "test.yaml")
-            == "kubectl --kubeconfig=test.yaml apply -f file.yaml"
+            kubectl("apply -f file.yaml", "test.yaml", namespace="test")
+            == "kubectl --kubeconfig=test.yaml --namespace test apply -f file.yaml"
         )
 
     def test_helm_without_kubeconfig(self):
         from reana.reana_dev.kueue import helm
 
-        assert helm("list") == "helm list"
-        assert helm("install myapp chart/") == "helm install myapp chart/"
+        assert helm("list") == "helm list --namespace kueue-system"
+        assert (
+            helm("install myapp chart/")
+            == "helm install myapp chart/ --namespace kueue-system"
+        )
 
     def test_helm_with_kubeconfig(self):
         from reana.reana_dev.kueue import helm
 
         assert (
             helm("list", "remote1-kubeconfig.yaml")
-            == "helm --kubeconfig=remote1-kubeconfig.yaml list"
+            == "helm --kubeconfig=remote1-kubeconfig.yaml --namespace kueue-system list"
         )
         assert (
             helm("install myapp chart/", "test.yaml")
-            == "helm --kubeconfig=test.yaml install myapp chart/"
+            == "helm --kubeconfig=test.yaml --namespace kueue-system install myapp chart/"
         )
-
-
-class TestBuildResourceFlavorCrd:
-    def test_build_resource_flavor_crd(self):
-        from reana.reana_dev.kueue import build_resource_flavor_crd
-
-        flavor = KueueFlavor("test-flavor", 4, "8Gi")
-        crd = build_resource_flavor_crd(flavor)
-
-        assert "apiVersion: kueue.x-k8s.io/v1beta1" in crd
-        assert "kind: ResourceFlavor" in crd
-        assert "name: test-flavor" in crd
-
-    def test_build_resource_flavor_crd_different_values(self):
-        from reana.reana_dev.kueue import build_resource_flavor_crd
-
-        flavor = KueueFlavor("highcpu", 16, "32Gi")
-        crd = build_resource_flavor_crd(flavor)
-
-        assert "apiVersion: kueue.x-k8s.io/v1beta1" in crd
-        assert "kind: ResourceFlavor" in crd
-        assert "name: highcpu" in crd
 
 
 class TestFindDuplicateFlavors:
@@ -881,35 +850,12 @@ class TestGetFilesInCurrentDir:
         assert result == ["file1.txt", "file2.yaml", "dir1"]
 
 
-class TestGetKubeconfigs:
-    @patch("reana.reana_dev.kueue.get_files_in_current_dir")
-    def test_get_kubeconfigs(self, mock_get_files):
-        from reana.reana_dev.kueue import get_kubeconfigs
-
-        mock_get_files.return_value = [
-            "remote1-kubeconfig.yaml",
-            "remote2-kubeconfig.yaml",
-            "other-file.yaml",
-            "test.txt",
-        ]
-        result = get_kubeconfigs()
-        assert result == ["remote1-kubeconfig.yaml", "remote2-kubeconfig.yaml"]
-
-    @patch("reana.reana_dev.kueue.get_files_in_current_dir")
-    def test_get_kubeconfigs_empty(self, mock_get_files):
-        from reana.reana_dev.kueue import get_kubeconfigs
-
-        mock_get_files.return_value = ["file1.txt", "file2.yaml"]
-        result = get_kubeconfigs()
-        assert result == []
-
-
 class TestGetRemotes:
-    @patch("reana.reana_dev.kueue.get_kubeconfigs")
-    def test_get_remotes(self, mock_get_kubeconfigs):
+    @patch("reana.reana_dev.kueue.get_files_in_current_dir")
+    def test_get_remotes(self, mock_get_files_in_current_dir):
         from reana.reana_dev.kueue import get_remotes
 
-        mock_get_kubeconfigs.return_value = [
+        mock_get_files_in_current_dir.return_value = [
             "remote1-kubeconfig.yaml",
             "remote2-kubeconfig.yaml",
             "my-cluster-kubeconfig.yaml",
@@ -917,11 +863,11 @@ class TestGetRemotes:
         result = get_remotes()
         assert result == ["remote1", "remote2", "my-cluster"]
 
-    @patch("reana.reana_dev.kueue.get_kubeconfigs")
-    def test_get_remotes_empty(self, mock_get_kubeconfigs):
+    @patch("reana.reana_dev.kueue.get_files_in_current_dir")
+    def test_get_remotes_empty(self, mock_get_files_in_current_dir):
         from reana.reana_dev.kueue import get_remotes
 
-        mock_get_kubeconfigs.return_value = []
+        mock_get_files_in_current_dir.return_value = []
         result = get_remotes()
         assert result == []
 
@@ -966,25 +912,6 @@ class TestEnsureKubeconfigExists:
         mock_exists.return_value = False
         with pytest.raises(ClickException, match="does not exist"):
             ensure_kubeconfig_exists("test-kubeconfig.yaml")
-
-
-class TestEnsureResourcesFileExists:
-    @patch("reana.reana_dev.kueue.os.path.exists")
-    def test_resources_file_exists(self, mock_exists):
-        from reana.reana_dev.kueue import ensure_resources_file_exists
-
-        mock_exists.return_value = True
-        # Should not raise an exception
-        ensure_resources_file_exists("test-resources.yaml")
-
-    @patch("reana.reana_dev.kueue.os.path.exists")
-    def test_resources_file_does_not_exist(self, mock_exists):
-        from reana.reana_dev.kueue import ensure_resources_file_exists
-        from click import ClickException
-
-        mock_exists.return_value = False
-        with pytest.raises(ClickException, match="does not exist"):
-            ensure_resources_file_exists("test-resources.yaml")
 
 
 class TestKueueFlavorEdgeCases:
