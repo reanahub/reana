@@ -1,3 +1,5 @@
+namespace: test-ns
+
 flavors:
   - name: "default"
     cpu: 4
