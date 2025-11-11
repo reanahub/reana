@@ -107,6 +107,7 @@ components:
       REANA_RATELIMIT_GUEST_USER: "40 per second"
       REANA_RATELIMIT_AUTHENTICATED_USER: "40 per second"
       REANA_RATELIMIT_SLOW: "1/5 second"
+      REANA_ADMIN_QUOTA_MANAGER: ""
     uwsgi:
       processes: 6
       threads: 4
