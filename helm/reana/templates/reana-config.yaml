@@ -17,6 +17,7 @@ data:
     chat_url: {{ .Values.components.reana_ui.chat_url | quote | default "null" }}
     privacy_notice_url: {{ .Values.components.reana_ui.privacy_notice_url | quote | default "null"}}
     cern_sso: {{ .Values.components.reana_ui.cern_sso | default false }}
+    eosc_sso: {{ .Values.components.reana_ui.eosc_sso | default false }}
     login_provider_config: {{ .Values.login | toJson }}
     hide_signup: {{ .Values.components.reana_ui.hide_signup | default false }}
     admin_email: {{ .Values.notifications.email_config.receiver | quote | default "null" }}
