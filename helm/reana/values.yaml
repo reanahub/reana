@@ -64,6 +64,8 @@ secrets:
   gitlab: {}
   cern:
     sso: {}
+  eosc:
+    sso: {}
   reana: {}
   login: {}
   opensearch: {}
