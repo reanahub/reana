@@ -1,10 +1,17 @@
 #!/bin/bash
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023, 2024 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
+
+# Are we using Kind for local developments? (kind, colima/k3s)
+if [ -z "$1" ]; then
+    kubernetes=kind
+else
+    kubernetes="$1"
+fi
 
 for image in \
     docker.io/maildev/maildev:1.1.0 \
@@ -21,5 +28,7 @@ for image in \
     docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.2 \
     quay.io/jupyter/scipy-notebook:notebook-7.2.2; do
     docker pull $image
-    kind load docker-image $image
+    if [ "$kubernetes" == "kind" ]; then
+        kind load docker-image $image
+    fi
 done
