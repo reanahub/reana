@@ -635,3 +635,27 @@ fluent-bit:
       mountPath: /fluent-bit/etc/certs
       readOnly: true
   priorityClassName: "reana-fluent-bit-priority-class"
+
+
+prometheus:
+  # -- start prometheus as part of reana
+  # TODO: give alterntive to connect to external one
+  enabled: true
+
+  server:
+    global:
+      scrape_interval: "2s"
+      evaluation_interval: "2s"
+      scrape_timeout: "1s"
+
+    # default config in the container sets global limit to 15s, so we need to override
+    defaultFlagsOverride:
+      - --config.file=/etc/config/prometheus.yml
+
+  kube-state-metrics:
+    extraArgs:
+      - --metric-labels-allowlist=jobs=[*],pods=[*]
+
+  prometheus-pushgateway:
+    enabled: false
+
