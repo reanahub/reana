@@ -276,6 +276,11 @@ spec:
           - name: KUEUE_ENABLED
             value: "True"
           {{- end }}
+          # Only if defaultNode and defaultQueue are both defined
+          {{- if and .Values.kueue.defaultNode .Values.kueue.defaultQueue }}
+          - name: KUEUE_DEFAULT_QUEUE
+            value: {{ .Values.kueue.defaultNode }}-{{ .Values.kueue.defaultQueue }}
+          {{- end }}
           - name: RABBIT_MQ_USER
             valueFrom:
               secretKeyRef:

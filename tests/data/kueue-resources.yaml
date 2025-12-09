@@ -1,0 +1,42 @@
+namespace: test-ns
+
+flavors:
+  - name: "default"
+    cpu: 4
+    memory: 8Gi
+  - name: "highcpu"
+    cpu: 16
+    memory: 8Gi
+  - name: "highmem"
+    cpu: 4
+    memory: 32Gi
+
+nodes:
+  - name: "local"
+    queues:
+      - name: "default"
+        flavors:
+          - "default"
+          - "highcpu"
+      - name: "atlas"
+        flavors:
+          - "default"
+      - name: "cms"
+        flavors:
+          - "default"
+          - "highmem"
+  - name: "remote1"
+    queues:
+      - name: "default"
+        flavors:
+          - "default"
+          - "highmem"
+  - name: "remote2"
+    queues:
+      - name: "default"
+        flavors:
+          - "default"
+          - "highcpu"
+      - name: "other"
+        flavors:
+          - "default"
