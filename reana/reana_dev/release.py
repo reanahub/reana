@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2022 CERN.
+# Copyright (C) 2020, 2022, 2023, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 
 """`reana-dev`'s release commands."""
 
-import json
 import os
 import sys
 import tempfile
@@ -17,7 +16,6 @@ from time import sleep
 
 import click
 
-from reana.reana_dev.docker import docker_push
 from reana.reana_dev.git import (
     get_current_commit,
     git_clean,
@@ -94,13 +92,21 @@ def release_commands():
 @click.option(
     "--platform",
     multiple=True,
-    help="Platforms for multi-arch images [default=current architecture]",
+    default=["linux/amd64", "linux/arm64"],
+    help="Platforms for multi-arch images [default=linux/amd64,linux/arm64]",
 )
-@click.option("--tags-only", is_flag=True, help="Only print the Docker image tags")
+@click.option(
+    "--build-arg",
+    "-b",
+    multiple=True,
+    help="Any build arguments? (e.g. `-b DEBUG=1`)",
+)
+@click.option("--no-cache", is_flag=True, help="Do not use Docker image layer cache.")
+@click.option("--tags-only", is_flag=True, help="Only print the Docker image tags.")
 @release_commands.command(name="release-docker")
 @click.pass_context
 def release_docker(
-    ctx, component, user, image_name, registry, platform, tags_only
+    ctx, component, user, image_name, registry, platform, build_arg, no_cache, tags_only
 ):  # noqa: D301
     """Release a component on a Docker image registry.
 
@@ -123,13 +129,17 @@ def release_docker(
     :param user: Organisation or user name. [default=reanahub]
     :param image_name: Custom name of the local Docker image.
     :param registry: Registry to use in the image tag. [default=docker.io]
-    :param platform: Platforms for multi-arch images. [default=current architecture]
+    :param platform: Platforms for multi-arch images. [default=linux/amd64,linux/arm64]
+    :param build_arg: Optional docker build argument. (e.g. DEBUG=1)
+    :param no_cache: Flag instructing to avoid using cache. [default=False]
     :param tags_only: Only print the Docker image tags.
     :type component: str
     :type user: str
     :type image_name: str
     :type registry: str
     :type platform: list
+    :type build_arg: str
+    :type no_cache: bool
     :type tags_only: bool
     """
     components = select_components(component)
@@ -138,20 +148,15 @@ def release_docker(
         click.secho("Cannot use custom image name with multiple components.", fg="red")
         sys.exit(1)
 
-    is_multi_arch = len(platform) > 1
-    if is_multi_arch and not tags_only:
-        # check whether podman is installed
-        run_command("podman version", display=False, return_output=True)
-    # platforms are in the format OS/ARCH[/VARIANT], we are only interested in ARCH
-    expected_arch = sorted([p.split("/")[1] for p in platform])
+    if not tags_only:
+        # check whether docker buildx is available
+        run_command("docker buildx version", display=False, return_output=True)
 
     cannot_release_on_dockerhub = []
     for component_ in components:
         if not is_component_dockerised(component_):
             cannot_release_on_dockerhub.append(component_)
         is_component_releasable(component_, exit_code=True, display=True)
-        # source_image_name is the name used by docker-build
-        source_image_name = f"docker.io/{user}/{component_}"
         target_image_name = f"{registry}/{user}/{image_name or component_}"
         docker_tag = get_docker_tag(component_)
 
@@ -159,46 +164,17 @@ def release_docker(
             click.echo(f"{target_image_name}:{docker_tag}")
             continue
 
-        if is_multi_arch:
-            manifest = json.loads(
-                run_command(
-                    f"podman manifest inspect {source_image_name}:latest",
-                    component=component_,
-                    return_output=True,
-                )
-            )
-            manifest_arch = sorted(
-                [m["platform"]["architecture"] for m in manifest["manifests"]]
-            )
-            if manifest_arch != expected_arch:
-                display_message(
-                    f"Expected multi-arch image {source_image_name} with {expected_arch} variants, "
-                    f"found {manifest_arch}.",
-                    component=component_,
-                )
-                sys.exit(1)
-            run_command(
-                f"podman tag {source_image_name}:latest {target_image_name}:{docker_tag}",
-                component_,
-            )
-            run_command(
-                f"podman manifest push --all {target_image_name}:{docker_tag} "
-                f"docker://{target_image_name}:{docker_tag}",
-                component_,
-            )
-        else:
-            run_command(
-                f"docker tag {source_image_name}:latest {target_image_name}:{docker_tag}",
-                component_,
-            )
-            ctx.invoke(
-                docker_push,
-                component=[component_],
-                registry=registry,
-                user=user,
-                image_name=image_name,
-                tag=docker_tag,
-            )
+        # Build and push image using buildx (like GitHub Actions)
+        cmd = "docker buildx build"
+        cmd += f" --platform {','.join(platform)}"
+        cmd += " --provenance=false"
+        cmd += " --sbom=false"
+        for arg in build_arg:
+            cmd += f" --build-arg {arg}"
+        if no_cache:
+            cmd += " --no-cache"
+        cmd += f" --push -t {target_image_name}:{docker_tag} ."
+        run_command(cmd, component_)
 
     if cannot_release_on_dockerhub:
         click.secho(

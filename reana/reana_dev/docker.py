@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2023 CERN.
+# Copyright (C) 2020, 2021, 2023, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -150,10 +150,15 @@ def docker_build(
         exclude_components = exclude_components.split(",")
     components = select_components(component, exclude_components)
 
-    is_multi_arch = len(platform) > 1
-    if is_multi_arch:
-        # check whether podman is installed
-        run_command("podman version", display=False, return_output=True)
+    if len(platform) > 1:
+        click.secho(
+            "ERROR: The 'docker-build' command now supports single-platform builds\n"
+            "only. If you would like to build and push a multi-platform image, please\n"
+            "use the 'release-docker' command instead. For example:\n\n"
+            "$ reana-dev release-docker -c . --platform linux/amd64 --platform linux/arm64",
+            fg="red",
+        )
+        sys.exit(1)
 
     built_components_versions_tags = []
 
@@ -169,20 +174,7 @@ def docker_build(
             component_version_tag = "docker.io/{0}/{1}:{2}".format(
                 user, component, component_tag
             )
-            if is_multi_arch:
-                # remove the image with the same name, if it exists, as otherwise
-                # podman is not able to create the manifest
-                run_command(
-                    f"podman image rm {component_version_tag} || true", component
-                )
-                # remove the manifest if it already exists, as otherwise podman will add
-                # the built images to the existing manifest instead of creating a new one
-                run_command(
-                    f"podman manifest rm {component_version_tag} || true", component
-                )
-                cmd = "podman build"
-            else:
-                cmd = "docker build"
+            cmd = "docker build"
             for arg in build_arg:
                 cmd += " --build-arg {0}".format(arg)
             if no_cache:
@@ -190,12 +182,8 @@ def docker_build(
             if quiet or parallel > 1:
                 cmd += " --quiet"
             if platform:
-                cmd += f" --platform {','.join(platform)}"
-
-            if is_multi_arch:
-                cmd += f" --manifest {component_version_tag} ."
-            else:
-                cmd += " -t {0} .".format(component_version_tag)
+                cmd += f" --platform {platform[0]}"
+            cmd += " -t {0} .".format(component_version_tag)
 
             commands.append((_run_command, (cmd, component)))
             built_components_versions_tags.append(component_version_tag)
@@ -330,22 +318,14 @@ def docker_push(user, tag, component, registry, image_name):  # noqa: D301
     :type registry: str
     :type image_name: str
     """
-    components = select_components(component)
-
-    if image_name and len(components) > 1:
-        click.secho("Cannot use custom image name with multiple components.", fg="red")
-        sys.exit(1)
-
-    for component in components:
-        component_tag = tag
-        if is_component_dockerised(component):
-            if tag == "auto":
-                component_tag = get_docker_tag(component)
-            cmd = f"docker push {registry}/{user}/{image_name or component}:{component_tag}"
-            run_command(cmd, component)
-        else:
-            msg = "Ignoring this component that does not contain" " a Dockerfile."
-            display_message(msg, component)
+    click.secho(
+        "ERROR: The 'docker-push' command is now deprecated. Please use the\n"
+        "'release-docker' command instead that will build and push a multi-arch image\n"
+        "with appropriate tag. For example:\n\n"
+        "$ reana-dev release-docker -c . --platform linux/amd64 --platform linux/arm64",
+        fg="red",
+    )
+    sys.exit(1)
 
 
 @click.option("--user", "-u", default="reanahub", help="DockerHub user name [reanahub]")
