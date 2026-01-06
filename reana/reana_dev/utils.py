@@ -942,6 +942,15 @@ def bump_component_version(
         updated_files.append(file_path)
         next_version_per_file_type[file_type] = new_version
 
+        if file_type == DOCKER_VERSION_FILE:
+            today = datetime.date.today().isoformat()
+            replace_string(
+                file_=file_path,
+                find='LABEL org.opencontainers.image.created=".*"',
+                replace=f'LABEL org.opencontainers.image.created="{today}"',
+                component=component,
+            )
+
     # depending on a component, return proper component version
     if DOCKER_VERSION_FILE in next_version_per_file_type.keys():
         return next_version_per_file_type[DOCKER_VERSION_FILE], updated_files
