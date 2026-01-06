@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -576,13 +576,22 @@ def update_module_in_cluster_components(
 
         new_version_obj = Version(new_version)
         next_minor_version = f"{new_version_obj.major}.{new_version_obj.minor + 1}.0"
-        replace_string(
-            file_="setup.py",
-            find='>=.*,<.*[^",]',
-            replace=f">={new_version},<{next_minor_version}",
-            line_selector_regex=f"{module}.*>=",
-            component=component,
-        )
+        if os.path.exists(get_srcdir(component) + os.sep + "setup.py"):
+            replace_string(
+                file_="setup.py",
+                find='>=.*,<.*[^",]',
+                replace=f">={new_version},<{next_minor_version}",
+                line_selector_regex=f"{module}.*>=",
+                component=component,
+            )
+        if os.path.exists(get_srcdir(component) + os.sep + "pyproject.toml"):
+            replace_string(
+                file_="pyproject.toml",
+                find='>=.*,<.*[^",]',
+                replace=f">={new_version},<{next_minor_version}",
+                line_selector_regex=f"{module}.*>=",
+                component=component,
+            )
         if os.path.exists(get_srcdir(component) + os.sep + "requirements.txt"):
             replace_string(
                 file_="requirements.txt",

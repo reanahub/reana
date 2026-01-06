@@ -227,7 +227,7 @@ def release_pypi(ctx, component, timeout):  # noqa: D301
         is_component_releasable(component, exit_code=True, display=True)
         ctx.invoke(git_clean, component=[component])
 
-        for cmd in ["rm -rf dist", "python setup.py sdist", "twine upload ./dist/*"]:
+        for cmd in ["rm -rf dist", "python -m build --sdist", "twine upload ./dist/*"]:
             run_command(cmd, component)
 
         retry_interval = 15

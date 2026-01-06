@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -53,6 +53,8 @@ def is_component_python_package(component):
     """
     if os.path.exists(get_srcdir(component) + os.sep + "setup.py"):
         return True
+    if os.path.exists(get_srcdir(component) + os.sep + "pyproject.toml"):
+        return True
     return False
 
 
@@ -66,10 +68,7 @@ def python_install_eggs():
     """Create eggs-info/ in all REANA infrastructure and runtime components."""
     for component in REPO_LIST_CLUSTER:
         if is_component_python_package(component):
-            for cmd in [
-                "python setup.py bdist_egg",
-            ]:
-                run_command(cmd, component)
+            run_command("pip install -e .", component)
 
 
 @python_commands.command(name="python-unit-tests")
@@ -193,7 +192,7 @@ def python_unit_tests(
         else:
             msg = (
                 "Ignoring this component that does not contain"
-                " a Python setup.py file."
+                " a Python setup.py or pyproject.toml file."
             )
             display_message(msg, component)
 

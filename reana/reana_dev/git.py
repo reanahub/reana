@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2023, 2024, 2025 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -1300,7 +1300,11 @@ def git_upgrade_shared_modules(
             if amend:
                 commit_cmd = "git commit --amend --no-edit"
 
-            files_to_commit = ["setup.py"]
+            files_to_commit = []
+            if os.path.exists(get_srcdir(c) + os.sep + "setup.py"):
+                files_to_commit.append("setup.py")
+            if os.path.exists(get_srcdir(c) + os.sep + "pyproject.toml"):
+                files_to_commit.append("pyproject.toml")
             if os.path.exists(get_srcdir(c) + os.sep + "requirements.txt"):
                 files_to_commit.append("requirements.txt")
             run_command(

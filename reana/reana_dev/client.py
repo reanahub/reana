@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2022, 2023 CERN.
+# Copyright (C) 2020, 2022, 2023, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -30,7 +30,7 @@ def client_install():  # noqa: D301
     """Install latest REANA client and its dependencies."""
     for component in REPO_LIST_CLIENT:
         for cmd in [
-            "if [ -e setup.py ]; then pip install . --upgrade; fi",
+            "if [ -e setup.py ] || [ -e pyproject.toml ]; then pip install . --upgrade; fi",
         ]:
             run_command(cmd, component)
     run_command("pip check", "reana")
