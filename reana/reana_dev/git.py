@@ -32,6 +32,7 @@ from reana.config import (
     REPO_LIST_ALL,
     REPO_LIST_CLUSTER_INFRASTRUCTURE,
     REPO_LIST_CLUSTER_RUNTIME_BATCH,
+    REPO_LIST_PYTHON_FIRST,
     REPO_LIST_PYTHON_REQUIREMENTS,
     REPO_LIST_SHARED,
 )
@@ -141,7 +142,10 @@ def git_create_release_branch(component: str, next_version: Optional[str]):
     if not next_version:
         # bump current version depending on whether it is semver2 or pep440
         current_version = get_current_component_version_from_source_files(component)
-        if version_files.get(DOCKER_VERSION_FILE):
+        if (
+            version_files.get(DOCKER_VERSION_FILE)
+            and component not in REPO_LIST_PYTHON_FIRST
+        ):
             next_version = bump_semver2_version(current_version)
         elif version_files.get(HELM_VERSION_FILE):
             next_version = bump_semver2_version(current_version)
@@ -155,6 +159,7 @@ def git_create_release_branch(component: str, next_version: Optional[str]):
         # provided next_version is always in pep440 version
         if (
             DOCKER_VERSION_FILE in version_files
+            and component not in REPO_LIST_PYTHON_FIRST
             or HELM_VERSION_FILE in version_files
             or JAVASCRIPT_VERSION_FILE in version_files
         ):

@@ -43,6 +43,7 @@ from reana.config import (
     REPO_LIST_CLUSTER_INFRASTRUCTURE,
     REPO_LIST_CLUSTER_RUNTIME_BATCH,
     REPO_LIST_DEMO_RUNNABLE,
+    REPO_LIST_PYTHON_FIRST,
 )
 
 
@@ -691,7 +692,10 @@ def get_current_component_version_from_source_files(
         all_version_files = {version_file: all_version_files[version_file]}
 
     version = ""
-    if all_version_files.get(DOCKER_VERSION_FILE):
+    if (
+        all_version_files.get(DOCKER_VERSION_FILE)
+        and component not in REPO_LIST_PYTHON_FIRST
+    ):
         with open(all_version_files.get(DOCKER_VERSION_FILE)) as f:
             for line in f.readlines():
                 match = re.match(
@@ -952,7 +956,10 @@ def bump_component_version(
             )
 
     # depending on a component, return proper component version
-    if DOCKER_VERSION_FILE in next_version_per_file_type.keys():
+    if (
+        DOCKER_VERSION_FILE in next_version_per_file_type.keys()
+        and component not in REPO_LIST_PYTHON_FIRST
+    ):
         return next_version_per_file_type[DOCKER_VERSION_FILE], updated_files
     elif HELM_VERSION_FILE in next_version_per_file_type.keys():
         return next_version_per_file_type[HELM_VERSION_FILE], updated_files
