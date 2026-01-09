@@ -132,6 +132,14 @@ REPO_LIST_PYTHON_REQUIREMENTS = [
 ]
 """List of cluster components that have a Python requirements file."""
 
+REPO_LIST_PYTHON_FIRST = [
+    "reana-client",
+]
+"""List of components that are Python packages first, Docker images second.
+
+For these components, the Python version (PEP440 format) takes precedence
+over the Docker version (semver2 format) for versioning and tagging purposes."""
+
 WORKFLOW_ENGINE_LIST_ALL = ["cwl", "serial", "yadage", "snakemake"]
 """List of supported workflow engines."""
 
