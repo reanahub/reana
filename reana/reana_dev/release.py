@@ -9,6 +9,7 @@
 """`reana-dev`'s release commands."""
 
 import os
+import subprocess
 import sys
 import tempfile
 from shutil import which
@@ -319,6 +320,152 @@ def release_helm(ctx, user: str, cr_commit: bool, dry_run: bool) -> None:  # noq
             f"git worktree remove '{gh_pages_worktree}'",
             dry_run=dry_run,
         )
+
+
+@click.option(
+    "--component",
+    "-c",
+    required=True,
+    multiple=True,
+    help="Which components? [name|CLUSTER]",
+)
+@click.option(
+    "--exclude-components",
+    default="",
+    help="Which components to exclude? [c1,c2,c3]",
+)
+@click.option(
+    "--src-registry",
+    default="docker.io",
+    help="Source registry [default=docker.io]",
+)
+@click.option(
+    "--src-user",
+    default="reanahub",
+    help="Source user/organisation name [default=reanahub]",
+)
+@click.option(
+    "--dst-registry",
+    default="registry.cern.ch",
+    help="Destination registry [default=registry.cern.ch]",
+)
+@click.option(
+    "--dst-user",
+    default="reanahub",
+    help="Destination user/organisation name [default=reanahub]",
+)
+@click.option("--image-name", help="Custom image name for the component")
+@click.option(
+    "--overwrite-existing",
+    is_flag=True,
+    default=False,
+    help="Overwrite images that already exist in destination registry [default=False]",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Print commands without executing them [default=False]",
+)
+@release_commands.command(name="release-docker-copy")
+def release_docker_copy(
+    component,
+    exclude_components,
+    src_registry,
+    src_user,
+    dst_registry,
+    dst_user,
+    image_name,
+    overwrite_existing,
+    dry_run,
+):  # noqa: D301
+    """Copy Docker images from one registry to another.
+
+    This command uses ``docker buildx imagetools create`` to copy multi-arch
+    images between registries without rebuilding them.
+
+    \b
+    :param components: The option ``component`` can be repeated. The value may
+                       consist of:
+                         * (1) standard component name such as
+                               'reana-workflow-controller';
+                         * (2) short component name such as 'r-w-controller';
+                         * (3) special value '.' indicating component of the
+                               current working directory;
+                         * (4) special value 'CLUSTER' that will expand to
+                               cover all REANA cluster components [default];
+                         * (5) special value 'CLIENT' that will expand to
+                               cover all REANA client components;
+                         * (6) special value 'DEMO' that will expand
+                               to include several runable REANA demo examples;
+                         * (7) special value 'ALL' that will expand to include
+                               all REANA repositories.
+    :param exclude_components: List of components to exclude from command.
+    :param src_registry: Source registry. [default=docker.io]
+    :param src_user: Source organisation or user name. [default=reanahub]
+    :param dst_registry: Destination registry. [default=registry.cern.ch]
+    :param dst_user: Destination organisation or user name. [default=reanahub]
+    :param image_name: Custom name of the Docker image.
+    :param overwrite_existing: Overwrite images that already exist in destination. [default=False]
+    :param dry_run: Print commands without executing them. [default=False]
+    :type component: str
+    :type exclude_components: str
+    :type src_registry: str
+    :type src_user: str
+    :type dst_registry: str
+    :type dst_user: str
+    :type image_name: str
+    :type overwrite_existing: bool
+    :type dry_run: bool
+    """
+    if exclude_components:
+        exclude_components = exclude_components.split(",")
+    components = select_components(component, exclude_components)
+
+    if image_name and len(components) > 1:
+        click.secho("Cannot use custom image name with multiple components.", fg="red")
+        sys.exit(1)
+
+    if not dry_run:
+        # check whether docker buildx is available
+        run_command("docker buildx version", display=False, return_output=True)
+
+    for component_ in components:
+        if not is_component_dockerised(component_):
+            display_message(
+                f"Component {component_} is not dockerised, skipping.", component_
+            )
+            continue
+
+        is_component_releasable(component_, exit_code=True, display=True)
+
+        component_image_name = image_name or component_
+        docker_tag = get_docker_tag(component_)
+        src_image = f"{src_registry}/{src_user}/{component_image_name}:{docker_tag}"
+        dst_image = f"{dst_registry}/{dst_user}/{component_image_name}:{docker_tag}"
+
+        if not overwrite_existing and not dry_run:
+            try:
+                subprocess.check_output(
+                    f"docker buildx imagetools inspect {dst_image}",
+                    shell=True,
+                    stderr=subprocess.DEVNULL,
+                )
+                display_message(
+                    f"Image {dst_image} already exists, skipping.", component_
+                )
+                continue
+            except subprocess.CalledProcessError:
+                pass  # image doesn't exist, proceed with copy
+
+        cmd = f"docker buildx imagetools create -t {dst_image} {src_image}"
+        run_command(cmd, component_, dry_run=dry_run)
+
+        if not dry_run:
+            click.secho(
+                f"{component_}: copied {src_image} to {dst_image}",
+                fg="green",
+            )
 
 
 release_commands_list = list(release_commands.commands.values())
