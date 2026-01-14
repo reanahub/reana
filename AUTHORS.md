@@ -44,6 +44,7 @@ organisation on GitHub, in alphabetical order:
 - [Maria Fernando](https://github.com/MMFernando)
 - [Markus Zimmermann](https://inspirehep.net/authors/1249806)
 - [Matthew Feickert](https://orcid.org/0000-0003-4124-7862)
+- [Michael Buchar](https://orcid.org/0009-0009-4804-8525)
 - [Michael Eliachevitch](https://orcid.org/0000-0003-2033-537X)
 - [Michael R. Crusoe](https://orcid.org/0000-0002-2961-9670)
 - [Parth Shandilya](https://github.com/ParthS007)
