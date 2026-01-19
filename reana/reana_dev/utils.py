@@ -1100,8 +1100,7 @@ def get_commit_pr_suffix(component):
 
 def print_colima_start_help():
     """Print information how to start Colima with K3s."""
-    print(
-        """
+    print("""
 Please start a Colima VM with Kubernetes option and with appropriate
 architecture, disk, memory, etc options for your laptop.
 
@@ -1120,5 +1119,4 @@ $ colima start \\
     --vm-type vz \\
     --vz-rosetta
 
-This script does not do this automatically. Exiting."""
-    )
+This script does not do this automatically. Exiting.""")

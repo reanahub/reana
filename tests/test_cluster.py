@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA
-# Copyright (C) 2024 CERN.
+# Copyright (C) 2024, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -15,7 +15,6 @@ import pytest
 from click.testing import CliRunner
 from mock import patch, mock_open
 from unittest.mock import call
-
 
 helm_command = """cat <<EOF | helm install reana helm/reana -n default --create-namespace --wait -f -
 components:

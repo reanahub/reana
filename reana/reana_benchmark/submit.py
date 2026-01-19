@@ -1,5 +1,5 @@
 # This file is part of REANA.
-# Copyright (C) 2021, 2022 CERN.
+# Copyright (C) 2021, 2022, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -24,7 +24,6 @@ from reana.reana_benchmark.utils import (
     build_extended_workflow_name,
 )
 from reana.reana_benchmark.config import REANA_ACCESS_TOKEN, WORKERS_DEFAULT_COUNT
-
 
 CURRENT_WORKING_DIRECTORY = os.getcwd()
 
