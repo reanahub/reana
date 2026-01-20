@@ -44,6 +44,8 @@ spec:
     metadata:
       labels:
         app: {{ include "reana.prefix" . }}-cache
+      annotations:
+        checksum/cache-secrets: {{ include (print $.Template.BasePath "/cache-secrets.yaml") . | sha256sum }}
     spec:
       containers:
       - name: cache

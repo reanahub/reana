@@ -51,6 +51,8 @@ spec:
     metadata:
       labels:
         app: {{ include "reana.prefix" . }}-message-broker
+      annotations:
+        checksum/message-broker-secrets: {{ include (print $.Template.BasePath "/message-broker-secrets.yaml") . | sha256sum }}
     spec:
       containers:
       - name: message-broker

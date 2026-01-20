@@ -31,6 +31,17 @@ spec:
       annotations:
         checksum/database-config: {{ include (print $.Template.BasePath "/database-config.yaml") . | sha256sum }}
         checksum/database-secrets: {{ include (print $.Template.BasePath "/database-secrets.yaml") . | sha256sum }}
+        checksum/sso-secrets: {{ include (print $.Template.BasePath "/sso-secrets.yaml") . | sha256sum }}
+        {{- if .Values.login }}
+        checksum/login-provider-secrets: {{ include (print $.Template.BasePath "/login-provider-secrets.yaml") . | sha256sum }}
+        {{- end }}
+        checksum/gitlab-secrets: {{ include (print $.Template.BasePath "/gitlab-secrets.yaml") . | sha256sum }}
+        checksum/app-secrets: {{ include (print $.Template.BasePath "/app-secrets.yaml") . | sha256sum }}
+        checksum/cache-secrets: {{ include (print $.Template.BasePath "/cache-secrets.yaml") . | sha256sum }}
+        checksum/message-broker-secrets: {{ include (print $.Template.BasePath "/message-broker-secrets.yaml") . | sha256sum }}
+        {{- if .Values.notifications.enabled }}
+        checksum/mail-notification-secrets: {{ include (print $.Template.BasePath "/mail-notification-secrets.yaml") . | sha256sum }}
+        {{- end }}
     spec:
       serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
       containers:

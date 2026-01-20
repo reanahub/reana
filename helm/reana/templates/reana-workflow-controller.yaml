@@ -54,6 +54,15 @@ spec:
       annotations:
         checksum/database-config: {{ include (print $.Template.BasePath "/database-config.yaml") . | sha256sum }}
         checksum/database-secrets: {{ include (print $.Template.BasePath "/database-secrets.yaml") . | sha256sum }}
+        checksum/gitlab-secrets: {{ include (print $.Template.BasePath "/gitlab-secrets.yaml") . | sha256sum }}
+        checksum/app-secrets: {{ include (print $.Template.BasePath "/app-secrets.yaml") . | sha256sum }}
+        checksum/message-broker-secrets: {{ include (print $.Template.BasePath "/message-broker-secrets.yaml") . | sha256sum }}
+        {{- if $opensearchEnabled }}
+        checksum/opensearch-secrets: {{ include (print $.Template.BasePath "/opensearch-secrets.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if $opensearchTlsEnabled }}
+        checksum/opensearch-tls-secrets: {{ include (print $.Template.BasePath "/opensearch-tls-secrets.yaml") . | sha256sum }}
+        {{- end }}
     spec:
       serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
       {{- if .Values.components.reana_workflow_controller.imagePullSecrets }}
