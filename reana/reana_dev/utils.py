@@ -643,7 +643,7 @@ def upgrade_requirements(component: str) -> bool:
 
     docker_cmd = (
         f"docker run --rm -it -v {get_srcdir(component)}:/code:z {PYTHON_DOCKER_IMAGE} "
-        f"bash -c 'cd /code && pip install --upgrade pip-tools setuptools pip && {pip_compile_cmd}'"
+        f"bash -c 'cd /code && pip install --upgrade pip-tools pip && pip install \"setuptools<81\" && {pip_compile_cmd}'"
     )
     run_command(docker_cmd, component)
     return True
