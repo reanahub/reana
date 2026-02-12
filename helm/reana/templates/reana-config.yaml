@@ -1,3 +1,6 @@
+{{- $email_confirmation := .Values.components.reana_server.environment.REANA_USER_EMAIL_CONFIRMATION | default false -}}
+{{- $email_confirmation_enabled := eq (toString $email_confirmation | lower) "true" -}}
+{{- $access_token_issuance_policy := .Values.components.reana_server.environment.REANA_ACCESS_TOKEN_ISSUANCE_POLICY | default "manual" -}}
 ---
 {{- if .Values.components.reana_ui.cern_ropo }}
   {{- fail  "`components.reana_ui.cern_ropo` is deprecated, please use `components.reana_ui.privacy_notice_url` instead." }}
@@ -31,11 +34,8 @@ data:
     {{- else }}
     local_users: false
     {{- end }}
-    {{- if or (.Values.components.reana_server.environment.REANA_USER_EMAIL_CONFIRMATION) (eq (.Values.components.reana_server.environment.REANA_USER_EMAIL_CONFIRMATION | toString) "<nil>") }}
-    user_confirmation: true
-    {{- else }}
-    user_confirmation: false
-    {{- end }}
+    user_confirmation: {{ $email_confirmation_enabled }}
+    access_token_issuance_policy: {{ $access_token_issuance_policy | quote }}
     quota_enabled: {{ .Values.quota.enabled }}
     file_preview_size_limit: {{ int .Values.components.reana_ui.file_preview_size_limit }}
     launcher_examples:
