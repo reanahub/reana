@@ -125,6 +125,8 @@ components:
       REANA_OPENSEARCH_USE_SSL: true
       REANA_OPENSEARCH_CA_CERTS: "/code/certs/ca.crt"
       REANA_OPENSEARCH_USER: reana
+      WORKSPACE_DISPLAY_FILE_LIMIT: 100000
+      FORCE_GARBAGE_COLLECTION: ""
   reana_workflow_engine_cwl:
     image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.3
     environment: {}
