@@ -62,12 +62,14 @@ def run_command_possibilities(command, component, return_output=False):
 )
 @patch(
     "reana.reana_dev.run.get_example_reana_yaml_file_path",
-    return_value="reana-cwl.yaml",
 )
 def test_run_example_check_only_passes(
-    mock_run_command, mock_get_example_reana_yaml_file_path
+    mock_get_example_reana_yaml_file_path, mock_run_command, tmp_path
 ):
     """Tests for run-example command with check-only flag, when all tests pass."""
+    yaml_file = tmp_path / "reana-cwl.yaml"
+    yaml_file.write_text("tests:\n  files:\n    - {file: output.txt}\n")
+    mock_get_example_reana_yaml_file_path.return_value = str(yaml_file)
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -93,15 +95,20 @@ def test_run_example_check_only_passes(
 )
 @patch(
     "reana.reana_dev.run.get_example_reana_yaml_file_path",
-    return_value="reana-cwl.yaml",
-    side_effect=lambda component, workflow_engine, compute_backend: (
-        "reana-cwl.yaml" if workflow_engine == "cwl" else "reana-yadage.yaml"
-    ),
 )
 def test_run_example_check_only_one_fail_one_pass(
-    mock_run_command, mock_get_example_reana_yaml_file_path
+    mock_get_example_reana_yaml_file_path, mock_run_command, tmp_path
 ):
     """Test for run-example command with check-only flag, and where one example fails and one passes."""
+    cwl_yaml = tmp_path / "reana-cwl.yaml"
+    cwl_yaml.write_text("tests:\n  files:\n    - {file: output.txt}\n")
+    yadage_yaml = tmp_path / "reana-yadage.yaml"
+    yadage_yaml.write_text("tests:\n  files:\n    - {file: output.txt}\n")
+    mock_get_example_reana_yaml_file_path.side_effect = (
+        lambda component, workflow_engine, compute_backend: (
+            str(cwl_yaml) if workflow_engine == "cwl" else str(yadage_yaml)
+        )
+    )
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -121,6 +128,47 @@ def test_run_example_check_only_one_fail_one_pass(
         assert "2 submitted" in result.output
         assert "1 passed" in result.output
         assert "1 failed: root6-roofit-cwl-kubernetes" in result.output
+
+
+@patch(
+    "reana.reana_dev.run.run_command",
+    side_effect=lambda command, component, return_output=False: (
+        "1"
+        if "reana-client logs" in command
+        else (
+            "bmass.png\njpsimass.png"
+            if "reana-client ls" in command
+            else "finished" if "reana-client status" in command else ""
+        )
+    ),
+)
+@patch(
+    "reana.reana_dev.run.get_example_reana_yaml_file_path",
+)
+def test_run_example_check_only_without_gherkin_tests(
+    mock_get_example_reana_yaml_file_path, mock_run_command, tmp_path
+):
+    """Tests for run-example command with check-only flag for examples without Gherkin tests."""
+    yaml_file = tmp_path / "reana.yaml"
+    yaml_file.write_text("workflow:\n  type: snakemake\n")
+    mock_get_example_reana_yaml_file_path.return_value = str(yaml_file)
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        result = runner.invoke(
+            reana_dev,
+            [
+                "run-example",
+                "-c",
+                "r-d-l-r-b2jpsik",
+                "-w",
+                "snakemake",
+                "--check-only",
+            ],
+        )
+        assert "1 passed" in result.output
+        assert "0 failed" in result.output
+        assert result.exit_code == 0
 
 
 def test_is_component_python_package():
