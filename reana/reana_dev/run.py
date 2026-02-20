@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023, 2025 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2025, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -15,11 +15,15 @@ import sys
 import time
 from typing import List
 
+import yaml
+
 import click
 
 from reana.config import (
     COMPUTE_BACKEND_LIST_ALL,
+    EXAMPLE_LOG_MESSAGES,
     EXAMPLE_NON_STANDARD_REANA_YAML_FILENAME,
+    EXAMPLE_OUTPUT_FILENAMES,
     TIMECHECK,
     TIMEOUT,
     WORKFLOW_ENGINE_LIST_ALL,
@@ -87,6 +91,32 @@ def construct_workflow_name(example, workflow_engine, compute_backend):
     output = "{0}-{1}-{2}".format(
         example.replace("reana-demo-", ""), workflow_engine, compute_backend
     )
+    return output
+
+
+def get_expected_log_messages_for_example(example):
+    """Return expected log messages for given example.
+
+    :param example: name of the component
+    :return: Tuple with output log messages(s)
+    """
+    try:
+        output = EXAMPLE_LOG_MESSAGES[example]
+    except KeyError:
+        output = EXAMPLE_LOG_MESSAGES["*"]
+    return output
+
+
+def get_expected_output_filenames_for_example(example):
+    """Return expected output file names for given example.
+
+    :param example: name of the component
+    :return: Tuple with output file name(s)
+    """
+    try:
+        output = EXAMPLE_OUTPUT_FILENAMES[example]
+    except KeyError:
+        output = EXAMPLE_OUTPUT_FILENAMES["*"]
     return output
 
 
@@ -610,21 +640,52 @@ def run_example(  # noqa: C901
                     elif "failed" in status:
                         run_statistics["failed"].append(workflow_name)
                     elif "finished" in status or "stopped" in status:
-                        try:
-                            tests = run_command(
-                                f"reana-client test -w {workflow_name}",
-                                component,
-                                return_output=True,
-                            )
-                            if re.findall(r"^\s*-> ERROR:.*", tests, re.MULTILINE):
-                                run_statistics["failed"].append(workflow_name)
-                            else:
+                        with open(reana_yaml_file_path) as f:
+                            reana_yaml = yaml.safe_load(f)
+                        if not reana_yaml.get("tests"):
+                            passed = True
+                            for log_message in get_expected_log_messages_for_example(
+                                component
+                            ):
+                                cmd = f"reana-client logs -w {workflow_name} | grep '{log_message}' | wc -l"
+                                cmd_output = run_command(
+                                    cmd, component, return_output=True
+                                )
+                                click.secho(cmd_output)
+                                if int(cmd_output) == 0:
+                                    passed = False
+                            if passed:
+                                cmd = f"reana-client ls -w {workflow_name}"
+                                listing = run_command(
+                                    cmd, component, return_output=True
+                                )
+                                click.secho(listing)
+                                expected_files = (
+                                    file
+                                    or get_expected_output_filenames_for_example(
+                                        component
+                                    )
+                                )
+                                for expected_file in expected_files:
+                                    if expected_file not in listing:
+                                        passed = False
+                            if passed:
                                 run_statistics["passed"].append(workflow_name)
-                        except SystemExit:
-                            run_statistics["failed"].append(workflow_name)
-                            display_message(
-                                f"Workflow {workflow_name} has no tests.", component
-                            )
+                            else:
+                                run_statistics["failed"].append(workflow_name)
+                        else:
+                            try:
+                                tests = run_command(
+                                    f"reana-client test -w {workflow_name}",
+                                    component,
+                                    return_output=True,
+                                )
+                                if re.findall(r"^\s*-> ERROR:.*", tests, re.MULTILINE):
+                                    run_statistics["failed"].append(workflow_name)
+                                else:
+                                    run_statistics["passed"].append(workflow_name)
+                            except SystemExit:
+                                run_statistics["failed"].append(workflow_name)
                     else:
                         run_statistics["failed"].append(workflow_name)
 
