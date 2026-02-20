@@ -18,6 +18,7 @@ REPO_LIST_DEMO_RUNNABLE = [
     "reana-demo-cms-dimuon-mass-spectrum",
     "reana-demo-cms-h4l",
     "reana-demo-helloworld",
+    "reana-demo-lhcb-run2-b2jpsik",
     "reana-demo-root6-roofit",
     "reana-demo-worldpopulation",
 ]
@@ -175,6 +176,11 @@ EXAMPLE_NON_STANDARD_REANA_YAML_FILENAME = {
             "kubernetes": "reana.yaml",
         }
     },
+    "reana-demo-lhcb-run2-b2jpsik": {
+        "snakemake": {
+            "kubernetes": "reana.yaml",
+        }
+    },
 }
 """List of non standard REANA demo's reana.yaml file names."""
 
@@ -186,6 +192,7 @@ EXAMPLE_OUTPUT_FILENAMES = {
     "reana-demo-atlas-recast": ("pre.png", "limit.png", "limit_data.json"),
     "reana-demo-cms-dimuon-mass-spectrum": ("DoubleMu.root",),
     "reana-demo-cms-h4l": ("results/mass4l_combine_userlvl3.pdf",),
+    "reana-demo-lhcb-run2-b2jpsik": ("bmass.png", "jpsimass.png"),
     "*": ("plot.png",),
 }
 """Expected success produced files by REANA demos."""
@@ -214,6 +221,7 @@ EXAMPLE_LOG_MESSAGES = {
     "reana-demo-alice-lego-train-test-run": ("pdf file plot.pdf has been created",),
     "reana-demo-bsm-search": ("postfit.pdf has been created",),
     "reana-demo-cms-dimuon-mass-spectrum": ("T---Report end!",),
+    "reana-demo-lhcb-run2-b2jpsik": ("png file jpsimass.png has been created",),
     "*": ("job:",),
 }
 """Expected success log messages from REANA demos."""
@@ -277,6 +285,9 @@ DOCKER_PREFETCH_IMAGES = {
     ],
     "reana-demo-dask-coffea": [
         "docker.io/coffeateam/coffea-dask-cc7:0.7.22-py3.10-g7f049",
+    ],
+    "reana-demo-lhcb-run2-b2jpsik": [
+        "docker.io/reanahub/reana-env-root6:6.38.00",
     ],
 }
 """Images to be prefetched depending on the REANA demo to be executed."""
