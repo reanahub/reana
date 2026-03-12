@@ -32,7 +32,7 @@ jobs:
           pip install -e .[all]
 
       - name: Run Sphinx documentation with doctests
-        run: ./run-tests.sh --check-sphinx
+        run: ./run-tests.sh --docs-sphinx
 
   format-black:
     runs-on: ubuntu-24.04
@@ -48,7 +48,7 @@ jobs:
       - name: Check Python code formatting
         run: |
           pip install black
-          ./run-tests.sh --check-black
+          ./run-tests.sh --format-black
 
   format-prettier:
     runs-on: ubuntu-24.04
@@ -62,23 +62,7 @@ jobs:
       - name: Check Prettier code fomatting
         run: |
           npm install prettier --global
-          ./run-tests.sh --check-prettier
-
-  format-pydocstyle:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Check compliance with Python docstring conventions
-        run: |
-          pip install pydocstyle
-          ./run-tests.sh --check-pydocstyle
+          ./run-tests.sh --format-prettier
 
   format-shfmt:
     runs-on: ubuntu-24.04
@@ -89,23 +73,7 @@ jobs:
       - name: Check shell script code fomatting
         run: |
           sudo apt-get install shfmt
-          ./run-tests.sh --check-shfmt
-
-  lint-check-manifest:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Check Python manifest completeness
-        run: |
-          pip install check-manifest
-          ./run-tests.sh --check-manifest
+          ./run-tests.sh --format-shfmt
 
   lint-commitlint:
     runs-on: ubuntu-24.04
@@ -126,12 +94,12 @@ jobs:
       - name: Check commit message compliance of the recently pushed commit
         if: github.event_name == 'push'
         run: |
-          ./run-tests.sh --check-commitlint HEAD~1 HEAD
+          ./run-tests.sh --lint-commitlint HEAD~1 HEAD
 
       - name: Check commit message compliance of the pull request
         if: github.event_name == 'pull_request'
         run: |
-          ./run-tests.sh --check-commitlint ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} ${{ github.event.pull_request.number }}
+          ./run-tests.sh --lint-commitlint ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} ${{ github.event.pull_request.number }}
 
   lint-flake8:
     runs-on: ubuntu-24.04
@@ -148,7 +116,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install flake8
-          ./run-tests.sh --check-flake8
+          ./run-tests.sh --lint-flake8
 
   lint-helm:
     runs-on: ubuntu-24.04
@@ -176,7 +144,23 @@ jobs:
       - name: Lint JSON files
         run: |
           npm install jsonlint --global
-          ./run-tests.sh --check-jsonlint
+          ./run-tests.sh --lint-jsonlint
+
+  lint-manifest:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Python manifest completeness
+        run: |
+          pip install check-manifest
+          ./run-tests.sh --lint-manifest
 
   lint-markdownlint:
     runs-on: ubuntu-24.04
@@ -190,7 +174,23 @@ jobs:
       - name: Lint Markdown files
         run: |
           npm install markdownlint-cli2 --global
-          ./run-tests.sh --check-markdownlint
+          ./run-tests.sh --lint-markdownlint
+
+  lint-pydocstyle:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check compliance with Python docstring conventions
+        run: |
+          pip install pydocstyle
+          ./run-tests.sh --lint-pydocstyle
 
   lint-shellcheck:
     runs-on: ubuntu-24.04
@@ -201,7 +201,7 @@ jobs:
       - name: Runs shell script static analysis
         run: |
           sudo apt-get install shellcheck
-          ./run-tests.sh --check-shellcheck
+          ./run-tests.sh --lint-shellcheck
 
   lint-yamllint:
     runs-on: ubuntu-24.04
@@ -219,7 +219,7 @@ jobs:
       - name: Lint YAML files
         run: |
           pip install yamllint
-          ./run-tests.sh --check-yamllint
+          ./run-tests.sh --lint-yamllint
 
   python-tests:
     runs-on: ubuntu-24.04
@@ -239,7 +239,7 @@ jobs:
           pip install -e .[all]
 
       - name: Run pytest
-        run: ./run-tests.sh --check-pytest
+        run: ./run-tests.sh --python-tests
 
       - name: Codecov Coverage
         uses: codecov/codecov-action@v4
