@@ -56,6 +56,10 @@ spec:
         checksum/database-secrets: {{ include (print $.Template.BasePath "/database-secrets.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
+      {{- if .Values.components.reana_workflow_controller.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.components.reana_workflow_controller.imagePullSecrets | nindent 8 }}
+      {{- end }}
       containers:
       - name: rest-api
         image: {{ .Values.components.reana_workflow_controller.image }}
