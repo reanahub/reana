@@ -185,6 +185,10 @@ spec:
             value: !!str {{ .Values.kubernetes_jobs_timeout_limit | default 604800 }}  # 604800 seconds = 7 days
           - name: REANA_JOB_CONTROLLER_IMAGE
             value: {{ .Values.components.reana_job_controller.image }}
+          {{- if .Values.components.reana_job_controller.imagePullSecrets }}
+          - name: REANA_JOB_CONTROLLER_SECRET
+            value: {{ .Values.components.reana_job_controller.imagePullSecrets }}
+          {{- end }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_CWL
             value: {{ .Values.components.reana_workflow_engine_cwl.image }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_YADAGE
@@ -296,6 +300,13 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-opensearch-secrets
                 key: REANA_OPENSEARCH_PASSWORD
+          {{- end }}
+          # configurations for datastore sidecar
+          - name: REANA_DATASTORE_IMAGE
+            values: {{ .Values.interactive_sessions.sidecars.datastore.image }}
+          {{- if .Values.interactive_sessions.sidecars.datastore.imagePullSecret }}
+          - name: REANA_DATASTORE_SECRET
+            values: {{ .Values.interactive_sessions.sidecars.datastore.imagePullSecret }}
           {{- end }}
       - name: job-status-consumer
         image: {{ .Values.components.reana_workflow_controller.image }}
