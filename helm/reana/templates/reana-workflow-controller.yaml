@@ -303,10 +303,10 @@ spec:
           {{- end }}
           # configurations for datastore sidecar
           - name: REANA_DATASTORE_IMAGE
-            values: {{ .Values.interactive_sessions.sidecars.datastore.image }}
+            value: {{ .Values.interactive_sessions.sidecars.datastore.image }}
           {{- if .Values.interactive_sessions.sidecars.datastore.imagePullSecret }}
           - name: REANA_DATASTORE_SECRET
-            values: {{ .Values.interactive_sessions.sidecars.datastore.imagePullSecret }}
+            value: {{ .Values.interactive_sessions.sidecars.datastore.imagePullSecret }}
           {{- end }}
       - name: job-status-consumer
         image: {{ .Values.components.reana_workflow_controller.image }}
