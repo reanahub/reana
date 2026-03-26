@@ -577,22 +577,16 @@ def update_module_in_cluster_components(
 
         new_version_obj = Version(new_version)
         next_minor_version = f"{new_version_obj.major}.{new_version_obj.minor + 1}.0"
-        if os.path.exists(get_srcdir(component) + os.sep + "setup.py"):
-            replace_string(
-                file_="setup.py",
-                find='>=.*,<.*[^",]',
-                replace=f">={new_version},<{next_minor_version}",
-                line_selector_regex=f"{module}.*>=",
-                component=component,
-            )
-        if os.path.exists(get_srcdir(component) + os.sep + "pyproject.toml"):
-            replace_string(
-                file_="pyproject.toml",
-                find='>=.*,<.*[^",]',
-                replace=f">={new_version},<{next_minor_version}",
-                line_selector_regex=f"{module}.*>=",
-                component=component,
-            )
+        for file_ in ("setup.py", "pyproject.toml"):
+            file_path = get_srcdir(component) + os.sep + file_
+            if os.path.exists(file_path) and module in open(file_path).read():
+                replace_string(
+                    file_=file_,
+                    find='>=.*,<.*[^",]',
+                    replace=f">={new_version},<{next_minor_version}",
+                    line_selector_regex=f"{module}.*>=",
+                    component=component,
+                )
         if os.path.exists(get_srcdir(component) + os.sep + "requirements.txt"):
             replace_string(
                 file_="requirements.txt",
