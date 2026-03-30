@@ -695,9 +695,8 @@ def get_current_component_version_from_source_files(
         all_version_files = {version_file: all_version_files[version_file]}
 
     version = ""
-    if (
-        all_version_files.get(DOCKER_VERSION_FILE)
-        and component not in REPO_LIST_PYTHON_FIRST
+    if all_version_files.get(DOCKER_VERSION_FILE) and (
+        version_file or component not in REPO_LIST_PYTHON_FIRST
     ):
         with open(all_version_files.get(DOCKER_VERSION_FILE)) as f:
             for line in f.readlines():
