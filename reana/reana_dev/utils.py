@@ -522,8 +522,17 @@ def replace_string(
             ),
             sys.exit(1)
 
+    # When multiple lines match, build a sed expression addressing each line
+    # separately (e.g. "30s/…/…/;45s/…/…/") to avoid invalid multi-line address.
+    lines = (
+        [ln.strip() for ln in line.strip().splitlines() if ln.strip()] if line else []
+    )
+    if lines:
+        sed_expr = ";".join(f"{ln}s/{find}/{replace}/" for ln in lines)
+    else:
+        sed_expr = f"s/{find}/{replace}/"
     cmd = (
-        f"sed -i.bk '{line}s/{find}/{replace}/' {file_} && [ -e {file_}.bk ]"
+        f"sed -i.bk '{sed_expr}' {file_} && [ -e {file_}.bk ]"
         f" && rm {file_}.bk"  # Compatibility with BSD sed
     )
 
