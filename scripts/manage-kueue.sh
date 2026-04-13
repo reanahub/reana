@@ -67,7 +67,7 @@ wait_for_cleanup() {
 
     print_info "Waiting for $resource_type cleanup..."
     while [ $count -lt $timeout ]; do
-        if [ "$(kubectl get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | wc -l)" -eq 0 ]; then
+        if [ "$(kubectl get "$resource_type" ${namespace_flag:+$namespace_flag} --no-headers 2>/dev/null | wc -l)" -eq 0 ]; then
             return 0
         fi
         sleep 1
@@ -79,13 +79,20 @@ wait_for_cleanup() {
 # Delete resources with error handling
 delete_resources() {
     local resource_type="$1"
+    local namespace_flag="$2"
 
     # Delete all resources of this type
-    kubectl get "$resource_type" --no-headers 2>/dev/null | while read -r resource_name rest; do
-        echo "Resource name: $resource_name"
+    kubectl get "$resource_type" ${namespace_flag:+$namespace_flag} --no-headers 2>/dev/null | while read -r namespace_or_name name_or_rest rest; do
+        if [[ "$namespace_flag" == "-A" ]]; then
+            local ns_arg="-n $namespace_or_name"
+            local name="$name_or_rest"
+        else
+            local ns_arg=""
+            local name="$namespace_or_name"
+        fi
 
-        echo -e "${BLUE}   - Deleting $resource_type $resource_name...${NC}"
-        kubectl delete "$resource_type" "$resource_name" --all-namespaces --ignore-not-found=true --timeout=20s
+        echo -e "${BLUE}   - Deleting $resource_type $name...${NC}"
+        kubectl delete "$resource_type" "$name" ${ns_arg:+$ns_arg} --ignore-not-found=true --timeout=20s
     done
 }
 
@@ -94,18 +101,20 @@ force_delete_resources() {
     local resource_type="$1"
     local namespace_flag="$2"
 
-    print_info "Force deleting $resource_type resources..."
-    kubectl get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | while read -r namespace_or_name name_or_rest rest; do
+    echo -e "${YELLOW}$ kubectl get $resource_type${namespace_flag:+ $namespace_flag} --no-headers${NC}"
+    kubectl get "$resource_type" ${namespace_flag:+$namespace_flag} --no-headers 2>/dev/null | while read -r namespace_or_name name_or_rest rest; do
         if [[ "$namespace_flag" == "-A" ]]; then
-            local ns="-n $namespace_or_name"
+            local ns_arg="-n $namespace_or_name"
             local name="$name_or_rest"
         else
-            local ns="$namespace_flag"
+            local ns_arg=""
             local name="$namespace_or_name"
         fi
 
-        kubectl patch "$resource_type" "$name" "$ns" --type merge --patch '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
-        kubectl delete "$resource_type" "$name" "$ns" --force --grace-period=0 --ignore-not-found=true 2>/dev/null || true
+        echo -e "${YELLOW}$ kubectl patch $resource_type $name${ns_arg:+ $ns_arg} --type merge --patch '{\"metadata\":{\"finalizers\":[]}}'${NC}"
+        kubectl patch "$resource_type" "$name" ${ns_arg:+$ns_arg} --type merge --patch '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
+        echo -e "${YELLOW}$ kubectl delete $resource_type $name${ns_arg:+ $ns_arg} --force --grace-period=0 --ignore-not-found=true${NC}"
+        kubectl delete "$resource_type" "$name" ${ns_arg:+$ns_arg} --force --grace-period=0 --ignore-not-found=true 2>/dev/null || true
     done
 }
 
@@ -114,9 +123,10 @@ count_and_display_resources() {
     local resource_type="$1"
     local namespace_flag="$2"
     local display_name="$3"
+    local absence_style="${4:-success}"
 
     local raw_count
-    raw_count=$(kubectl get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | wc -l)
+    raw_count=$(kubectl get "$resource_type" ${namespace_flag:+$namespace_flag} --no-headers 2>/dev/null | wc -l)
 
     # Trim the raw count output
     local count
@@ -124,12 +134,16 @@ count_and_display_resources() {
 
     if [ "$count" -gt 0 ]; then
         echo -e "${BLUE} - $display_name ($count found):${NC}"
-        kubectl get "$resource_type" "$namespace_flag" --no-headers 2>/dev/null | while read -r line; do
+        kubectl get "$resource_type" ${namespace_flag:+$namespace_flag} --no-headers 2>/dev/null | while read -r line; do
             echo -e "${YELLOW}   • $line${NC}"
         done
         return 0 # Success - resources found
     else
-        print_status "No $display_name found"
+        if [ "$absence_style" = "info" ]; then
+            print_info "No $display_name found"
+        else
+            print_status "No $display_name found"
+        fi
         return 1 # No resources found
     fi
 }
@@ -139,27 +153,27 @@ verify_kueue_resources() {
     local mode="$1" # "check" or "final"
 
     if [ "$mode" = "final" ]; then
-        print_section "🔍 Final verification of Kueue resources..."
+        print_section "⚙️  Final verification of Kueue resources..."
     else
-        print_section "🔍 Checking Kueue resources..."
+        print_section "⚙️  Checking Kueue resources..."
     fi
 
     local has_resources=false
 
     # Check each resource type
-    if count_and_display_resources "clusterqueue" "" "ClusterQueues"; then
+    if count_and_display_resources "clusterqueues.kueue.x-k8s.io" "" "ClusterQueues"; then
         has_resources=true
     fi
 
-    if count_and_display_resources "localqueue" "-A" "LocalQueues"; then
+    if count_and_display_resources "localqueues.kueue.x-k8s.io" "-A" "LocalQueues"; then
         has_resources=true
     fi
 
-    if count_and_display_resources "resourceflavor" "" "ResourceFlavors"; then
+    if count_and_display_resources "resourceflavors.kueue.x-k8s.io" "" "ResourceFlavors"; then
         has_resources=true
     fi
 
-    if count_and_display_resources "workloads" "-A" "Workloads"; then
+    if count_and_display_resources "workloads.kueue.x-k8s.io" "-A" "Workloads" "info"; then
         has_resources=true
     fi
 
@@ -178,12 +192,48 @@ install_kueue() {
         return 0
     fi
 
-    print_section "📦 Installing Kueue..."
+    print_section "⚙️  Installing Kueue..."
     run_cmd helm install kueue oci://registry.k8s.io/kueue/charts/kueue \
-        --version=0.13.2 \
+        --version=0.17.0 \
         --namespace kueue-system \
-        --create-namespace \
-        --wait --timeout 300s
+        --create-namespace
+    run_cmd kubectl rollout status deployment/kueue-controller-manager \
+        -n kueue-system --timeout=300s
+    # On first boot the controller may crash before the apiserver has cached the
+    # CRD conversion webhook configuration, causing a bootstrapping deadlock.
+    # Detect CrashLoopBackOff and delete the pod once to trigger a clean restart.
+    sleep 5
+    local pod
+    pod=$(kubectl get pod -n kueue-system -l app.kubernetes.io/name=kueue \
+        -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    local restarted=false
+    if kubectl get pod -n kueue-system "$pod" \
+        -o jsonpath='{.status.containerStatuses[0].state.waiting.reason}' 2>/dev/null |
+        grep -q "CrashLoopBackOff\|Error"; then
+        print_warning "Controller crashed on first boot (known bootstrapping issue) — restarting..."
+        kubectl delete pod -n kueue-system "$pod" 2>/dev/null
+        restarted=true
+    fi
+    # Wait for the cert-rotator to patch the CRD conversion webhook caBundle.
+    # The webhook fails with "x509: unknown authority" until the
+    # cert-rotator updates the CRD spec.
+    print_section "⚙️  Waiting for webhook certificates to propagate..."
+    local timeout=60
+    local count=0
+    until kubectl get crd clusterqueues.kueue.x-k8s.io \
+        -o jsonpath='{.spec.conversion.webhook.clientConfig.caBundle}' 2>/dev/null | grep -q .; do
+        sleep 1
+        ((count++))
+        [ $count -ge $timeout ] && break
+    done
+    if [ $count -ge $timeout ]; then
+        print_warning "Webhook may not be ready yet — configure may fail if run immediately."
+    fi
+    # If the pod was restarted, wait for it to become ready again
+    if [ "$restarted" = "true" ]; then
+        run_cmd kubectl rollout status deployment/kueue-controller-manager \
+            -n kueue-system --timeout=120s
+    fi
 
     # Use `check_crds_installed "false"` to verify installation
     if check_crds_installed "check"; then
@@ -200,18 +250,19 @@ configure_kueue() {
         return 1
     fi
 
-    print_section "📄 Applying Kueue resource manifests..."
+    print_section "⚙️  Applying Kueue resource manifests..."
     print_info "Batch : ${BATCH_CPU} CPU | ${BATCH_MEMORY} memory"
     print_info "Job   : ${JOB_CPU} CPU | ${JOB_MEMORY} memory"
 
+    echo -e "${YELLOW}$ kubectl apply -f -${NC}"
     cat <<EOF | kubectl apply -f -
 ---
-apiVersion: kueue.x-k8s.io/v1beta1
+apiVersion: kueue.x-k8s.io/v1beta2
 kind: ResourceFlavor
 metadata:
   name: "default-flavor"
 ---
-apiVersion: kueue.x-k8s.io/v1beta1
+apiVersion: kueue.x-k8s.io/v1beta2
 kind: LocalQueue
 metadata:
   namespace: "default"
@@ -219,7 +270,7 @@ metadata:
 spec:
   clusterQueue: "cluster-queue-reana-run-batch"
 ---
-apiVersion: kueue.x-k8s.io/v1beta1
+apiVersion: kueue.x-k8s.io/v1beta2
 kind: ClusterQueue
 metadata:
   name: "cluster-queue-reana-run-batch"
@@ -235,7 +286,7 @@ spec:
       - name: "memory"
         nominalQuota: ${BATCH_MEMORY}
 ---
-apiVersion: kueue.x-k8s.io/v1beta1
+apiVersion: kueue.x-k8s.io/v1beta2
 kind: LocalQueue
 metadata:
   namespace: "default"
@@ -243,7 +294,7 @@ metadata:
 spec:
   clusterQueue: "cluster-queue-reana-run-job"
 ---
-apiVersion: kueue.x-k8s.io/v1beta1
+apiVersion: kueue.x-k8s.io/v1beta2
 kind: ClusterQueue
 metadata:
   name: "cluster-queue-reana-run-job"
@@ -260,7 +311,7 @@ spec:
         nominalQuota: ${JOB_MEMORY}
 EOF
 
-    print_status "ClusterQueue, LocalQueue, and ResourceFlavor applied"
+    print_info "ClusterQueue, LocalQueue, and ResourceFlavor applied"
     sleep 2
     verify_kueue_resources "check"
     print_status "Kueue resources verified"
@@ -269,25 +320,24 @@ EOF
 # Handle workload removal/preservation
 remove_workloads() {
     local workload_count
-    workload_count=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l)
+    workload_count=$(kubectl get workloads.kueue.x-k8s.io -A --no-headers 2>/dev/null | wc -l)
 
-    print_section "🚧 Removing active Kueue workloads and associated jobs..."
+    print_section "⚙️  Removing active Kueue workloads and associated jobs..."
 
     if [ "$workload_count" -gt 0 ]; then
         print_info "Found $workload_count workload(s), removing workloads and their parent jobs..."
-        count_and_display_resources "workloads" "-A" "Active workloads"
+        count_and_display_resources "workloads.kueue.x-k8s.io" "-A" "Active workloads"
 
         # First, find and remove the associated Jobs to prevent workload recreation
         print_info "Identifying and removing parent Jobs..."
         kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace) \(.metadata.name)"' | while read -r namespace job_name; do
             if [ -n "$namespace" ] && [ -n "$job_name" ]; then
-                echo -e "${BLUE}   - Deleting Job $job_name in namespace $namespace...${NC}"
-                kubectl delete job "$job_name" -n "$namespace" --ignore-not-found=true --timeout=30s
+                run_cmd kubectl delete job "$job_name" -n "$namespace" --ignore-not-found=true --timeout=30s
             fi
         done
 
         # Also remove any jobs that might have workloads associated (broader search)
-        kubectl get workloads -A --no-headers 2>/dev/null | while read -r namespace workload_name rest; do
+        kubectl get workloads.kueue.x-k8s.io -A --no-headers 2>/dev/null | while read -r namespace workload_name rest; do
             # Extract potential job name from workload name (workloads are often named after their jobs)
             # Common pattern: job-<jobname>-<hash> becomes workload job-<jobname>-<hash>-<suffix>
             local potential_job_name
@@ -301,14 +351,13 @@ remove_workloads() {
 
             # Check if a job with this name exists
             if kubectl get job "$potential_job_name" -n "$namespace" &>/dev/null; then
-                echo -e "${BLUE}   - Deleting associated Job $potential_job_name in namespace $namespace...${NC}"
-                kubectl delete job "$potential_job_name" -n "$namespace" --ignore-not-found=true --timeout=30s
+                run_cmd kubectl delete job "$potential_job_name" -n "$namespace" --ignore-not-found=true --timeout=30s
             fi
         done
 
         # Now delete the workloads themselves
         print_info "Removing workloads..."
-        delete_resources "workloads" "" ""
+        delete_resources "workloads.kueue.x-k8s.io" "-A"
 
         # Wait for workload cleanup
         print_info "Waiting for workload and job cleanup..."
@@ -316,7 +365,7 @@ remove_workloads() {
         local count=0
         while [ $count -lt $cleanup_timeout ]; do
             local remaining_workloads
-            remaining_workloads=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l)
+            remaining_workloads=$(kubectl get workloads.kueue.x-k8s.io -A --no-headers 2>/dev/null | wc -l)
             local remaining_kueue_jobs
             remaining_kueue_jobs=$(kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null)' 2>/dev/null | jq -s length 2>/dev/null || echo "0")
 
@@ -334,11 +383,11 @@ remove_workloads() {
 
         # Force cleanup if needed
         local remaining
-        remaining=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l)
+        remaining=$(kubectl get workloads.kueue.x-k8s.io -A --no-headers 2>/dev/null | wc -l)
 
         if [ "$remaining" -gt 0 ]; then
             print_warning "Some workloads still exist, forcing deletion..."
-            force_delete_resources "workloads" "-A"
+            force_delete_resources "workloads.kueue.x-k8s.io" "-A"
 
             # Force delete any remaining Kueue jobs
             kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace) \(.metadata.name)"' | while read -r namespace job_name; do
@@ -351,17 +400,17 @@ remove_workloads() {
         fi
 
         # Final check
-        remaining=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l)
+        remaining=$(kubectl get workloads.kueue.x-k8s.io -A --no-headers 2>/dev/null | wc -l)
         local remaining_jobs
         remaining_jobs=$(kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null)' 2>/dev/null | jq -s length 2>/dev/null || echo "0")
 
         if [ "$remaining" -eq 0 ] && [ "$remaining_jobs" -eq 0 ]; then
-            print_status "All workloads and associated jobs removed"
+            print_info "All workloads and associated jobs removed"
         else
             print_warning "$remaining workloads and $remaining_jobs Kueue jobs still exist after cleanup"
             if [ "$remaining" -gt 0 ]; then
                 print_info "Remaining workloads:"
-                kubectl get workloads -A 2>/dev/null || true
+                kubectl get workloads.kueue.x-k8s.io -A 2>/dev/null || true
             fi
             if [ "$remaining_jobs" -gt 0 ]; then
                 print_info "Remaining Kueue jobs:"
@@ -369,55 +418,69 @@ remove_workloads() {
             fi
         fi
     else
-        print_status "No active workloads found"
+        print_info "No active workloads found"
     fi
 }
 
 # Remove Kueue resources (queues, flavors, etc.)
 remove_kueue_resources() {
-    print_section "📄 Removing Kueue resource manifests..."
+    print_section "⚙️  Removing LocalQueues..."
+    force_delete_resources "localqueues.kueue.x-k8s.io" "-A"
 
-    # Delete any remaining LocalQueues
-    print_section " - Removing LocalQueues..."
-    force_delete_resources "localqueue" ""
+    print_section "⚙️  Removing ClusterQueues..."
+    force_delete_resources "clusterqueues.kueue.x-k8s.io" ""
 
-    # Delete any remaining ClusterQueues
-    print_section " - Removing ClusterQueues..."
-    force_delete_resources "clusterqueue" ""
+    print_section "⚙️  Removing ResourceFlavors..."
+    force_delete_resources "resourceflavors.kueue.x-k8s.io" ""
 
-    # Delete ResourceFlavors
-    print_section " - Removing ResourceFlavors..."
-    force_delete_resources "resourceflavor" ""
-
-    print_status "Kueue resources removed"
+    print_info "Kueue resources removed"
 }
 
 # Remove Kueue helm installation
 remove_kueue_installation() {
     if ! is_kueue_installed; then
-        print_status "Kueue is not installed"
+        print_info "Kueue is not installed, nothing to uninstall"
         return 0
     fi
 
-    print_section "📦 Uninstalling Kueue..."
-    if ! helm uninstall kueue -n kueue-system --wait --timeout 10s; then
+    print_section "⚙️  Uninstalling Kueue..."
+    if ! run_cmd helm uninstall kueue -n kueue-system --wait --timeout 10s; then
         # Check if error was a timeout
         if helm status kueue -n kueue-system >/dev/null 2>&1; then
             print_warning "Helm uninstall timed out, retrying again..."
-            helm uninstall kueue -n kueue-system --wait --timeout 10s
-            print_status "Kueue uninstalled successfully"
+            run_cmd helm uninstall kueue -n kueue-system --wait --timeout 10s
+            print_info "Kueue uninstalled successfully"
         else
-            print_status "Release already gone"
+            print_info "Release already gone"
         fi
     fi
 
-    print_section " - Removing Kueue namespace..."
+    print_section "⚙️  Removing Kueue namespace..."
     force_delete_resources "namespace" "kueue-system"
+
+    # Wait for Kueue CRDs to be fully deleted. If stuck (e.g. finalizer not
+    # cleared due to conversion webhook being gone), force-remove finalizers.
+    print_section "⚙️  Waiting for Kueue CRDs to be fully deleted..."
+    local kueue_crds
+    kueue_crds=$(kubectl get crd -o name 2>/dev/null | grep kueue.x-k8s.io || true)
+    for crd in $kueue_crds; do
+        local timeout=30
+        local count=0
+        while kubectl get "$crd" &>/dev/null; do
+            sleep 1
+            ((count++))
+            if [ $count -ge $timeout ]; then
+                print_warning "$crd stuck terminating — force-removing finalizers..."
+                run_cmd kubectl patch "$crd" -p '{"metadata":{"finalizers":[]}}' --type=merge
+                break
+            fi
+        done
+    done
 }
 
 # Main remove function with granular options
 remove_kueue() {
-    print_section "🗑️ Removing Kueue components..."
+    print_section "⚙️  Removing Kueue components..."
 
     # Determine what to remove based on flags
     local should_remove_workloads=$REMOVE_WORKLOADS
@@ -440,13 +503,6 @@ remove_kueue() {
         should_remove_kueue=true
     fi
 
-    # Show what will be removed
-    print_info "Components to be removed:"
-    [ "$should_remove_workloads" = "true" ] && echo -e "${BLUE}  • Workloads${NC}"
-    [ "$should_remove_resources" = "true" ] && echo -e "${BLUE}  • Kueue Resources (queues, flavors)${NC}"
-    [ "$should_remove_kueue" = "true" ] && echo -e "${BLUE}  • Kueue Installation (Helm chart)${NC}"
-    echo
-
     # Remove workloads first if requested
     if [ "$should_remove_workloads" = "true" ]; then
         remove_workloads
@@ -468,7 +524,7 @@ remove_kueue() {
         if verify_kueue_resources "final"; then
             print_warning "Some Kueue resources may still exist"
         else
-            print_status "All Kueue resources removed"
+            print_info "All Kueue resources removed"
         fi
     fi
 
@@ -546,11 +602,11 @@ check_crds_installed() {
 
 # Status check for Kueue
 status_kueue() {
-    print_section "📊 Kueue Status Report"
+    print_section "🔍 Kueue Status Report"
     echo ""
 
     # Check if Kueue is enabled in values.yaml
-    print_section "⚙️  Configuration Check"
+    print_section "🔍 Configuration Check"
     local values_file="helm/reana/values.yaml"
     local kueue_enabled_in_config=false
     if [[ -f "$values_file" ]]; then
@@ -566,7 +622,7 @@ status_kueue() {
     echo ""
 
     # Check Kueue installation
-    print_section "🔧 Installation Status"
+    print_section "🔍 Installation Status"
     if is_kueue_installed; then
         print_status "Kueue is installed"
 
@@ -594,7 +650,7 @@ status_kueue() {
     echo ""
 
     # Check CRDs
-    print_section "📋 Custom Resource Definitions (CRDs)"
+    print_section "🔍 Custom Resource Definitions (CRDs)"
     if check_crds_installed "true"; then
         print_status "All Kueue CRDs are present"
     else
@@ -603,13 +659,13 @@ status_kueue() {
     echo ""
 
     # Check ResourceFlavors
-    print_section "🎨 ResourceFlavors"
+    print_section "🔍 ResourceFlavors"
     local rf_count
-    rf_count=$(kubectl get resourceflavors --no-headers 2>/dev/null | wc -l)
+    rf_count=$(kubectl get resourceflavors.kueue.x-k8s.io --no-headers 2>/dev/null | wc -l)
 
     if [ "$rf_count" -gt 0 ]; then
         print_info "Found $rf_count ResourceFlavor(s):"
-        kubectl get resourceflavors --no-headers 2>/dev/null | while read -r name age; do
+        kubectl get resourceflavors.kueue.x-k8s.io --no-headers 2>/dev/null | while read -r name age; do
             echo -e "${BLUE}   • $name (age: $age)${NC}"
         done
     else
@@ -618,20 +674,20 @@ status_kueue() {
     echo ""
 
     # Check ClusterQueues
-    print_section "🏢 ClusterQueues"
+    print_section "🔍 ClusterQueues"
     local cq_count
-    cq_count=$(kubectl get clusterqueues --no-headers 2>/dev/null | wc -l)
+    cq_count=$(kubectl get clusterqueues.kueue.x-k8s.io --no-headers 2>/dev/null | wc -l)
 
     if [ "$cq_count" -gt 0 ]; then
         print_info "Found $cq_count ClusterQueue(s):"
-        kubectl get clusterqueues -o custom-columns="NAME:.metadata.name,COHORT:.spec.cohort,PENDING:.status.pendingWorkloads,ADMITTED:.status.admittedWorkloads" --no-headers 2>/dev/null | while read -r line; do
+        kubectl get clusterqueues.kueue.x-k8s.io -o custom-columns="NAME:.metadata.name,COHORT:.spec.cohort,PENDING:.status.pendingWorkloads,ADMITTED:.status.admittedWorkloads" --no-headers 2>/dev/null | while read -r line; do
             echo -e "${BLUE}   • $line${NC}"
         done
 
         # Show resource quotas for each ClusterQueue
         echo ""
         print_info "Resource quotas per ClusterQueue:"
-        kubectl get clusterqueues -o json 2>/dev/null | jq -r '.items[] | "\(.metadata.name): " + (.spec.resourceGroups[0].flavors[0].resources | map("\(.name)=\(.nominalQuota)") | join(", "))' | while read -r line; do
+        kubectl get clusterqueues.kueue.x-k8s.io -o json 2>/dev/null | jq -r '.items[] | "\(.metadata.name): " + (.spec.resourceGroups[0].flavors[0].resources | map("\(.name)=\(.nominalQuota)") | join(", "))' | while read -r line; do
             echo -e "${NC}   📊 $line${NC}"
         done
     else
@@ -640,13 +696,13 @@ status_kueue() {
     echo ""
 
     # Check LocalQueues
-    print_section "🏪 LocalQueues"
+    print_section "🔍 LocalQueues"
     local lq_count
-    lq_count=$(kubectl get localqueues -A --no-headers 2>/dev/null | wc -l)
+    lq_count=$(kubectl get localqueues.kueue.x-k8s.io -A --no-headers 2>/dev/null | wc -l)
 
     if [ "$lq_count" -gt 0 ]; then
         print_info "Found $lq_count LocalQueue(s):"
-        kubectl get localqueues -A -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,CLUSTERQUEUE:.spec.clusterQueue,PENDING:.status.pendingWorkloads,ADMITTED:.status.admittedWorkloads" --no-headers 2>/dev/null | while read -r line; do
+        kubectl get localqueues.kueue.x-k8s.io -A -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,CLUSTERQUEUE:.spec.clusterQueue,PENDING:.status.pendingWorkloads,ADMITTED:.status.admittedWorkloads" --no-headers 2>/dev/null | while read -r line; do
             echo -e "${BLUE}   • $line${NC}"
         done
     else
@@ -655,13 +711,13 @@ status_kueue() {
     echo ""
 
     # Check active Workloads
-    print_section "⚡ Active Workloads"
+    print_section "🔍 Active Workloads"
     local workload_count
-    workload_count=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l)
+    workload_count=$(kubectl get workloads.kueue.x-k8s.io -A --no-headers 2>/dev/null | wc -l)
 
     if [ "$workload_count" -gt 0 ]; then
         print_info "Found $workload_count active workload(s):"
-        kubectl get workloads -A -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,QUEUE:.spec.queueName,ADMITTED:.status.conditions[?(@.type=='Admitted')].status" --no-headers 2>/dev/null | while read -r line; do
+        kubectl get workloads.kueue.x-k8s.io -A -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,QUEUE:.spec.queueName,ADMITTED:.status.conditions[?(@.type=='Admitted')].status" --no-headers 2>/dev/null | while read -r line; do
             if [[ "$line" == *"True"* ]]; then
                 echo -e "${GREEN}   ✅ $line${NC}"
             else
@@ -674,7 +730,7 @@ status_kueue() {
     echo ""
 
     # Check Kueue-managed Jobs
-    print_section "🎯 Kueue-managed Jobs"
+    print_section "🔍 Kueue-managed Jobs"
     local kueue_jobs
     kueue_jobs=$(kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null)' 2>/dev/null | jq -s length 2>/dev/null || echo "0")
 
@@ -695,7 +751,7 @@ status_kueue() {
     echo ""
 
     # Check recent Kueue events
-    print_section "📰 Recent Kueue Events (last 10)"
+    print_section "🔍 Recent Kueue Events (last 10)"
     local events
     events=$(kubectl get events -A --field-selector reason=Admitted,reason=QuotaReserved,reason=Preempted,reason=Evicted --sort-by='.lastTimestamp' 2>/dev/null | tail -10)
 
@@ -717,19 +773,19 @@ status_kueue() {
     echo ""
 
     # Summary
-    print_section "📝 Summary"
+    print_section "🔍 Summary"
     if is_kueue_installed; then
         local rf_count cq_count lq_count wl_count
-        rf_count=$(kubectl get resourceflavors --no-headers 2>/dev/null | wc -l || echo 0)
+        rf_count=$(kubectl get resourceflavors.kueue.x-k8s.io --no-headers 2>/dev/null | wc -l || echo 0)
         rf_count=$(echo "$rf_count" | tr -d '[:space:]')
 
-        cq_count=$(kubectl get clusterqueues --no-headers 2>/dev/null | wc -l || echo 0)
+        cq_count=$(kubectl get clusterqueues.kueue.x-k8s.io --no-headers 2>/dev/null | wc -l || echo 0)
         cq_count=$(echo "$cq_count" | tr -d '[:space:]')
 
-        lq_count=$(kubectl get localqueues -A --no-headers 2>/dev/null | wc -l || echo 0)
+        lq_count=$(kubectl get localqueues.kueue.x-k8s.io -A --no-headers 2>/dev/null | wc -l || echo 0)
         lq_count=$(echo "$lq_count" | tr -d '[:space:]')
 
-        wl_count=$(kubectl get workloads -A --no-headers 2>/dev/null | wc -l || echo 0)
+        wl_count=$(kubectl get workloads.kueue.x-k8s.io -A --no-headers 2>/dev/null | wc -l || echo 0)
         wl_count=$(echo "$wl_count" | tr -d '[:space:]')
 
         if [ "$rf_count" -gt 0 ] && [ "$cq_count" -gt 0 ] && [ "$lq_count" -gt 0 ]; then
@@ -762,13 +818,13 @@ monitor_kueue() {
         echo "========================================"
         echo
         echo "=== Kueue Workloads ==="
-        kubectl get workloads -A 2>/dev/null || echo "No workloads found"
+        kubectl get workloads.kueue.x-k8s.io -A 2>/dev/null || echo "No workloads found"
         echo
         echo "=== Jobs with Kueue Labels/Annotations ==="
         kubectl get jobs -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.labels["kueue.x-k8s.io/queue-name"] != null or .metadata.annotations["kueue.x-k8s.io/queue-name"] != null) | "\(.metadata.namespace)\t\(.metadata.name)\t\(.metadata.labels["kueue.x-k8s.io/queue-name"] // .metadata.annotations["kueue.x-k8s.io/queue-name"] // "N/A")"' 2>/dev/null || echo "No Kueue-managed jobs"
         echo
         echo "=== Queue Status ==="
-        kubectl get localqueues,clusterqueues -A 2>/dev/null
+        kubectl get localqueues.kueue.x-k8s.io,clusterqueues.kueue.x-k8s.io -A 2>/dev/null || echo "No queue resources found"
         echo
         echo "=== Recent Events (Kueue-related) ==="
         kubectl get events -A --field-selector reason=Admitted,reason=QuotaReserved,reason=Preempted --sort-by='.lastTimestamp' 2>/dev/null | tail -5
