@@ -259,9 +259,8 @@ quota:
   cpu_periodic_reset:
     enabled: false
     period_months: 3
-    anchor_at: ""
   # backward compatibility
-  disk_update: "0 3 * * *" # everyday at 3am
+  disk_update: "0 3 * * *" # every day at 3am
   termination_update_policy: ""
 
 # OpenSearch chart values.yaml

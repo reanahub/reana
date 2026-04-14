@@ -101,8 +101,6 @@ spec:
             value: {{ .Values.quota.cpu_periodic_reset.enabled | default false | quote }}
           - name: REANA_DEFAULT_QUOTA_CPU_PERIODIC_RESET_MONTHS
             value: {{ .Values.quota.cpu_periodic_reset.period_months | default 3 | quote }}
-          - name: REANA_DEFAULT_QUOTA_CPU_PERIODIC_RESET_ANCHOR_AT
-            value: {{ .Values.quota.cpu_periodic_reset.anchor_at | default "" | quote }}
           {{- if .Values.kubernetes_jobs_max_user_cpu_request }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_CPU_REQUEST
             value: {{ .Values.kubernetes_jobs_max_user_cpu_request | quote }}
