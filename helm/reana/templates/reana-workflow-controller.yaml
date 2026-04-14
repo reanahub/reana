@@ -107,9 +107,9 @@ spec:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
           - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-            value: {{ .Release.Namespace }}
+            value: {{ .Release.Namespace | quote }}
           - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-            value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+            value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
           - name: REANA_INGRESS_ANNOTATIONS
             value: {{ .Values.ingress.annotations | toJson | quote }}
           {{- if .Values.ingress.ingress_class_name }}
@@ -117,18 +117,18 @@ spec:
             value: {{ .Values.ingress.ingress_class_name | quote }}
           {{- end }}
           - name: REANA_INGRESS_HOST
-            value: {{ .Values.reana_hostname | default "" | quote  }}
+            value: {{ .Values.reana_hostname | default "" | quote }}
           - name: REANA_DEFAULT_QUOTA_CPU_LIMIT
             value: {{ .Values.quota.default_cpu_limit | default 0 | quote }}
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
             value: {{ .Values.quota.default_disk_limit | default 0 | quote }}
           {{- if .Values.quota.enabled }}
           - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-            value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" }}
+            value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" | quote }}
           {{- end }}
           {{- if .Values.naming_scheme }}
           - name: REANA_COMPONENT_NAMING_SCHEME
-            value: {{ .Values.naming_scheme }}
+            value: {{ .Values.naming_scheme | quote }}
           {{- end }}
           - name: WORKSPACE_PATHS
             value: {{ .Values.workspaces.paths | toJson | quote }}
@@ -144,15 +144,15 @@ spec:
           {{- end }}
           {{- if .Values.node_label_runtimebatch }}
           - name: REANA_RUNTIME_BATCH_KUBERNETES_NODE_LABEL
-            value: {{ .Values.node_label_runtimebatch }}
+            value: {{ .Values.node_label_runtimebatch | quote }}
           {{- end }}
           {{- if .Values.node_label_runtimejobs }}
           - name: REANA_RUNTIME_JOBS_KUBERNETES_NODE_LABEL
-            value: {{ .Values.node_label_runtimejobs }}
+            value: {{ .Values.node_label_runtimejobs | quote }}
           {{- end }}
           {{- if .Values.node_label_runtimesessions }}
           - name: REANA_RUNTIME_SESSIONS_KUBERNETES_NODE_LABEL
-            value: {{ .Values.node_label_runtimesessions }}
+            value: {{ .Values.node_label_runtimesessions | quote }}
           {{- end }}
           {{- if .Values.kubernetes_jobs_max_user_cpu_request }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_CPU_REQUEST
@@ -164,11 +164,11 @@ spec:
           {{- end }}
           {{- if .Values.kubernetes_jobs_max_user_memory_request }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_REQUEST
-            value: {{ .Values.kubernetes_jobs_max_user_memory_request }}
+            value: {{ .Values.kubernetes_jobs_max_user_memory_request | quote }}
           {{- end }}
           {{- if .Values.kubernetes_jobs_max_user_memory_limit }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_LIMIT
-            value: {{ .Values.kubernetes_jobs_max_user_memory_limit }}
+            value: {{ .Values.kubernetes_jobs_max_user_memory_limit | quote }}
           {{- end }}
           {{- if .Values.kubernetes_jobs_cpu_request }}
           - name: REANA_KUBERNETES_JOBS_CPU_REQUEST
@@ -180,24 +180,24 @@ spec:
           {{- end }}
           {{- if .Values.kubernetes_jobs_memory_request }}
           - name: REANA_KUBERNETES_JOBS_MEMORY_REQUEST
-            value: {{ .Values.kubernetes_jobs_memory_request }}
+            value: {{ .Values.kubernetes_jobs_memory_request | quote }}
           {{- end }}
           - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
-            value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" }}
+            value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" | quote }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_TIMEOUT_LIMIT
-            value: !!str {{ .Values.kubernetes_jobs_max_user_timeout_limit | default 1209600 }}  # 1209600 seconds = 14 days
+            value: {{ .Values.kubernetes_jobs_max_user_timeout_limit | default "1209600" | quote }}  # 1209600 seconds = 14 days
           - name: REANA_KUBERNETES_JOBS_TIMEOUT_LIMIT
-            value: !!str {{ .Values.kubernetes_jobs_timeout_limit | default 604800 }}  # 604800 seconds = 7 days
+            value: {{ .Values.kubernetes_jobs_timeout_limit | default "604800" | quote }}  # 604800 seconds = 7 days
           - name: REANA_JOB_CONTROLLER_IMAGE
-            value: {{ .Values.components.reana_job_controller.image }}
+            value: {{ .Values.components.reana_job_controller.image | quote }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_CWL
-            value: {{ .Values.components.reana_workflow_engine_cwl.image }}
+            value: {{ .Values.components.reana_workflow_engine_cwl.image | quote }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_YADAGE
-            value: {{ .Values.components.reana_workflow_engine_yadage.image }}
+            value: {{ .Values.components.reana_workflow_engine_yadage.image | quote }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_SERIAL
-            value: {{ .Values.components.reana_workflow_engine_serial.image }}
+            value: {{ .Values.components.reana_workflow_engine_serial.image | quote }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_SNAKEMAKE
-            value: {{ .Values.components.reana_workflow_engine_snakemake.image }}
+            value: {{ .Values.components.reana_workflow_engine_snakemake.image | quote }}
           # Environment variables for workflow engines
           - name: REANA_WORKFLOW_ENGINE_CWL_ENV_VARS
             value: {{ .Values.components.reana_workflow_engine_cwl.environment | toJson | quote }}
@@ -222,15 +222,15 @@ spec:
           - name: DASK_AUTOSCALER_ENABLED
             value: {{ .Values.dask.autoscaler_enabled | quote | default "true" }}
           - name: REANA_DASK_CLUSTER_MAX_MEMORY_LIMIT
-            value: {{ .Values.dask.cluster_max_memory_limit | default "16Gi" }}
+            value: {{ .Values.dask.cluster_max_memory_limit | default "16Gi" | quote }}
           - name: REANA_DASK_CLUSTER_DEFAULT_NUMBER_OF_WORKERS
-            value: !!str {{ .Values.dask.cluster_default_number_of_workers | default 2 }}
+            value: {{ .Values.dask.cluster_default_number_of_workers | default "2" | quote }}
           - name: REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_MEMORY
-            value: {{ .Values.dask.cluster_default_single_worker_memory | default "2Gi" }}
+            value: {{ .Values.dask.cluster_default_single_worker_memory | default "2Gi" | quote }}
           - name: REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_MEMORY
-            value: {{ .Values.dask.cluster_max_single_worker_memory | default "8Gi" }}
+            value: {{ .Values.dask.cluster_max_single_worker_memory | default "8Gi" | quote }}
           - name: REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_THREADS
-            value: !!str {{ .Values.dask.cluster_default_single_worker_threads | default 4 }}
+            value: {{ .Values.dask.cluster_default_single_worker_threads | default "4" | quote }}
           {{- end }}
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
@@ -320,12 +320,12 @@ spec:
         - name: REANA_COMPONENT_PREFIX
           value: {{ include "reana.prefix" . }}
         - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-          value: {{ .Release.Namespace }}
+          value: {{ .Release.Namespace | quote }}
         - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-          value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+          value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
         {{- if .Values.quota.enabled }}
         - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-          value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" }}
+          value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" | quote }}
         {{- end }}
         {{- range $key, $value := .Values.components.reana_workflow_controller.environment }}
         - name: {{ $key }}

@@ -90,9 +90,9 @@ spec:
           - name: REANA_COMPUTE_BACKENDS
             value: {{ .Values.compute_backends | toJson | quote }}
           - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-            value: {{ .Release.Namespace }}
+            value: {{ .Release.Namespace | quote }}
           - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-            value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+            value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
           - name: REANA_DEFAULT_QUOTA_CPU_LIMIT
             value: {{ .Values.quota.default_cpu_limit | default 0 | quote }}
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
@@ -107,20 +107,20 @@ spec:
           {{- end }}
           {{- if .Values.kubernetes_jobs_max_user_memory_request }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_REQUEST
-            value: {{ .Values.kubernetes_jobs_max_user_memory_request }}
+            value: {{ .Values.kubernetes_jobs_max_user_memory_request | quote }}
           {{- end }}
           {{- if .Values.kubernetes_jobs_max_user_memory_limit }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_LIMIT
-            value: {{ .Values.kubernetes_jobs_max_user_memory_limit }}
+            value: {{ .Values.kubernetes_jobs_max_user_memory_limit | quote }}
           {{- end }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_TIMEOUT_LIMIT
-            value: !!str {{ .Values.kubernetes_jobs_max_user_timeout_limit | default 1209600 }}  # 1209600 seconds = 14 days
+            value: {{ .Values.kubernetes_jobs_max_user_timeout_limit | default "1209600" | quote }}  # 1209600 seconds = 14 days
           - name: REANA_INTERACTIVE_SESSION_MAX_INACTIVITY_PERIOD
             value: {{ .Values.interactive_sessions.maximum_inactivity_period | default "forever" | quote }}
           - name: REANA_INTERACTIVE_SESSIONS_ENVIRONMENTS
             value: {{ .Values.interactive_sessions.environments | toJson | quote }}
           - name: REANA_KUBERNETES_JOBS_TIMEOUT_LIMIT
-            value: !!str {{ .Values.kubernetes_jobs_timeout_limit | default 604800 }}  # 604800 seconds = 7 days
+            value: {{ .Values.kubernetes_jobs_timeout_limit | default "604800" | quote }}  # 604800 seconds = 7 days
           {{- if .Values.kubernetes_jobs_cpu_request }}
           - name: REANA_KUBERNETES_JOBS_CPU_REQUEST
             value: {{ .Values.kubernetes_jobs_cpu_request | quote }}
@@ -131,29 +131,29 @@ spec:
           {{- end }}
           {{- if .Values.kubernetes_jobs_memory_request }}
           - name: REANA_KUBERNETES_JOBS_MEMORY_REQUEST
-            value: {{ .Values.kubernetes_jobs_memory_request }}
+            value: {{ .Values.kubernetes_jobs_memory_request | quote }}
           {{- end }}
           - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
-            value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" }}
+            value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" | quote }}
           - name: DASK_ENABLED
             value: {{ .Values.dask.enabled | quote }}
           {{- if .Values.dask.enabled }}
           - name: DASK_AUTOSCALER_ENABLED
             value: {{ .Values.dask.autoscaler_enabled | quote | default "true" }}
           - name: REANA_DASK_CLUSTER_MAX_MEMORY_LIMIT
-            value: {{ .Values.dask.cluster_max_memory_limit | default "16Gi" }}
+            value: {{ .Values.dask.cluster_max_memory_limit | default "16Gi" | quote }}
           - name: REANA_DASK_CLUSTER_DEFAULT_NUMBER_OF_WORKERS
-            value: !!str {{ .Values.dask.cluster_default_number_of_workers | default 2 }}
+            value: {{ .Values.dask.cluster_default_number_of_workers | default "2" | quote }}
           - name: REANA_DASK_CLUSTER_MAX_NUMBER_OF_WORKERS
-            value: !!str {{ .Values.dask.cluster_max_number_of_workers | default 20 }}
+            value: {{ .Values.dask.cluster_max_number_of_workers | default "20" | quote }}
           - name: REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_MEMORY
-            value: {{ .Values.dask.cluster_default_single_worker_memory | default "2Gi" }}
+            value: {{ .Values.dask.cluster_default_single_worker_memory | default "2Gi" | quote }}
           - name: REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_MEMORY
-            value: {{ .Values.dask.cluster_max_single_worker_memory | default "8Gi" }}
+            value: {{ .Values.dask.cluster_max_single_worker_memory | default "8Gi" | quote }}
           - name: REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_THREADS
-            value: !!str {{ .Values.dask.cluster_default_single_worker_threads | default 4 }}
+            value: {{ .Values.dask.cluster_default_single_worker_threads | default "4" | quote }}
           - name: REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_THREADS
-            value: !!str {{ .Values.dask.cluster_max_single_worker_threads | default 8 }}
+            value: {{ .Values.dask.cluster_max_single_worker_threads | default "8" | quote }}
           {{- end }}
           - name: WORKSPACE_PATHS
             value: {{ .Values.workspaces.paths | toJson | quote }}
@@ -161,7 +161,7 @@ spec:
             value: {{ .Values.workspaces.retention_rules.maximum_period | default "forever" | quote }}
           {{- if .Values.quota.enabled }}
           - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-            value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" }}
+            value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" | quote }}
           {{- end }}
           {{- range $key, $value := .Values.components.reana_server.environment }}
           - name: {{ $key }}
@@ -169,7 +169,7 @@ spec:
           {{- end }}
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
-            value: {{ .Values.reana_hostname }}
+            value: {{ .Values.reana_hostname | quote }}
           {{- end }}
           - name: CERN_CONSUMER_KEY
             valueFrom:
@@ -265,16 +265,16 @@ spec:
                 name: {{ include "reana.prefix" . }}-db-secrets
                 key: password
           - name: REANA_NOTIFICATIONS_ENABLED
-            value: "{{ .Values.notifications.enabled }}"
+            value: {{ .Values.notifications.enabled | quote }}
           {{- if .Values.notifications.enabled }}
           - name: REANA_EMAIL_RECEIVER
-            value: {{ .Values.notifications.email_config.receiver }}
+            value: {{ .Values.notifications.email_config.receiver | quote }}
           - name: REANA_EMAIL_SENDER
-            value: {{ .Values.notifications.email_config.sender }}
+            value: {{ .Values.notifications.email_config.sender | quote }}
           - name: REANA_EMAIL_SMTP_SERVER
-            value: {{ .Values.notifications.email_config.smtp_server | default (printf "%s-mail" (include "reana.prefix" .)) }}
+            value: {{ .Values.notifications.email_config.smtp_server | default (printf "%s-mail" (include "reana.prefix" .)) | quote }}
           - name: REANA_EMAIL_SMTP_PORT
-            value: "{{ .Values.notifications.email_config.smtp_port | default "30025" }}"
+            value: {{ .Values.notifications.email_config.smtp_port | default "30025" | quote }}
           - name: REANA_EMAIL_SMTP_SSL
             value: {{ .Values.notifications.email_config.smtp_ssl | quote }}
           {{- if .Values.debug.enabled }}
@@ -313,9 +313,9 @@ spec:
         - name: REANA_COMPONENT_PREFIX
           value: {{ include "reana.prefix" . }}
         - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-          value: {{ .Release.Namespace }}
+          value: {{ .Release.Namespace | quote }}
         - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-          value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+          value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
         {{- range $key, $value := .Values.components.reana_server.environment }}
         - name: {{ $key }}
           value: {{ $value | quote }}

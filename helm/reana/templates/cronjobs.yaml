@@ -39,7 +39,7 @@ spec:
             env:
             {{- if .Values.reana_hostname }}
             - name: REANA_HOSTNAME
-              value: {{ .Values.reana_hostname }}
+              value: {{ .Values.reana_hostname | quote }}
             {{- end }}
             {{- if .Values.debug.enabled }}
             - name: FLASK_ENV
@@ -56,15 +56,15 @@ spec:
                   name: {{ include "reana.prefix" . }}-db-secrets
                   key: password
             - name: REANA_NOTIFICATIONS_ENABLED
-              value: "{{ .Values.notifications.enabled }}"
+              value: {{ .Values.notifications.enabled | quote }}
             - name: REANA_EMAIL_RECEIVER
-              value: {{ .Values.notifications.email_config.receiver }}
+              value: {{ .Values.notifications.email_config.receiver | quote }}
             - name: REANA_EMAIL_SENDER
-              value: {{ .Values.notifications.email_config.sender }}
+              value: {{ .Values.notifications.email_config.sender | quote }}
             - name: REANA_EMAIL_SMTP_SERVER
-              value: {{ .Values.notifications.email_config.smtp_server | default (printf "%s-mail" (include "reana.prefix" .)) }}
+              value: {{ .Values.notifications.email_config.smtp_server | default (printf "%s-mail" (include "reana.prefix" .)) | quote }}
             - name: REANA_EMAIL_SMTP_PORT
-              value: "{{ .Values.notifications.email_config.smtp_port | default "30025" }}"
+              value: {{ .Values.notifications.email_config.smtp_port | default "30025" | quote }}
             - name: REANA_EMAIL_SMTP_SSL
               value: {{ .Values.notifications.email_config.smtp_ssl | quote }}
             {{- if .Values.debug.enabled }}
@@ -97,9 +97,9 @@ spec:
                   name: {{ include "reana.prefix" . }}-secrets
                   key: REANA_SECRET_KEY
             - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-              value: {{ .Release.Namespace }}
+              value: {{ .Release.Namespace | quote }}
             - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-              value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+              value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
             volumeMounts:
               {{- if .Values.debug.enabled }}
               - mountPath: /code/
@@ -166,7 +166,7 @@ spec:
               value: "true"
             {{- if .Values.reana_hostname }}
             - name: REANA_HOSTNAME
-              value: {{ .Values.reana_hostname }}
+              value: {{ .Values.reana_hostname | quote }}
             {{- end }}
             {{- if .Values.debug.enabled }}
             - name: FLASK_ENV
@@ -185,9 +185,9 @@ spec:
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
             - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-              value: {{ .Release.Namespace }}
+              value: {{ .Release.Namespace | quote }}
             - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-              value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+              value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
             volumeMounts:
               {{- if .Values.debug.enabled }}
               - mountPath: /code/
@@ -250,7 +250,7 @@ spec:
             env:
             {{- if .Values.reana_hostname }}
             - name: REANA_HOSTNAME
-              value: {{ .Values.reana_hostname }}
+              value: {{ .Values.reana_hostname | quote }}
             {{- end }}
             {{- if .Values.debug.enabled }}
             - name: FLASK_ENV
@@ -279,9 +279,9 @@ spec:
                   name: {{ include "reana.prefix" . }}-secrets
                   key: REANA_SECRET_KEY
             - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-              value: {{ .Release.Namespace }}
+              value: {{ .Release.Namespace | quote }}
             - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-              value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+              value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
             volumeMounts:
               {{- if .Values.debug.enabled }}
               - mountPath: /code/
@@ -345,7 +345,7 @@ spec:
             env:
             {{- if .Values.reana_hostname }}
             - name: REANA_HOSTNAME
-              value: {{ .Values.reana_hostname }}
+              value: {{ .Values.reana_hostname | quote }}
             {{- end }}
             {{- if .Values.debug.enabled }}
             - name: FLASK_ENV
@@ -374,9 +374,9 @@ spec:
                   name: {{ include "reana.prefix" . }}-secrets
                   key: REANA_SECRET_KEY
             - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-              value: {{ .Release.Namespace }}
+              value: {{ .Release.Namespace | quote }}
             - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-              value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+              value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
             volumeMounts:
               {{- if .Values.debug.enabled }}
               - mountPath: /code/
