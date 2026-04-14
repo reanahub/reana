@@ -139,7 +139,7 @@ components:
     image: docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.4
     environment: {}
   reana_workflow_validator:
-    image: docker.io/reanahub/reana-workflow-validator:0.95.0
+    image: docker.io/reanahub/reana-workflow-validator:0.95.0-alpha.1
     environment: {}
   reana_job_controller:
     image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.4
@@ -208,7 +208,7 @@ dask:
 dask-kubernetes-operator:
   image:
     name: docker.io/reanahub/reana-dask-kubernetes-operator
-    tag: 0.95.0
+    tag: 0.95.0-alpha.2
   serviceAccount:
     create: false
     # Change the reana prefix if you opted another prefix in your cluster

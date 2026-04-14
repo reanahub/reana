@@ -26,6 +26,7 @@ for image in \
     docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.4 \
     docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.4 \
     docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.4 \
+    docker.io/reanahub/reana-dask-kubernetes-operator:0.95.0-alpha.2 \
     quay.io/jupyter/scipy-notebook:notebook-7.2.2; do
     docker pull $image
     if [ "$kubernetes" == "kind" ]; then
