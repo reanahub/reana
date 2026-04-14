@@ -161,7 +161,7 @@ spec:
             value: {{ .Values.workspaces.retention_rules.maximum_period | default "forever" | quote }}
           {{- if .Values.quota.enabled }}
           - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-            value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" | quote }}
+            value: {{ tpl .Values.quota.workflow_termination_update_policy . | quote }}
           {{- end }}
           {{- range $key, $value := .Values.components.reana_server.environment }}
           - name: {{ $key }}
