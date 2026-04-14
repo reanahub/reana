@@ -119,9 +119,9 @@ spec:
           - name: REANA_INGRESS_HOST
             value: {{ .Values.reana_hostname | default "" | quote }}
           - name: REANA_DEFAULT_QUOTA_CPU_LIMIT
-            value: {{ .Values.quota.default_cpu_limit | default 0 | quote }}
+            value: {{ .Values.quota.default_cpu_limit | default 0 | int64 | quote }}
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
-            value: {{ .Values.quota.default_disk_limit | default 0 | quote }}
+            value: {{ .Values.quota.default_disk_limit | default 0 | int64 | quote }}
           {{- if .Values.quota.enabled }}
           - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
             value: {{ tpl .Values.quota.workflow_termination_update_policy . | quote }}
@@ -185,9 +185,9 @@ spec:
           - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
             value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" | quote }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_TIMEOUT_LIMIT
-            value: {{ .Values.kubernetes_jobs_max_user_timeout_limit | default "1209600" | quote }}  # 1209600 seconds = 14 days
+            value: {{ .Values.kubernetes_jobs_max_user_timeout_limit | default 1209600 | int64 | quote }}  # 1209600 seconds = 14 days
           - name: REANA_KUBERNETES_JOBS_TIMEOUT_LIMIT
-            value: {{ .Values.kubernetes_jobs_timeout_limit | default "604800" | quote }}  # 604800 seconds = 7 days
+            value: {{ .Values.kubernetes_jobs_timeout_limit | default 604800 | int64 | quote }}  # 604800 seconds = 7 days
           - name: REANA_JOB_CONTROLLER_IMAGE
             value: {{ .Values.components.reana_job_controller.image | quote }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_CWL

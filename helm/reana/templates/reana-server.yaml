@@ -94,9 +94,9 @@ spec:
           - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
             value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
           - name: REANA_DEFAULT_QUOTA_CPU_LIMIT
-            value: {{ .Values.quota.default_cpu_limit | default 0 | quote }}
+            value: {{ .Values.quota.default_cpu_limit | default 0 | int64 | quote }}
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
-            value: {{ .Values.quota.default_disk_limit | default 0 | quote }}
+            value: {{ .Values.quota.default_disk_limit | default 0 | int64 | quote }}
           {{- if .Values.kubernetes_jobs_max_user_cpu_request }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_CPU_REQUEST
             value: {{ .Values.kubernetes_jobs_max_user_cpu_request | quote }}
@@ -114,13 +114,13 @@ spec:
             value: {{ .Values.kubernetes_jobs_max_user_memory_limit | quote }}
           {{- end }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_TIMEOUT_LIMIT
-            value: {{ .Values.kubernetes_jobs_max_user_timeout_limit | default "1209600" | quote }}  # 1209600 seconds = 14 days
+            value: {{ .Values.kubernetes_jobs_max_user_timeout_limit | default 1209600 | int64 | quote }}  # 1209600 seconds = 14 days
           - name: REANA_INTERACTIVE_SESSION_MAX_INACTIVITY_PERIOD
             value: {{ .Values.interactive_sessions.maximum_inactivity_period | default "forever" | quote }}
           - name: REANA_INTERACTIVE_SESSIONS_ENVIRONMENTS
             value: {{ .Values.interactive_sessions.environments | toJson | quote }}
           - name: REANA_KUBERNETES_JOBS_TIMEOUT_LIMIT
-            value: {{ .Values.kubernetes_jobs_timeout_limit | default "604800" | quote }}  # 604800 seconds = 7 days
+            value: {{ .Values.kubernetes_jobs_timeout_limit | default 604800 | int64 | quote }}  # 604800 seconds = 7 days
           {{- if .Values.kubernetes_jobs_cpu_request }}
           - name: REANA_KUBERNETES_JOBS_CPU_REQUEST
             value: {{ .Values.kubernetes_jobs_cpu_request | quote }}
