@@ -251,11 +251,16 @@ pgbouncer:
 # Quota
 quota:
   enabled: true
+  default_disk_limit: 0
+  default_cpu_limit: 0
   periodic_update_policy: "{{ .Values.quota.disk_update }}"
   workflow_termination_update_policy:
     "{{ .Values.quota.termination_update_policy }}"
+  cpu_periodic_reset:
+    enabled: false
+    period_months: 3
   # backward compatibility
-  disk_update: "0 3 * * *" # everyday at 3am
+  disk_update: "0 3 * * *" # every day at 3am
   termination_update_policy: ""
 
 # OpenSearch chart values.yaml
