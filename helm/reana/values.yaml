@@ -93,6 +93,24 @@ components:
     file_preview_size_limit: "5242880" # 5 * 1024**2 = 5 MiB
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-ui:0.95.0-alpha.3
+    nginx:
+      security_headers:
+        hsts: "max-age=31536000; includeSubDomains"
+        x_frame_options: "DENY"
+        x_content_type_options: "nosniff"
+        cross_origin_opener_policy: "same-origin"
+        cross_origin_resource_policy: "same-origin"
+        referrer_policy: "strict-origin-when-cross-origin"
+        permissions_policy:
+          "accelerometer=(), ambient-light-sensor=(), camera=(),
+          display-capture=(), geolocation=(), gyroscope=(), magnetometer=(),
+          microphone=(), payment=(), usb=()"
+        # NOTE: keep in sync with reana-server config.py content security policy headers
+        csp:
+          "default-src 'self'; script-src 'self'; style-src 'self'
+          'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:;
+          font-src 'self' data: https://fonts.gstatic.com; connect-src 'self';
+          frame-ancestors 'none'; object-src 'none'; base-uri 'self';"
   reana_db:
     enabled: true
     image: docker.io/library/postgres:12.13
