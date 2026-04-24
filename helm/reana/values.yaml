@@ -99,6 +99,27 @@ components:
     file_preview_size_limit: "5242880" # 5 * 1024**2 = 5 MiB
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-ui:0.95.0-alpha.4
+    nginx:
+      security_headers:
+        hsts: "max-age=31536000; includeSubDomains"
+        x_frame_options: "DENY"
+        x_content_type_options: "nosniff"
+        cross_origin_opener_policy: "same-origin"
+        cross_origin_resource_policy: "same-origin"
+        referrer_policy: "strict-origin-when-cross-origin"
+        permissions_policy:
+          "accelerometer=(), ambient-light-sensor=(), camera=(),
+          display-capture=(), geolocation=(), gyroscope=(), magnetometer=(),
+          microphone=(), payment=(), usb=()"
+        # NOTE: this CSP intentionally differs from reana-server's policy.
+        # The UI additionally permits Google Fonts, external HTTPS images, and
+        # same-origin objects. Shared directives should remain aligned; these
+        # UI-specific exceptions should not be copied to reana-server.
+        csp:
+          "default-src 'self'; script-src 'self'; style-src 'self'
+          'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:
+          https:; font-src 'self' data: https://fonts.gstatic.com; connect-src
+          'self'; frame-ancestors 'none'; object-src 'self'; base-uri 'self';"
   reana_db:
     enabled: true
     image: docker.io/library/postgres:12.13

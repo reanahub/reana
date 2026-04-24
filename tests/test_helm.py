@@ -8,7 +8,14 @@
 
 """Tests for reana-dev helm-* commands."""
 
+import shutil
+import subprocess
+from pathlib import Path
+
 import pytest
+import yaml
+
+HELM_CHART = Path(__file__).parent.parent / "helm" / "reana"
 
 
 @pytest.mark.parametrize(
@@ -39,3 +46,64 @@ def test_replace_docker_images(original, docker_images, expected):
     from reana.reana_dev.helm import _replace_docker_images
 
     assert _replace_docker_images(original, docker_images) == expected
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_nginx_config_quoted_origins(tmp_path):
+    """Quoted origins in a security header value must be escaped correctly in the rendered nginx config."""
+    values_file = tmp_path / "values.yaml"
+    values_file.write_text(
+        yaml.dump(
+            {
+                "components": {
+                    "reana_ui": {
+                        "nginx": {
+                            "security_headers": {
+                                "permissions_policy": 'geolocation=(self "https://example.org")'
+                            }
+                        }
+                    }
+                },
+                "secrets": {
+                    "cache": {"user": "test", "password": "test"},
+                    "database": {"user": "test", "password": "test"},
+                    "message_broker": {"user": "test", "password": "test"},
+                    "reana": {"REANA_SECRET_KEY": "test"},
+                },
+            }
+        )
+    )
+
+    # Fetch charts if they are missing
+    if not any((HELM_CHART / "charts").glob("*.tgz")):
+        subprocess.run(
+            ["helm", "dependency", "update", str(HELM_CHART)],
+            capture_output=True,
+            check=True,
+        )
+
+    rendered = subprocess.run(
+        ["helm", "template", "reana", str(HELM_CHART), "-f", str(values_file)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    nginx_conf = None
+    for doc in yaml.safe_load_all(rendered.stdout):
+        if (
+            doc
+            and doc.get("kind") == "ConfigMap"
+            and "nginx" in doc["metadata"]["name"]
+        ):
+            nginx_conf = doc["data"]["reana-ui.conf"]
+            break
+
+    assert nginx_conf is not None, "nginx ConfigMap not found in rendered chart"
+    assert (
+        r'add_header Permissions-Policy "geolocation=(self \"https://example.org\")" always;'
+        in nginx_conf
+    )
