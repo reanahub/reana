@@ -29,6 +29,8 @@ spec:
     metadata:
       labels:
         app: {{ include "reana.prefix" . }}-ui
+      annotations:
+        checksum/nginx-config: {{ include (print $.Template.BasePath "/nginx-config.yaml") . | sha256sum }}
     spec:
       containers:
       - name: ui
@@ -36,6 +38,15 @@ spec:
         imagePullPolicy: {{ .Values.components.reana_ui.imagePullPolicy }}
         ports:
         - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: reana-ui.conf
+      volumes:
+      - name: nginx-config
+        configMap:
+          defaultMode: 420
+          name: nginx-config
       {{- if .Values.node_label_infrastructure }}
       {{- $full_label := split "=" .Values.node_label_infrastructure }}
       nodeSelector:
