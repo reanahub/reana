@@ -11,13 +11,14 @@
 import base64
 import json
 import logging
+import os
 import subprocess
 import traceback
 
 import click
 
 from reana.config import REPO_LIST_CLIENT
-from reana.reana_dev.utils import run_command
+from reana.reana_dev.utils import get_srcdir, run_command
 
 
 @click.group()
@@ -27,12 +28,23 @@ def client_commands():
 
 @client_commands.command(name="client-install")
 def client_install():  # noqa: D301
-    """Install latest REANA client and its dependencies."""
+    """Install latest REANA client and its dependencies.
+
+    All components are installed in a single pip invocation so that
+    pip can resolve version constraints from all local source
+    directories together, avoiding conflicts when local branches
+    have different dependency pins than published PyPI versions.
+    """
+    paths = []
     for component in REPO_LIST_CLIENT:
-        for cmd in [
-            "if [ -e setup.py ] || [ -e pyproject.toml ]; then pip install . --upgrade; fi",
-        ]:
-            run_command(cmd, component)
+        srcdir = get_srcdir(component)
+        if os.path.exists(os.path.join(srcdir, "setup.py")) or os.path.exists(
+            os.path.join(srcdir, "pyproject.toml")
+        ):
+            paths.append(srcdir)
+    if paths:
+        cmd = "pip install --upgrade " + " ".join(paths)
+        run_command(cmd, "reana")
     run_command("pip check", "reana")
 
 

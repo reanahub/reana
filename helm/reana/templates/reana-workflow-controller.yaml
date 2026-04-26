@@ -263,8 +263,8 @@ spec:
             value: "{{ include "reana.prefix" . }}-wdb"
           - name: WDB_NO_BROWSER_AUTO_OPEN
             value: "True"
-          - name: FLASK_ENV
-            value:  "development"
+          - name: FLASK_DEBUG
+            value:  "1"
           # Hack to not verify SSL connections https://stackoverflow.com/questions/48391750/disable-python-requests-ssl-validation-for-an-imported-module
           - name: CURL_CA_BUNDLE
             value: ""
@@ -344,8 +344,8 @@ spec:
           value: "{{ include "reana.prefix" . }}-wdb"
         - name: WDB_NO_BROWSER_AUTO_OPEN
           value: "True"
-        - name: FLASK_ENV
-          value:  "development"
+        - name: FLASK_DEBUG
+          value:  "1"
         # Hack to not verify SSL connections https://stackoverflow.com/questions/48391750/disable-python-requests-ssl-validation-for-an-imported-module
         - name: CURL_CA_BUNDLE
           value: ""

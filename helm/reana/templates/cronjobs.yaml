@@ -42,8 +42,8 @@ spec:
               value: {{ .Values.reana_hostname | quote }}
             {{- end }}
             {{- if .Values.debug.enabled }}
-            - name: FLASK_ENV
-              value:  "development"
+            - name: FLASK_DEBUG
+              value:  "1"
             {{- end }}
             - name: REANA_DB_USERNAME
               valueFrom:
@@ -169,8 +169,8 @@ spec:
               value: {{ .Values.reana_hostname | quote }}
             {{- end }}
             {{- if .Values.debug.enabled }}
-            - name: FLASK_ENV
-              value:  "development"
+            - name: FLASK_DEBUG
+              value:  "1"
             {{- end }}
             - name: REANA_DB_USERNAME
               valueFrom:
@@ -253,8 +253,8 @@ spec:
               value: {{ .Values.reana_hostname | quote }}
             {{- end }}
             {{- if .Values.debug.enabled }}
-            - name: FLASK_ENV
-              value:  "development"
+            - name: FLASK_DEBUG
+              value:  "1"
             {{- end }}
             - name: REANA_DB_USERNAME
               valueFrom:
@@ -348,8 +348,8 @@ spec:
               value: {{ .Values.reana_hostname | quote }}
             {{- end }}
             {{- if .Values.debug.enabled }}
-            - name: FLASK_ENV
-              value:  "development"
+            - name: FLASK_DEBUG
+              value:  "1"
             {{- end }}
             - name: REANA_DB_USERNAME
               valueFrom:
