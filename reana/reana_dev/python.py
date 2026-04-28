@@ -180,7 +180,7 @@ def python_unit_tests(
                 ),
                 # Now we can call installing regular test dependencies
                 '{} && pip install ".[tests]" --upgrade'.format(cmd_activate_venv),
-                "{} && {} ./run-tests.sh --check-pytest".format(
+                "{} && {} ./run-tests.sh --python-tests".format(
                     cmd_activate_venv, env_pytestarg
                 ),
             ]:
