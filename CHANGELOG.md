@@ -2,6 +2,104 @@
 
 # Changelog
 
+## [0.95.0](https://github.com/reanahub/reana/compare/0.9.4...0.95.0) (2026-04-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* **reana-dev:** The `docker-build` command is now intended for single-platform local development builds only, and the `docker-push` command has been fully deprecated in favour of `release-docker`.
+
+### Build
+
+* **helm:** upgrade PgBouncer to 1.24.1 ([#907](https://github.com/reanahub/reana/issues/907)) ([d449404](https://github.com/reanahub/reana/commit/d449404768de015a0d47da67d7aee4339849ba76))
+
+
+### Features
+
+* **config:** add new reana-demo-lhcb-run2-b2jpsik example ([#928](https://github.com/reanahub/reana/issues/928)) ([c90496a](https://github.com/reanahub/reana/commit/c90496ac5a825e804c99a2db3bde98b1ff1823a7))
+* **helm:** add configurable workspace listing limits ([#900](https://github.com/reanahub/reana/issues/900)) ([cdcaa96](https://github.com/reanahub/reana/commit/cdcaa96c957c65fa046fa54447fa6b55e7899b1b))
+* **helm:** add EOSC SSO authentication option ([#911](https://github.com/reanahub/reana/issues/911)) ([9ad4b4a](https://github.com/reanahub/reana/commit/9ad4b4ad1dfaf6b61df2f029bb7b617594e8da9e))
+* **helm:** add Kueue scheduling option for user workloads ([#903](https://github.com/reanahub/reana/issues/903)) ([02053cf](https://github.com/reanahub/reana/commit/02053cfb10762877fd5dfe236713548334984b20)), closes [#800](https://github.com/reanahub/reana/issues/800)
+* **helm:** add new component reana-dask-kubernetes-operator ([#891](https://github.com/reanahub/reana/issues/891)) ([909d2e0](https://github.com/reanahub/reana/commit/909d2e070fbb22e7dd81c562d42108a5760cd63b))
+* **helm:** add quota management secret configuration ([#908](https://github.com/reanahub/reana/issues/908)) ([301fc2a](https://github.com/reanahub/reana/commit/301fc2a962a6401eb730ebaace455b7f3f0df9a2))
+* **helm:** allow automatic access token issuance ([#927](https://github.com/reanahub/reana/issues/927)) ([4d85bc1](https://github.com/reanahub/reana/commit/4d85bc10b679044a181e960aa0a40a8a8bd35549)), closes [#925](https://github.com/reanahub/reana/issues/925)
+* **helm:** allow configuring number of threads for Dask workers ([#877](https://github.com/reanahub/reana/issues/877)) ([3e3dc24](https://github.com/reanahub/reana/commit/3e3dc24646f94f6b4ba83346e979938c83e1a0fe)), closes [#874](https://github.com/reanahub/reana/issues/874)
+* **helm:** allow custom session lifetime ([#937](https://github.com/reanahub/reana/issues/937)) ([2ea8abf](https://github.com/reanahub/reana/commit/2ea8abf4cd1e56b97ffe7ba62daa06a344ea20d4))
+* **helm:** allow only reana-server to connect to reana-cache ([#847](https://github.com/reanahub/reana/issues/847)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** collect logs from Dask pods ([#850](https://github.com/reanahub/reana/issues/850)) ([06fa887](https://github.com/reanahub/reana/commit/06fa887e1e8aa3c99058ae4c5a6c6491337cefa2))
+* **helm:** increase default rate limit to 40 requests per second ([#890](https://github.com/reanahub/reana/issues/890)) ([3375dae](https://github.com/reanahub/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **helm:** increase default rate limit to 40 requests per second ([#890](https://github.com/reanahub/reana/issues/890)) ([e377407](https://github.com/reanahub/reana/commit/e377407a85329d2b609900bd8457b1d92eee7299))
+* **helm:** introduce `node_label_infrastructurewc` Helm value ([#885](https://github.com/reanahub/reana/issues/885)) ([3375dae](https://github.com/reanahub/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **helm:** introduce `node_label_infrastructurewc` Helm value ([#885](https://github.com/reanahub/reana/issues/885)) ([4aac8f4](https://github.com/reanahub/reana/commit/4aac8f49419ba452679cd48cd5027c3597c94df5))
+* **helm:** introduce `traefik.external` Helm chart value ([#866](https://github.com/reanahub/reana/issues/866)) ([b2074bc](https://github.com/reanahub/reana/commit/b2074bc7b261ec7aa7eefc40590b6dd94905cc8c)), closes [#852](https://github.com/reanahub/reana/issues/852)
+* **helm:** introduce resource requests and limits for job pods ([#888](https://github.com/reanahub/reana/issues/888)) ([3375dae](https://github.com/reanahub/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **helm:** introduce resource requests and limits for job pods ([#888](https://github.com/reanahub/reana/issues/888)) ([15ca171](https://github.com/reanahub/reana/commit/15ca1719594830a90f45002208e050b3c9f99102)), closes [#883](https://github.com/reanahub/reana/issues/883)
+* **helm:** release check on most-supported Kubernetes version ([#848](https://github.com/reanahub/reana/issues/848)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** remove default GitLab host ([#938](https://github.com/reanahub/reana/issues/938)) ([eac01cb](https://github.com/reanahub/reana/commit/eac01cb0e277079431442849a7b6839c91f6f728))
+* **helm:** replace FLASK_ENV with FLASK_DEBUG for debug mode ([#946](https://github.com/reanahub/reana/issues/946)) ([83df5a9](https://github.com/reanahub/reana/commit/83df5a97ef01320a49c3cbf6db5747cfff7843fa))
+* **helm:** roll all affected deployments when secrets change ([#923](https://github.com/reanahub/reana/issues/923)) ([048bb40](https://github.com/reanahub/reana/commit/048bb4054f847cf1031dfba423ad578f8d1bed20))
+* **helm:** support password-protected rabbitmq ([#847](https://github.com/reanahub/reana/issues/847)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** support password-protected redis ([#847](https://github.com/reanahub/reana/issues/847)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **reana-dev:** add `--namespace` option to `run-ci` command ([#862](https://github.com/reanahub/reana/issues/862)) ([51c3a11](https://github.com/reanahub/reana/commit/51c3a112c0afd1adeb6f004e986369990630ff5f))
+* **reana-dev:** add release-docker-copy command ([#919](https://github.com/reanahub/reana/issues/919)) ([219e202](https://github.com/reanahub/reana/commit/219e202790843d378c0d5fc92c64e79b19de8a0f))
+* **reana-dev:** add support for pyproject.toml components ([#916](https://github.com/reanahub/reana/issues/916)) ([d475e29](https://github.com/reanahub/reana/commit/d475e29df333001d70f384d8fb381093547da077))
+* **reana-dev:** allow using Colima/K3s as an alternative to Kind ([#894](https://github.com/reanahub/reana/issues/894)) ([3375dae](https://github.com/reanahub/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **reana-dev:** allow using Colima/K3s as an alternative to Kind ([#894](https://github.com/reanahub/reana/issues/894)) ([ad4cd09](https://github.com/reanahub/reana/commit/ad4cd09078b4f32907d1f22a1a7c86e013f96cde))
+* **reana-dev:** enhance changelog aggregator for alpha releases ([#921](https://github.com/reanahub/reana/issues/921)) ([73027e0](https://github.com/reanahub/reana/commit/73027e03475211b3b9d15d76e0bacea01a2cac7e))
+* **reana-dev:** update Dockerfile image.created label on release ([#917](https://github.com/reanahub/reana/issues/917)) ([57ab98f](https://github.com/reanahub/reana/commit/57ab98f9fb0e64e2c3a81bbf08cb10e957f6028f))
+* **reana-dev:** use Docker Buildx for multi-arch image releases ([#915](https://github.com/reanahub/reana/issues/915)) ([2e59c41](https://github.com/reanahub/reana/commit/2e59c41f9e610bdefe500fa4280799c05bc3db84))
+* **scripts:** upgrade Kueue to v0.17.0 ([#940](https://github.com/reanahub/reana/issues/940)) ([4f2ba90](https://github.com/reanahub/reana/commit/4f2ba905773815d5172376d11347f5f97361f673))
+* **scripts:** upgrade to Jupyter SciPy 7.2.2 notebook ([#846](https://github.com/reanahub/reana/issues/846)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+
+
+### Bug fixes
+
+* **helm:** add disabling of GitLab host via empty string ([#922](https://github.com/reanahub/reana/issues/922)) ([b182726](https://github.com/reanahub/reana/commit/b1827260c6f9aa71d968862d0a046d9574e8b246))
+* **helm:** allow interactive-session-cleanup job to access RWC ([#853](https://github.com/reanahub/reana/issues/853)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** harmonise REANA host name and port configurations ([#867](https://github.com/reanahub/reana/issues/867)) ([8acfb28](https://github.com/reanahub/reana/commit/8acfb287b916602f8f8f1cedf5d112b545c17300)), closes [#865](https://github.com/reanahub/reana/issues/865)
+* **helm:** quote Helm template values consistently ([#939](https://github.com/reanahub/reana/issues/939)) ([32f3d8f](https://github.com/reanahub/reana/commit/32f3d8f95e0099eb1dc5c5b9b1ae6972b4af5f96))
+* **helm:** remove null default for quota update policy ([#941](https://github.com/reanahub/reana/issues/941)) ([307584d](https://github.com/reanahub/reana/commit/307584dfb329a3b579610dbcd8523bbecec3f560))
+* **helm:** use alpha image tag for dask operator ([#942](https://github.com/reanahub/reana/issues/942)) ([10702a9](https://github.com/reanahub/reana/commit/10702a9ded4091dcbd9195e04cac8b4f4a17cf79))
+* **helm:** use int64 for large numeric template values ([#941](https://github.com/reanahub/reana/issues/941)) ([c817d7a](https://github.com/reanahub/reana/commit/c817d7ae60f452e4a09702a1c28e721828adac1d))
+* **reana-dev:** correctly handle missing changelog of components ([#858](https://github.com/reanahub/reana/issues/858)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **reana-dev:** detect versions in git-create-release-commit ([#936](https://github.com/reanahub/reana/issues/936)) ([0243ef7](https://github.com/reanahub/reana/commit/0243ef72afb2d532b388d424f2678c520a790179))
+* **reana-dev:** enable `run-example` fallback legacy checks ([#928](https://github.com/reanahub/reana/issues/928)) ([90f1467](https://github.com/reanahub/reana/commit/90f1467f7e31d1d28f408f5d7dbc9ce581069337))
+* **reana-dev:** handle multi-match in git-upgrade-shared-modules ([#936](https://github.com/reanahub/reana/issues/936)) ([bc946d5](https://github.com/reanahub/reana/commit/bc946d5c6c2e37b9aba29da12ec02726d47f5f8d))
+* **reana-dev:** improve component detection from subdirectories ([#910](https://github.com/reanahub/reana/issues/910)) ([471e5a3](https://github.com/reanahub/reana/commit/471e5a3b6278302a7a2c9d03ff6a512448d66dda))
+* **reana-dev:** install all client components in one pip call ([#946](https://github.com/reanahub/reana/issues/946)) ([25e4593](https://github.com/reanahub/reana/commit/25e4593006bb7fefe5519f23f97c966efd334eba))
+* **reana-dev:** upgrade shared modules in both setup/pyproject ([#934](https://github.com/reanahub/reana/issues/934)) ([d3ac466](https://github.com/reanahub/reana/commit/d3ac4663802d3abfa3cf50cc96641c616e56703c))
+* **reana-dev:** use chore commit scope when bumping dependencies ([#868](https://github.com/reanahub/reana/issues/868)) ([3788789](https://github.com/reanahub/reana/commit/378878948e1fa99e3f2e336cbf5d699753aaa08d))
+* **reana-dev:** use correct `--python-tests` flag in tests ([#946](https://github.com/reanahub/reana/issues/946)) ([01a44b9](https://github.com/reanahub/reana/commit/01a44b9b5872531576071a5a77556f66097329f4))
+* **reana-dev:** use PEP440 version format for reana-client tags ([#920](https://github.com/reanahub/reana/issues/920)) ([17fd87d](https://github.com/reanahub/reana/commit/17fd87d0be04bd27fd65273b14cc5d2639b014d7))
+
+
+### Code style
+
+* **python:** adapt code base to the new black version ([#921](https://github.com/reanahub/reana/issues/921)) ([ccd3077](https://github.com/reanahub/reana/commit/ccd307742be5c8635e36034ec8903208d60b3f7e))
+
+
+### Continuous integration
+
+* **commitlint:** fix local running of commit linter on macOS ([#898](https://github.com/reanahub/reana/issues/898)) ([c48d92a](https://github.com/reanahub/reana/commit/c48d92a4e089f61f27302c16e3657a71146d34d7))
+* **helm:** configure target branch name for helm linting ([#863](https://github.com/reanahub/reana/issues/863)) ([e2b6037](https://github.com/reanahub/reana/commit/e2b603726ea37a946d0ec09999645861c9e75ce1))
+* **helm:** configure target branch name for helm linting ([#885](https://github.com/reanahub/reana/issues/885)) ([3375dae](https://github.com/reanahub/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **helm:** configure target branch name for helm linting ([#885](https://github.com/reanahub/reana/issues/885)) ([823f9fc](https://github.com/reanahub/reana/commit/823f9fc80a880176dbbc52d6d3622fb3a12ded8e))
+* **python:** pin setuptools below 81 ([#926](https://github.com/reanahub/reana/issues/926)) ([75303e4](https://github.com/reanahub/reana/commit/75303e459011f14eae421feb5236ec4a4c597ab8))
+* **run-tests:** add usage help and refactor options ([#930](https://github.com/reanahub/reana/issues/930)) ([5bb9b8d](https://github.com/reanahub/reana/commit/5bb9b8de446e27de0fcdc89f0fce805a81d01783))
+* **runners:** upgrade CI runners to Ubuntu 22.04 ([#890](https://github.com/reanahub/reana/issues/890)) ([3375dae](https://github.com/reanahub/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **runners:** upgrade CI runners to Ubuntu 22.04 ([#890](https://github.com/reanahub/reana/issues/890)) ([dc0cad7](https://github.com/reanahub/reana/commit/dc0cad72aad4fc668beabc67ba57db7901c5e639))
+
+
+### Documentation
+
+* **helm:** clarify secrets-related warning in README ([#847](https://github.com/reanahub/reana/issues/847)) ([d9c375f](https://github.com/reanahub/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** document all configurable environment variables ([#901](https://github.com/reanahub/reana/issues/901)) ([060c02f](https://github.com/reanahub/reana/commit/060c02f524d52ffd962b953a723a8b3f1946dda0)), closes [#899](https://github.com/reanahub/reana/issues/899)
+
+
+### Chores
+
+* **master:** release 0.95.0-alpha.1 ([251a172](https://github.com/reanahub/reana/commit/251a172977e0eb666d4335809ef43ca692fcfeab))
+
 ## [0.9.4](https://github.com/reanahub/reana/compare/0.9.3...0.9.4) (2024-12-16)
 
 ### :sparkles: What's new in REANA 0.9.4
