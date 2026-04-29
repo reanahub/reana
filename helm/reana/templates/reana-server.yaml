@@ -228,6 +228,11 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-secrets
                 key: REANA_SECRET_KEY
+          - name: REANA_CACHE_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-cache-secrets
+                key: user
           - name: REANA_CACHE_PASSWORD
             valueFrom:
               secretKeyRef:

@@ -51,14 +51,34 @@ spec:
       - name: cache
         image: docker.io/library/redis:8.6.3
         env:
+          - name: REANA_CACHE_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-cache-secrets
+                key: user
           - name: REANA_CACHE_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-cache-secrets
                 key: password
         args:
-          - "--requirepass"
-          - "$(REANA_CACHE_PASSWORD)"
+          # Disable the built-in `default` Redis user so only the named user
+          # below can authenticate; without this, Redis accepts passwordless
+          # connections as `default` (the legacy `--requirepass` is sugar for
+          # giving `default` a password, which we no longer use). Each ACL
+          # rule must be a separate argv token (Redis rejects space-joined
+          # rules as "Spaces not allowed in ACL usernames"), so the YAML
+          # list expands to one element per rule.
+          - "--user"
+          - "default"
+          - "off"
+          - "--user"
+          - "$(REANA_CACHE_USER)"
+          - "on"
+          - ">$(REANA_CACHE_PASSWORD)"
+          - "~*"
+          - "&*"
+          - "+@all"
         ports:
         - containerPort: 6379
       {{- if .Values.node_label_infrastructure }}

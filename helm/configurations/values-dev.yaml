@@ -108,6 +108,7 @@ secrets:
     user: reana-message-broker-user-for-development
     password: reana-message-broker-password-for-development
   cache:
+    user: reana-cache-user-for-development
     password: reana-cache-password-for-development
   opensearch:
     user: reana-opensearch-user-for-development
