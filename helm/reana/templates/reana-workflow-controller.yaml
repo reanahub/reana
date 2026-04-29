@@ -250,11 +250,13 @@ spec:
           - name: REANA_STORAGE_BACKEND
             value: "network"
           {{ end }}
+          {{- if .Values.secrets.gitlab }}
           - name: REANA_GITLAB_HOST
             valueFrom:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
                 key: REANA_GITLAB_HOST
+          {{- end }}
           - name: REANA_SECRET_KEY
             valueFrom:
               secretKeyRef:
@@ -373,11 +375,13 @@ spec:
             secretKeyRef:
               name: {{ include "reana.prefix" . }}-db-secrets
               key: password
+        {{- if .Values.secrets.gitlab }}
         - name: REANA_GITLAB_HOST
           valueFrom:
             secretKeyRef:
               name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
               key: REANA_GITLAB_HOST
+        {{- end }}
         - name: RABBIT_MQ_USER
           valueFrom:
             secretKeyRef:

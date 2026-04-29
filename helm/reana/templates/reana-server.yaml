@@ -208,6 +208,7 @@ spec:
                 name: {{ include "reana.prefix" $ }}-login-provider-secrets
                 key: PROVIDER_SECRETS
           {{- end }}
+          {{- if .Values.secrets.gitlab }}
           - name: REANA_GITLAB_OAUTH_APP_ID
             valueFrom:
               secretKeyRef:
@@ -223,6 +224,7 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
                 key: REANA_GITLAB_HOST
+          {{- end }}
           - name: REANA_SECRET_KEY
             valueFrom:
               secretKeyRef:
