@@ -175,6 +175,7 @@ spec:
           - name: REANA_HOSTNAME
             value: {{ .Values.reana_hostname | quote }}
           {{- end }}
+          {{- if .Values.secrets.cern.sso }}
           - name: CERN_CONSUMER_KEY
             valueFrom:
               secretKeyRef:
@@ -185,6 +186,8 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-cern-sso-secrets
                 key: CERN_CONSUMER_SECRET
+          {{- end }}
+          {{- if .Values.secrets.eosc.sso }}
           - name: EOSC_CONSUMER_KEY
             valueFrom:
               secretKeyRef:
@@ -195,6 +198,7 @@ spec:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-eosc-sso-secrets
                 key: EOSC_CONSUMER_SECRET
+          {{- end }}
           {{- if .Values.login }}
           - name: LOGIN_PROVIDERS_CONFIGS
             value: {{ .Values.login | toJson | quote }}
