@@ -298,6 +298,11 @@ spec:
                 name: {{ include "reana.prefix" . }}-message-broker-secrets
                 key: password
           {{- if $opensearchEnabled }}
+          - name: REANA_OPENSEARCH_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-opensearch-secrets
+                key: REANA_OPENSEARCH_USER
           - name: REANA_OPENSEARCH_PASSWORD
             valueFrom:
               secretKeyRef:

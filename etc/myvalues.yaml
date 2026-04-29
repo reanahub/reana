@@ -1,0 +1,24 @@
+# Sample REANA Helm values file for local single-user development clusters.
+#
+# DO NOT USE THESE VALUES IN PRODUCTION.
+#
+# Production deployments must replace every secret below with a strong, randomly
+# generated value, for example using `openssl rand -hex 32` or a vault tool.
+
+reana_hostname: localhost
+reana_hostport: 30443
+
+secrets:
+  reana:
+    REANA_SECRET_KEY: reana-secret-key-for-development
+  database:
+    user: reana-db-user-for-development
+    password: reana-db-password-for-development
+  message_broker:
+    user: reana-message-broker-user-for-development
+    password: reana-message-broker-password-for-development
+  cache:
+    password: reana-cache-password-for-development
+  opensearch:
+    user: reana-opensearch-user-for-development
+    password: reana-opensearch-password-for-development
