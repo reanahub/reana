@@ -49,7 +49,7 @@ spec:
     spec:
       containers:
       - name: cache
-        image: docker.io/library/redis:5.0.5
+        image: docker.io/library/redis:8.6.3
         env:
           - name: REANA_CACHE_PASSWORD
             valueFrom:
