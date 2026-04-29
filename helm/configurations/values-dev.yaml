@@ -93,3 +93,10 @@ dask-kubernetes-operator:
     - name: reana-code
       hostPath:
         path: /code/reana-dask-kubernetes-operator
+
+# Secrets for local development only. For production purposes, please supply a
+# strong random value when deploying:
+# --set secrets.reana.REANA_SECRET_KEY=$(openssl rand -hex 32)
+secrets:
+  reana:
+    REANA_SECRET_KEY: "reana-development-only--not-for-production-use"
