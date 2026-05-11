@@ -798,8 +798,15 @@ def git_checkout(branch, component, exclude_components, fetch):  # noqa: D301
     "--branch", "-b", nargs=2, multiple=True, help="Which PR? [component PR#]"
 )
 @click.option("--fetch", is_flag=True, default=False)
+@click.option(
+    "--reuse-existing-local-branch",
+    is_flag=True,
+    default=False,
+    help="If a local pr-<PR#> branch already exists, check it out instead of "
+    "failing. No sync with upstream is performed.",
+)
 @git_commands.command(name="git-checkout-pr")
-def git_checkout_pr(branch, fetch):  # noqa: D301
+def git_checkout_pr(branch, fetch, reuse_existing_local_branch):  # noqa: D301
     """Check out local branch corresponding to a component pull request.
 
     The ``-b`` option can be repetitive to check out several pull requests in
@@ -812,8 +819,12 @@ def git_checkout_pr(branch, fetch):  # noqa: D301
                    72`` will create a local branch called ``pr-72`` in the
                    reana-workflow-controller source code directory.
     :param fetch: Should we fetch latest upstream first? [default=False]
+    :param reuse_existing_local_branch: If a local ``pr-<PR#>`` branch already
+                   exists, check it out instead of failing. No sync with
+                   upstream is performed. [default=False]
     :type branch: list
     :type fetch: bool
+    :type reuse_existing_local_branch: bool
     """
     for cpr in branch:
         component, pull_request = cpr
@@ -823,10 +834,17 @@ def git_checkout_pr(branch, fetch):  # noqa: D301
             ]
         )[0]
         if component in REPO_LIST_ALL:
+            local_branch = "pr-{0}".format(pull_request)
+            if reuse_existing_local_branch and branch_exists(component, local_branch):
+                cmd = "git checkout {0}".format(local_branch)
+                run_command(cmd, component)
+                continue
             if fetch:
                 cmd = "git fetch upstream"
                 run_command(cmd, component)
-            cmd = "git checkout -b pr-{0} upstream/pr/{0}".format(pull_request)
+            cmd = "git checkout -b {0} upstream/pr/{1}".format(
+                local_branch, pull_request
+            )
             run_command(cmd, component)
         else:
             msg = "Ignoring unknown component."
