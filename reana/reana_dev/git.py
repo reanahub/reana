@@ -58,6 +58,7 @@ from reana.reana_dev.utils import (
     upgrade_requirements,
     validate_directory,
     get_commit_pr_suffix,
+    find_standard_component_name,
 )
 
 
@@ -794,61 +795,219 @@ def git_checkout(branch, component, exclude_components, fetch):  # noqa: D301
             )
 
 
+def _get_prs_from_issue(repo, issue_number):
+    """Return (component, pr_number) pairs for all PRs linked to a GitHub issue."""
+    # Use the issue timeline API to get all events for this issue
+    output = run_command(
+        f"gh api repos/reanahub/{repo}/issues/{issue_number}/timeline --paginate",
+        display=False,
+        return_output=True,
+    )
+
+    try:
+        events = json.loads(output)
+    except (json.JSONDecodeError, TypeError):
+        click.secho("Failed to parse GitHub API results.", fg="red")
+        sys.exit(1)
+
+    # Extract PRs from cross-referenced events
+    prs = set()
+    for event in events:
+        if event.get("event") != "cross-referenced":
+            # We're only looking for cross-referencing events (not e.g. comments)
+            continue
+
+        source_issue = event.get("source", {}).get("issue", {})
+        if not source_issue.get("pull_request"):
+            # We're only looking for events mentioning PRs
+            continue
+
+        component = source_issue.get("repository", {}).get("name", "")
+        pr_number = str(source_issue["number"])
+        prs.add((component, pr_number))
+
+    prs = list(prs)
+
+    if not prs:
+        click.secho(
+            f"No PRs found linked to reanahub/{repo}#{issue_number}.",
+            fg="yellow",
+        )
+
+    return prs
+
+
+def _collect_prs_to_checkout(branch, issue):
+    """Return a deduplicated, conflict-checked list of (component, pr_number) pairs.
+
+    :raises: SystemExit on conflict.
+    """
+    prs = []
+
+    for component, pull_request in branch:
+        component = select_components([component])[0]
+        if component not in REPO_LIST_ALL:
+            display_message("Ignoring unknown component.", component)
+            continue
+        prs.append((component, pull_request))
+
+    if issue is not None:
+        repo, issue_number = issue
+
+        try:
+            repo = find_standard_component_name(repo)
+        except Exception:
+            click.secho(
+                f"Component name {repo} cannot be uniquely mapped — "
+                "pass the full repository name.",
+                fg="red",
+            )
+            sys.exit(1)
+
+        for component, pull_request in _get_prs_from_issue(repo, issue_number):
+            if component not in REPO_LIST_ALL:
+                click.secho(
+                    f"Skipping PR #{pull_request} in {component} (not a known REANA component).",
+                    fg="yellow",
+                )
+                continue
+            prs.append((component, pull_request))
+
+    # Detect conflicts (whether from -b repetition or -b vs -i) where the user
+    # is trying to check out two different PRs from the same component.
+    # Same (component, PR#) pair appearing twice is harmless and silently deduped.
+    by_component = {}
+    for component, pr in prs:
+        if component in by_component and by_component[component] != pr:
+            click.secho(
+                f"Conflict for {component}: asked to check out both "
+                f"pr-{by_component[component]} and pr-{pr}. "
+                "Remove the duplicate from -b/-i.",
+                fg="red",
+            )
+            sys.exit(1)
+        by_component[component] = pr
+    return list(by_component.items())
+
+
+def _checkout_pr_branch(component, pull_request, fetch, pull, reset):
+    """Fetch and check out a single PR branch."""
+    if fetch or pull or reset:
+        run_command("git fetch upstream", component)
+
+    if not branch_exists(component, f"pr-{pull_request}"):
+        run_command(
+            f"git checkout -b pr-{pull_request} upstream/pr/{pull_request}",
+            component,
+        )
+        return
+
+    run_command(f"git checkout pr-{pull_request}", component)
+
+    if reset:
+        run_command(f"git reset --hard upstream/pr/{pull_request}", component)
+    elif pull:
+        _pull_pr_branch(component, pull_request)
+
+
+def _pull_pr_branch(component, pull_request):
+    """Fast-forward an existing PR branch, refusing if dirty or non-fast-forwardable."""
+    # `git status --porcelain` also lists untracked files. We intentionally
+    # treat them as "dirty" — refusing to ff-merge is safer than ff'ing
+    # over scratch state the user may want to preserve.
+    dirty = run_command(
+        "git status --porcelain", component, display=False, return_output=True
+    )
+
+    if dirty:
+        click.secho(
+            f"{component}: skipping update of pr-{pull_request}: "
+            "working tree has local modifications (use --reset to override).",
+            fg="yellow",
+        )
+        return
+
+    try:
+        run_command(
+            f"git merge --ff-only upstream/pr/{pull_request}",
+            component,
+            exit_on_error=False,
+        )
+    except subprocess.CalledProcessError:
+        click.secho(
+            f"{component}: cannot fast-forward pr-{pull_request}: "
+            "branch has local commits (use --reset to override).",
+            fg="yellow",
+        )
+
+
 @click.option(
     "--branch", "-b", nargs=2, multiple=True, help="Which PR? [component PR#]"
 )
-@click.option("--fetch", is_flag=True, default=False)
 @click.option(
-    "--reuse-existing-local-branch",
+    "--issue",
+    "-i",
+    nargs=2,
+    default=None,
+    help="Derive PRs from a GitHub issue. [repo issue#]",
+)
+@click.option(
+    "--fetch",
     is_flag=True,
     default=False,
-    help="If a local pr-<PR#> branch already exists, check it out instead of "
-    "failing. No sync with upstream is performed.",
+    help="Fetch latest upstream before checking out?",
+)
+@click.option(
+    "--pull",
+    is_flag=True,
+    default=False,
+    help="Fetch and fast-forward existing local PR branches?",
+)
+@click.option(
+    "--reset",
+    is_flag=True,
+    default=False,
+    help="Fetch and hard-reset existing local PR branches?",
 )
 @git_commands.command(name="git-checkout-pr")
-def git_checkout_pr(branch, fetch, reuse_existing_local_branch):  # noqa: D301
-    """Check out local branch corresponding to a component pull request.
+def git_checkout_pr(branch, issue, fetch, pull, reset):  # noqa: D301
+    """Check out local branches corresponding to pull requests.
 
-    The ``-b`` option can be repetitive to check out several pull requests in
-    several repositories at the same time.
+    The ``-b`` option can be repeated to check out several pull requests
+    across several repositories at the same time. Use ``-i`` to automatically
+    derive the set of PRs from a GitHub issue's linked PRs instead.
+
+    For existing local PR branches, the default behaviour is to switch to them
+    without modifying their state. Use ``--pull`` to fetch and fast-forward
+    them (refusing if the branch is dirty or has local commits), or ``--reset``
+    to fetch and hard-reset them unconditionally.
 
     \b
-    :param branch: The option ``branch`` can be repeated. The value consist of
+    :param branch: The option ``branch`` can be repeated. The value consists of
                    two strings specifying the component name and the pull
                    request number. For example, ``-b reana-workflow-controller
                    72`` will create a local branch called ``pr-72`` in the
                    reana-workflow-controller source code directory.
-    :param fetch: Should we fetch latest upstream first? [default=False]
-    :param reuse_existing_local_branch: If a local ``pr-<PR#>`` branch already
-                   exists, check it out instead of failing. No sync with
-                   upstream is performed. [default=False]
+    :param issue: Derive PRs to check out from the cross-references of a GitHub
+                  issue. The value consists of two strings: the reanahub
+                  repository name and the issue number. For example,
+                  ``-i pytest-reana 156`` will check out all PRs that
+                  reference the pytest-reana#156 issue.
+    :param fetch: Fetch latest upstream before checking out? [default=False]
+    :param pull: Fetch and fast-forward existing local PR branches? [default=False]
+    :param reset: Fetch and hard-reset existing local PR branches? [default=False]
     :type branch: list
+    :type issue: Optional[tuple]
     :type fetch: bool
-    :type reuse_existing_local_branch: bool
+    :type pull: bool
+    :type reset: bool
     """
-    for cpr in branch:
-        component, pull_request = cpr
-        component = select_components(
-            [
-                component,
-            ]
-        )[0]
-        if component in REPO_LIST_ALL:
-            local_branch = "pr-{0}".format(pull_request)
-            if reuse_existing_local_branch and branch_exists(component, local_branch):
-                cmd = "git checkout {0}".format(local_branch)
-                run_command(cmd, component)
-                continue
-            if fetch:
-                cmd = "git fetch upstream"
-                run_command(cmd, component)
-            cmd = "git checkout -b {0} upstream/pr/{1}".format(
-                local_branch, pull_request
-            )
-            run_command(cmd, component)
-        else:
-            msg = "Ignoring unknown component."
-            display_message(msg, component)
+    if not branch and issue is None:
+        click.secho("Please specify -b/--branch or -i/--issue.", fg="red")
+        sys.exit(1)
+
+    for component, pull_request in _collect_prs_to_checkout(branch, issue):
+        _checkout_pr_branch(component, pull_request, fetch, pull, reset)
 
 
 @click.option(
