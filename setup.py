@@ -23,7 +23,9 @@ extras_require = {
         "Sphinx>=1.5.1",
     ],
     "tests": [
-        "pytest-reana>=0.9.2,<0.10.0",
+        "pytest>=7.0.0,<9.0.0",
+        "pytest-cov>=3.0.0,<4.0",
+        "mock>=3.0,<4",
     ],
     "benchmark": [
         "pandas>=1.1.5",

@@ -991,8 +991,8 @@ def git_checkout_pr(branch, issue, fetch, pull, reset):  # noqa: D301
     :param issue: Derive PRs to check out from the cross-references of a GitHub
                   issue. The value consists of two strings: the reanahub
                   repository name and the issue number. For example,
-                  ``-i pytest-reana 156`` will check out all PRs that
-                  reference the pytest-reana#156 issue.
+                  ``-i reana-commons 123`` will check out all PRs that
+                  reference the reana-commons#123 issue.
     :param fetch: Fetch latest upstream before checking out? [default=False]
     :param pull: Fetch and fast-forward existing local PR branches? [default=False]
     :param reset: Fetch and hard-reset existing local PR branches? [default=False]

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2024, 2025 CERN.
+# Copyright (C) 2020, 2021, 2022, 2024, 2025, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -59,7 +59,7 @@ def create_build_status_page():
         "developers": {
             "title": "For developers",
             "description": "Understand REANA source code, adapt it to your needs, contribute changes back.",
-            "packages": {"reana": {}, "pytest-reana": {}},
+            "packages": {"reana": {}},
         },
         "environments": {
             "simple": True,

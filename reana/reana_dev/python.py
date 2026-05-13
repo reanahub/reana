@@ -154,8 +154,6 @@ def python_unit_tests(
                 ),
                 "{} && which python".format(cmd_activate_venv),
                 "{} && pip install pip --upgrade".format(cmd_activate_venv),
-                "{} && cd ../pytest-reana && "
-                " pip install . --upgrade".format(cmd_activate_venv),
                 "{} && cd ../reana-commons && "
                 " pip install . --upgrade".format(cmd_activate_venv),
                 "{} && cd ../reana-db && "
