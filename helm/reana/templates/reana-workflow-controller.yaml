@@ -181,7 +181,7 @@ spec:
             value: {{ $runtimeFsGroupChangePolicy | quote }}
           - name: REANA_INFRASTRUCTURE_KUBERNETES_SERVICEACCOUNT_NAME
             value: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
-          {{- if .Values.namespace_runtime }}
+          {{- if and .Values.namespace_runtime (ne .Values.namespace_runtime .Release.Namespace) }}
           - name: REANA_RUNTIME_KUBERNETES_SERVICEACCOUNT_NAME
             value: {{ include "reana.prefixed_runtime_svaccount_name" . }}
           {{- end }}

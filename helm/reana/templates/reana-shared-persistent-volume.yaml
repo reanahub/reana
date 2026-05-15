@@ -1,4 +1,7 @@
 {{- if not (eq .Values.shared_storage.backend "hostpath") }}
+{{- $isCephFs := eq .Values.shared_storage.backend "cephfs" }}
+{{- $hasCustomStorageClass := not (empty .Values.shared_storage.storage_class_name) }}
+{{- $isStaticCephFs := and $isCephFs (not $hasCustomStorageClass) }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -11,18 +14,17 @@ spec:
   resources:
     requests:
       storage: {{ .Values.shared_storage.volume_size }}G
-  {{- if .Values.shared_storage.storage_class_name }}
+  {{- if $hasCustomStorageClass }}
   storageClassName: {{ .Values.shared_storage.storage_class_name }}
-  {{- else if and (eq .Values.shared_storage.backend "cephfs") (semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion) }}
+  {{- else if $isStaticCephFs }}
   storageClassName: ""
   volumeName: {{ include "reana.prefix" . }}-shared-persistent-volume-storage
   {{- else }}
   storageClassName: {{ include "reana.prefix" . }}-shared-volume-storage-class
   {{- end }}
-# Which storage class to create depending on the backend
-{{- if and (eq .Values.shared_storage.backend "cephfs") (not .Values.shared_storage.storage_class_name) }}
-{{- if semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion }}
+{{- if $isStaticCephFs }}
 ---
+# Static Manila CephFS volume backing the shared PVC above.
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -45,24 +47,53 @@ spec:
     volumeAttributes:
       shareID: {{ .Values.shared_storage.cephfs.cephfs_os_share_id }}
       shareAccessID: {{ .Values.shared_storage.cephfs.cephfs_os_share_access_id }}
-{{- else }}
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: {{ include "reana.prefix" . }}-shared-volume-storage-class
-  namespace: {{ .Release.Namespace }}
-provisioner: {{ .Values.shared_storage.cephfs.provisioner }}
-parameters:
-  type: {{ .Values.shared_storage.cephfs.type }}
-  zones: {{ .Values.shared_storage.cephfs.availability_zone }}
-  osSecretName: {{ .Values.shared_storage.cephfs.os_secret_name }}
-  osSecretNamespace: {{ .Values.shared_storage.cephfs.os_secret_namespace }}
-  protocol: CEPHFS
-  backend: csi-cephfs
-  csi-driver: cephfs.csi.ceph.com
-  osShareID: {{ .Values.shared_storage.cephfs.cephfs_os_share_id }}
-  osShareAccessID: {{ .Values.shared_storage.cephfs.cephfs_os_share_access_id }}
 {{- end }}
+{{- if and .Values.namespace_runtime (ne .Values.namespace_runtime .Release.Namespace) }}
+{{- if $hasCustomStorageClass }}
+{{- fail "namespace_runtime cannot be used together with shared_storage.storage_class_name. A dynamically provisioned infrastructure PVC cannot share the chart-managed static Manila CephFS volume created for the runtime namespace. Leave namespace_runtime empty or remove shared_storage.storage_class_name." }}
+{{- end }}
+{{- if not $isStaticCephFs }}
+{{- fail "namespace_runtime is supported only with shared_storage.backend=cephfs using the chart-managed static Manila CephFS volumes. Other PVC-backed storage configurations could mount different exports in the infrastructure and runtime namespaces. Leave namespace_runtime empty to run workflow pods in the release namespace." }}
+{{- end }}
+---
+# Kubernetes requires a 1:1 PV-to-PVC binding. This second PV uses a distinct
+# volumeHandle but points at the same underlying CephFS share as the one above.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "reana.prefix" . }}-shared-persistent-volume-runtime-storage
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: {{ .Values.shared_storage.volume_size }}G
+  csi:
+    driver: cephfs.manila.csi.openstack.org
+    volumeHandle: {{ .Values.shared_storage.cephfs.cephfs_os_share_id }}-runtime
+    nodeStageSecretRef:
+      name: {{ .Values.shared_storage.cephfs.os_secret_name }}
+      namespace: {{ .Values.shared_storage.cephfs.os_secret_namespace }}
+    nodePublishSecretRef:
+      name: {{ .Values.shared_storage.cephfs.os_secret_name }}
+      namespace: {{ .Values.shared_storage.cephfs.os_secret_namespace }}
+    volumeAttributes:
+      shareID: {{ .Values.shared_storage.cephfs.cephfs_os_share_id }}
+      shareAccessID: {{ .Values.shared_storage.cephfs.cephfs_os_share_access_id }}
+---
+# Identically-named PVC in the runtime namespace so that batch pods can mount
+# the same shared storage without cross-namespace PVC references.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "reana.prefix" . }}-shared-persistent-volume
+  namespace: {{ .Values.namespace_runtime }}
+spec:
+  accessModes:
+  - {{ .Values.shared_storage.access_modes }}
+  resources:
+    requests:
+      storage: {{ .Values.shared_storage.volume_size }}G
+  storageClassName: ""
+  volumeName: {{ include "reana.prefix" . }}-shared-persistent-volume-runtime-storage
 {{- end }}
 {{- end }}

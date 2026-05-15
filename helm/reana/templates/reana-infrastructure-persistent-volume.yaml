@@ -1,5 +1,8 @@
 {{- if .Values.infrastructure_storage }}
 {{- if not (eq .Values.infrastructure_storage.backend "hostpath") }}
+{{- $isCephFs := eq .Values.infrastructure_storage.backend "cephfs" }}
+{{- $hasCustomStorageClass := not (empty .Values.infrastructure_storage.storage_class_name) }}
+{{- $isStaticCephFs := and $isCephFs (not $hasCustomStorageClass) }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -12,18 +15,17 @@ spec:
   resources:
     requests:
       storage: {{ .Values.infrastructure_storage.volume_size }}G
-  {{- if .Values.infrastructure_storage.storage_class_name }}
+  {{- if $hasCustomStorageClass }}
   storageClassName: {{ .Values.infrastructure_storage.storage_class_name }}
-  {{- else if and (eq .Values.infrastructure_storage.backend "cephfs") (semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion) }}
+  {{- else if $isStaticCephFs }}
   storageClassName: ""
   volumeName: {{ include "reana.prefix" . }}-infrastructure-persistent-volume-storage
   {{- else }}
   storageClassName: {{ include "reana.prefix" . }}-infrastructure-volume-storage-class
   {{- end }}
-# Which storage class to create depending on the backend
-{{- if and (eq .Values.infrastructure_storage.backend "cephfs") (not .Values.infrastructure_storage.storage_class_name) }}
-{{- if semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion }}
+{{- if $isStaticCephFs }}
 ---
+# Static Manila CephFS volume backing the infrastructure PVC above.
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -46,25 +48,6 @@ spec:
     volumeAttributes:
       shareID: {{ .Values.infrastructure_storage.cephfs.cephfs_os_share_id }}
       shareAccessID: {{ .Values.infrastructure_storage.cephfs.cephfs_os_share_access_id }}
-{{- else }}
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: {{ include "reana.prefix" . }}-infrastructure-volume-storage-class
-  namespace: {{ .Release.Namespace }}
-provisioner: {{ .Values.infrastructure_storage.cephfs.provisioner }}
-parameters:
-  type: {{ .Values.infrastructure_storage.cephfs.type }}
-  zones: {{ .Values.infrastructure_storage.cephfs.availability_zone }}
-  osSecretName: {{ .Values.infrastructure_storage.cephfs.os_secret_name }}
-  osSecretNamespace: {{ .Values.infrastructure_storage.cephfs.os_secret_namespace }}
-  protocol: CEPHFS
-  backend: csi-cephfs
-  csi-driver: cephfs.csi.ceph.com
-  osShareID: {{ .Values.infrastructure_storage.cephfs.cephfs_os_share_id }}
-  osShareAccessID: {{ .Values.infrastructure_storage.cephfs.cephfs_os_share_access_id }}
-{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

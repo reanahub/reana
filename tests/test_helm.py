@@ -17,6 +17,50 @@ import pytest
 import yaml
 
 HELM_CHART = Path(__file__).parent.parent / "helm" / "reana"
+HELM_TEST_SECRETS = {
+    "cache": {"user": "test", "password": "test"},
+    "database": {"user": "test", "password": "test"},
+    "message_broker": {"user": "test", "password": "test"},
+    "reana": {"REANA_SECRET_KEY": "test"},
+}
+
+
+def _render_helm_chart(tmp_path, values=None, namespace="default", check=True):
+    """Render the REANA Helm chart with common test secrets."""
+    values_file = tmp_path / "values.yaml"
+    chart_values = {"secrets": HELM_TEST_SECRETS}
+    chart_values.update(values or {})
+    values_file.write_text(yaml.safe_dump(chart_values))
+
+    if not any((HELM_CHART / "charts").glob("*.tgz")):
+        subprocess.run(
+            ["helm", "dependency", "update", str(HELM_CHART)],
+            capture_output=True,
+            check=True,
+        )
+
+    return subprocess.run(
+        [
+            "helm",
+            "template",
+            "reana",
+            str(HELM_CHART),
+            "--namespace",
+            namespace,
+            "--kube-version",
+            "1.29.0",
+            "-f",
+            str(values_file),
+        ],
+        capture_output=True,
+        text=True,
+        check=check,
+    )
+
+
+def _rendered_documents(rendered):
+    """Return non-empty resources from Helm output."""
+    return [document for document in yaml.safe_load_all(rendered.stdout) if document]
 
 
 @pytest.mark.parametrize(
@@ -184,4 +228,313 @@ def test_job_controller_receives_vetted_container_images(
     job_controller_env = json.loads(workflow_controller_env)
     assert (
         json.loads(job_controller_env["REANA_VETTED_CONTAINER_IMAGES"]) == vetted_images
+    )
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    "shared_storage",
+    [
+        pytest.param({"backend": "cephfs"}, id="default-storage-class"),
+        pytest.param(
+            {"backend": "cephfs", "storage_class_name": None},
+            id="null-storage-class",
+        ),
+    ],
+)
+def test_runtime_namespace_renders_static_cephfs_resources(tmp_path, shared_storage):
+    """A separate runtime namespace should share the static CephFS volume."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        {
+            "namespace_runtime": "runtime",
+            "shared_storage": shared_storage,
+        },
+        namespace="infrastructure",
+    )
+    documents = _rendered_documents(rendered)
+
+    runtime_namespace = next(
+        document
+        for document in documents
+        if document["kind"] == "Namespace" and document["metadata"]["name"] == "runtime"
+    )
+    assert runtime_namespace["metadata"]["labels"] == {
+        "app.kubernetes.io/component": "runtime",
+        "app.kubernetes.io/instance": "reana",
+        "app.kubernetes.io/managed-by": "Helm",
+        "app.kubernetes.io/part-of": "reana",
+    }
+
+    infrastructure_volume = next(
+        document
+        for document in documents
+        if document["kind"] == "PersistentVolume"
+        and document["metadata"]["name"].endswith("-shared-persistent-volume-storage")
+    )
+    runtime_volume = next(
+        document
+        for document in documents
+        if document["kind"] == "PersistentVolume"
+        and document["metadata"]["name"].endswith("-runtime-storage")
+    )
+    infrastructure_csi = infrastructure_volume["spec"]["csi"]
+    runtime_csi = runtime_volume["spec"]["csi"]
+    assert infrastructure_csi["volumeHandle"] != runtime_csi["volumeHandle"]
+    assert runtime_volume["spec"]["csi"]["volumeHandle"].endswith("-runtime")
+    for attribute in ("shareID", "shareAccessID"):
+        assert (
+            infrastructure_csi["volumeAttributes"][attribute]
+            == runtime_csi["volumeAttributes"][attribute]
+        )
+
+    runtime_claim = next(
+        document
+        for document in documents
+        if document["kind"] == "PersistentVolumeClaim"
+        and document["metadata"].get("namespace") == "runtime"
+    )
+    assert runtime_claim["spec"]["storageClassName"] == ""
+    assert runtime_claim["spec"]["volumeName"] == runtime_volume["metadata"]["name"]
+
+    runtime_service_account = next(
+        document
+        for document in documents
+        if document["kind"] == "ServiceAccount"
+        and document["metadata"].get("namespace") == "runtime"
+    )
+    assert any(
+        document["kind"] == "ConfigMap"
+        and document["metadata"].get("namespace") == "runtime"
+        and document["metadata"]["name"].endswith("-krb5-conf")
+        for document in documents
+    )
+    deployment_binding = next(
+        document
+        for document in documents
+        if document["kind"] == "ClusterRoleBinding"
+        and document["metadata"]["name"].endswith("-manage-deployments")
+    )
+    assert {
+        "kind": "ServiceAccount",
+        "name": runtime_service_account["metadata"]["name"],
+        "namespace": "runtime",
+    } in deployment_binding["subjects"]
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    "shared_storage,error_message",
+    [
+        pytest.param(
+            {"backend": "cephfs", "storage_class_name": "rook-cephfs"},
+            "namespace_runtime cannot be used together with "
+            "shared_storage.storage_class_name",
+            id="custom-storage-class",
+        ),
+        pytest.param(
+            {"backend": "nfs"},
+            "namespace_runtime is supported only with shared_storage.backend=cephfs",
+            id="nfs",
+        ),
+    ],
+)
+def test_runtime_namespace_rejects_unsupported_pvc_storage(
+    tmp_path, shared_storage, error_message
+):
+    """A runtime PVC must not silently target a different shared volume."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        {
+            "namespace_runtime": "runtime",
+            "shared_storage": shared_storage,
+        },
+        check=False,
+    )
+
+    assert rendered.returncode != 0
+    assert error_message in rendered.stderr
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_runtime_namespace_hostpath_does_not_create_pvc(tmp_path):
+    """Hostpath storage should not require a namespace-scoped PVC."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        {"namespace_runtime": "runtime"},
+    )
+    documents = _rendered_documents(rendered)
+
+    assert any(
+        document["kind"] == "Namespace" and document["metadata"]["name"] == "runtime"
+        for document in documents
+    )
+    assert not any(
+        document["kind"] == "PersistentVolumeClaim"
+        and document["metadata"].get("namespace") == "runtime"
+        for document in documents
+    )
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    "namespace_runtime",
+    [
+        pytest.param(None, id="unset"),
+        pytest.param("infrastructure", id="release-namespace"),
+    ],
+)
+def test_runtime_namespace_disabled_does_not_create_resources(
+    tmp_path, namespace_runtime
+):
+    """An unset or same-as-release value should not duplicate resources."""
+    values = {}
+    if namespace_runtime:
+        values["namespace_runtime"] = namespace_runtime
+    rendered = _render_helm_chart(
+        tmp_path,
+        values,
+        namespace="infrastructure",
+    )
+    documents = _rendered_documents(rendered)
+
+    assert not any(
+        document["kind"] == "Namespace"
+        and document["metadata"]["name"] == "infrastructure"
+        for document in documents
+    )
+    assert not any(
+        document["kind"] == "ServiceAccount"
+        and document["metadata"]["name"].endswith("-runtime")
+        for document in documents
+    )
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_custom_storage_class_without_runtime_namespace(tmp_path):
+    """Custom shared StorageClasses should retain their existing behaviour."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        {
+            "shared_storage": {
+                "backend": "cephfs",
+                "storage_class_name": "rook-cephfs",
+            }
+        },
+        namespace="infrastructure",
+    )
+    documents = _rendered_documents(rendered)
+
+    infrastructure_claim = next(
+        document
+        for document in documents
+        if document["kind"] == "PersistentVolumeClaim"
+        and document["metadata"].get("namespace") == "infrastructure"
+        and document["metadata"]["name"].endswith("-shared-persistent-volume")
+    )
+    assert infrastructure_claim["spec"]["storageClassName"] == "rook-cephfs"
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_null_storage_class_without_runtime_namespace(tmp_path):
+    """A null StorageClass should retain static CephFS volume binding."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        {
+            "shared_storage": {
+                "backend": "cephfs",
+                "storage_class_name": None,
+            }
+        },
+        namespace="infrastructure",
+    )
+    documents = _rendered_documents(rendered)
+
+    infrastructure_volume = next(
+        document
+        for document in documents
+        if document["kind"] == "PersistentVolume"
+        and document["metadata"]["name"].endswith("-shared-persistent-volume-storage")
+    )
+    infrastructure_claim = next(
+        document
+        for document in documents
+        if document["kind"] == "PersistentVolumeClaim"
+        and document["metadata"].get("namespace") == "infrastructure"
+        and document["metadata"]["name"].endswith("-shared-persistent-volume")
+    )
+    assert infrastructure_claim["spec"]["storageClassName"] == ""
+    assert (
+        infrastructure_claim["spec"]["volumeName"]
+        == infrastructure_volume["metadata"]["name"]
+    )
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_infrastructure_cephfs_binds_static_volume(tmp_path):
+    """Infrastructure CephFS storage should bind its own static volume."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        {
+            "infrastructure_storage": {
+                "backend": "cephfs",
+                "access_modes": "ReadWriteMany",
+                "volume_size": 20,
+                "cephfs": {
+                    "os_secret_name": "os-trustee",
+                    "os_secret_namespace": "kube-system",
+                    "cephfs_os_share_id": "infrastructure-share",
+                    "cephfs_os_share_access_id": "infrastructure-share-access",
+                },
+            }
+        },
+        namespace="infrastructure",
+    )
+    documents = _rendered_documents(rendered)
+
+    volume = next(
+        document
+        for document in documents
+        if document["kind"] == "PersistentVolume"
+        and document["metadata"]["name"].endswith(
+            "-infrastructure-persistent-volume-storage"
+        )
+    )
+    claim = next(
+        document
+        for document in documents
+        if document["kind"] == "PersistentVolumeClaim"
+        and document["metadata"]["name"].endswith("-infrastructure-persistent-volume")
+    )
+    assert claim["spec"]["storageClassName"] == ""
+    assert claim["spec"]["volumeName"] == volume["metadata"]["name"]
+    assert volume["spec"]["csi"]["volumeHandle"] == "infrastructure-share"
+
+    # The legacy Manila provisioner StorageClass is unreachable on every
+    # Kubernetes version the chart supports and must no longer be rendered.
+    assert not any(
+        document["kind"] == "StorageClass"
+        and document["metadata"]["name"].endswith("-volume-storage-class")
+        for document in documents
     )

@@ -119,6 +119,15 @@ secrets:
     user: reana-opensearch-user-for-development
     password: reana-opensearch-password-for-development
 
+# Runtime namespace: uncomment to run user workflow pods (run-batch, run-job,
+# run-session, run-dask) in a separate namespace from the infrastructure pods.
+# The chart owns this namespace, so `helm uninstall` deletes it and everything
+# inside. This provides administrative separation, not network isolation. It
+# works with the default `hostpath` backend used for local development; with
+# PVC-backed storage only the chart-managed static Manila CephFS volumes are
+# supported, and custom storage classes or NFS are rejected at install time.
+# namespace_runtime: reana-runtime
+
 # Compute backends; only Kubernetes is active by default.
 compute_backends:
   - kubernetes
