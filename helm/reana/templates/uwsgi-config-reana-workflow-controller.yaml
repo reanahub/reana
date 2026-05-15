@@ -1,0 +1,50 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: uwsgi-config-reana-workflow-controller
+  namespace: {{ .Release.Namespace }}
+data:
+  uwsgi.ini: |
+    [uwsgi]
+    stats = /tmp/stats.socket
+    http = 0.0.0.0:5000
+    module = reana_workflow_controller.app:app
+    master = true
+    processes = {{ .Values.components.reana_workflow_controller.uwsgi.processes }}
+    threads = {{ .Values.components.reana_workflow_controller.uwsgi.threads }}
+    enable-threads = true
+    single-interpreter = true
+    need-app = true
+    vacuum = true
+    wsgi-disable-file-wrapper = true
+
+    auto-procname = true
+    buffer-size = 10240
+    post-buffering = true
+    lazy-apps = true
+
+    # Logging
+    {{- if not .Values.components.reana_workflow_controller.uwsgi.log_all }}
+    disable-logging = true
+    log-4xx = {{ .Values.components.reana_workflow_controller.uwsgi.log_4xx }}
+    log-5xx = {{ .Values.components.reana_workflow_controller.uwsgi.log_5xx }}
+    {{- end }}
+
+    # Workers management
+    idle = {{ .Values.components.reana_workflow_controller.uwsgi.idle }}
+    max-requests = {{ .Values.components.reana_workflow_controller.uwsgi.max_requests }}
+    max-requests-delta = 149
+    max-worker-lifetime = {{ .Values.components.reana_workflow_controller.uwsgi.max_worker_lifetime }}
+    reload-on-rss = {{ .Values.components.reana_workflow_controller.uwsgi.reload_on_rss }}
+
+    # fix up signal handling
+    die-on-term = true
+    hook-master-start = unix_signal:2 gracefully_kill_them_all
+    hook-master-start = unix_signal:15 gracefully_kill_them_all
+
+    # enable keepalive to avoid 500/502 from traefik
+    http-keepalive = 1
+
+    # fix uWSGI memory consumption on systems with very high fs.nr_open limits
+    max-fd = 1048576

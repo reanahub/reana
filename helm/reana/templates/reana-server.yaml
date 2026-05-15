@@ -39,6 +39,7 @@ spec:
         checksum/app-secrets: {{ include (print $.Template.BasePath "/app-secrets.yaml") . | sha256sum }}
         checksum/cache-secrets: {{ include (print $.Template.BasePath "/cache-secrets.yaml") . | sha256sum }}
         checksum/message-broker-secrets: {{ include (print $.Template.BasePath "/message-broker-secrets.yaml") . | sha256sum }}
+        checksum/uwsgi-config: {{ include (print $.Template.BasePath "/uwsgi-config-reana-server.yaml") . | sha256sum }}
         {{- if .Values.notifications.enabled }}
         checksum/mail-notification-secrets: {{ include (print $.Template.BasePath "/mail-notification-secrets.yaml") . | sha256sum }}
         {{- end }}
@@ -77,7 +78,7 @@ spec:
             mountPath: {{ $workspace_path._1 }}
           {{- end }}
           {{- end }}
-          - name: uwsgi-config
+          - name: uwsgi-config-reana-server
             mountPath: '/var/reana/uwsgi'
           - name: reana-config
             mountPath: '/var/reana/config'
@@ -400,10 +401,10 @@ spec:
         hostPath:
           path: /code/reana-server
       {{- end }}
-      - name: uwsgi-config
+      - name: uwsgi-config-reana-server
         configMap:
           defaultMode: 420
-          name: uwsgi-config
+          name: uwsgi-config-reana-server
       - name: reana-config
         configMap:
           defaultMode: 420

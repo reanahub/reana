@@ -57,6 +57,7 @@ spec:
         checksum/gitlab-secrets: {{ include (print $.Template.BasePath "/gitlab-secrets.yaml") . | sha256sum }}
         checksum/app-secrets: {{ include (print $.Template.BasePath "/app-secrets.yaml") . | sha256sum }}
         checksum/message-broker-secrets: {{ include (print $.Template.BasePath "/message-broker-secrets.yaml") . | sha256sum }}
+        checksum/uwsgi-config: {{ include (print $.Template.BasePath "/uwsgi-config-reana-workflow-controller.yaml") . | sha256sum }}
         {{- if $opensearchEnabled }}
         checksum/opensearch-secrets: {{ include (print $.Template.BasePath "/opensearch-secrets.yaml") . | sha256sum }}
         {{- end }}
@@ -77,6 +78,9 @@ spec:
         args: ["flask run --host=0.0.0.0"]
         tty: true
         stdin: true
+        {{- else }}
+        # do not use "/bin/sh -c" here as that breaks signal propagation
+        command: ["uwsgi", "--ini", "/var/reana/uwsgi/uwsgi.ini"]
         {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
@@ -85,6 +89,8 @@ spec:
           {{- end }}
           - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
             name: reana-shared-volume
+          - name: uwsgi-config-reana-workflow-controller
+            mountPath: '/var/reana/uwsgi'
           {{- range $workspace_paths := .Values.workspaces.paths }}
           {{- if ne (typeOf $workspace_paths) "string" -}}
           {{- fail "The workspaces.paths should be a list of strings e.g node_host_path:pod_mount_path" -}}
@@ -410,6 +416,10 @@ spec:
             - key: ca.crt
               path: ca.crt
       {{- end }}
+      - name: uwsgi-config-reana-workflow-controller
+        configMap:
+          defaultMode: 420
+          name: uwsgi-config-reana-workflow-controller
       {{- if .Values.debug.enabled }}
       - name: reana-code
         hostPath:

@@ -123,6 +123,10 @@ components:
       log_all: true
       log_4xx: true
       log_5xx: true
+      idle: 0
+      max_requests: 1999
+      max_worker_lifetime: 0
+      reload_on_rss: 250
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.7
@@ -132,6 +136,16 @@ components:
       REANA_OPENSEARCH_ENABLED: false
       REANA_OPENSEARCH_USE_SSL: true
       REANA_OPENSEARCH_CA_CERTS: "/code/certs/ca.crt"
+    uwsgi:
+      processes: 2
+      threads: 2
+      log_all: true
+      log_4xx: true
+      log_5xx: true
+      idle: 0
+      max_requests: 1999
+      max_worker_lifetime: 0
+      reload_on_rss: 1024
   reana_workflow_engine_cwl:
     image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.5
     environment: {}
@@ -150,6 +164,15 @@ components:
   reana_job_controller:
     image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.5
     environment: {}
+    uwsgi:
+      threads: 2
+      log_all: true
+      log_4xx: true
+      log_5xx: true
+      idle: 0
+      max_requests: 1999
+      max_worker_lifetime: 0
+      reload_on_rss: 250
   reana_message_broker:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-message-broker:0.95.0-alpha.3
