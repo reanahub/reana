@@ -1,9 +1,14 @@
+{{- $namespaces := list .Release.Namespace }}
+{{- if and .Values.namespace_runtime (ne .Values.namespace_runtime .Release.Namespace) }}
+{{- $namespaces = append $namespaces .Values.namespace_runtime }}
+{{- end }}
+{{- range $namespaces }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "reana.prefix" . }}-krb5-conf
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "reana.prefix" $ }}-krb5-conf
+  namespace: {{ . }}
 data:
   krb5.conf: |
         [libdefaults]
@@ -36,3 +41,4 @@ data:
            ticket_lifetime = 25h
            use_shmem = sshd
          }
+{{- end }}
