@@ -123,6 +123,8 @@ spec:
             value: {{ .Values.interactive_sessions.environments | toJson | quote }}
           - name: REANA_KUBERNETES_JOBS_TIMEOUT_LIMIT
             value: {{ .Values.kubernetes_jobs_timeout_limit | default 604800 | int64 | quote }}  # 604800 seconds = 7 days
+          - name: REANA_KUBERNETES_JOBS_MIN_USER_UID
+            value: {{ .Values.kubernetes_jobs_min_user_uid | default 100 | int64 | quote }}
           {{- if .Values.kubernetes_jobs_cpu_request }}
           - name: REANA_KUBERNETES_JOBS_CPU_REQUEST
             value: {{ .Values.kubernetes_jobs_cpu_request | quote }}
