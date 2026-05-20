@@ -1122,3 +1122,61 @@ $ colima start \\
     --vz-rosetta
 
 This script does not do this automatically. Exiting.""")
+
+
+def ensure_multiarch_builder() -> str:
+    """Ensure a docker-container driver buildx builder exists for multi-platform builds.
+
+    Multi-platform manifest-list builds (``--platform linux/amd64,linux/arm64``)
+    require buildx's ``docker-container`` driver. The default builder on Docker
+    Desktop and native Docker installs uses the ``docker`` driver, which cannot
+    build multi-platform manifest lists in a single command. This helper checks
+    for a ``docker-container`` builder named ``reana-multiarch``, creates it if
+    missing, and returns its name so callers can pass ``--builder <name>`` to
+    ``docker buildx build``. If a builder with that name exists but uses a
+    different driver, this exits with an error rather than silently failing the
+    later build.
+
+    :return: name of a usable docker-container driver builder
+    :rtype: str
+    """
+    builder_name = "reana-multiarch"
+    required_driver = "docker-container"
+    try:
+        output = run_command(
+            f"docker buildx inspect {builder_name}",
+            display=False,
+            return_output=True,
+            exit_on_error=False,
+        )
+    except subprocess.CalledProcessError:
+        click.secho(
+            f"Creating docker-container buildx builder '{builder_name}' "
+            "for multi-platform builds...",
+            fg="yellow",
+        )
+        run_command(
+            f"docker buildx create --name {builder_name} "
+            f"--driver {required_driver} --bootstrap"
+        )
+        return builder_name
+
+    match = re.search(r"^Driver:\s*(\S+)", output, re.MULTILINE)
+    if not match:
+        click.secho(
+            f"Could not determine driver of buildx builder '{builder_name}'. "
+            f"Inspect manually with 'docker buildx inspect {builder_name}'.",
+            fg="red",
+        )
+        sys.exit(1)
+    current_driver = match.group(1)
+    if current_driver != required_driver:
+        click.secho(
+            f"Buildx builder '{builder_name}' exists but uses driver "
+            f"'{current_driver}' instead of required '{required_driver}'. "
+            f"Remove it with 'docker buildx rm {builder_name}' and re-run "
+            "to let this helper recreate it.",
+            fg="red",
+        )
+        sys.exit(1)
+    return builder_name
