@@ -2459,4 +2459,641 @@ def get_aggregate_changelog(  # noqa: C901
         )
 
 
+def _run_graphql(query, variables=None):
+    """Execute a GitHub GraphQL query via gh CLI and return the response data.
+
+    :param query: GraphQL query or mutation string.
+    :param variables: Optional dict of GraphQL variables.
+    :raises SystemExit: on API error or non-zero exit code.
+    :return: Parsed ``data`` field from the GraphQL response.
+    :rtype: dict
+    """
+    payload = {"query": query}
+    if variables:
+        payload["variables"] = variables
+    try:
+        result = subprocess.run(
+            ["gh", "api", "graphql", "--input", "-"],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as err:
+        click.secho(f"GitHub GraphQL API error: {err.stderr}", fg="red")
+        sys.exit(1)
+    data = json.loads(result.stdout)
+    if "errors" in data:
+        for error in data["errors"]:
+            click.secho(f"GraphQL error: {error.get('message', error)}", fg="red")
+        sys.exit(1)
+    return data["data"]
+
+
+def _find_project_number_by_name(org, name):
+    """Return the project number whose title matches *name* exactly.
+
+    Scans all Projects V2 in *org* to detect ambiguous titles. GitHub allows
+    multiple projects to share the same title; in that case the user must
+    pass the numeric project number to disambiguate, since picking the first
+    match could silently target the wrong project for this destructive
+    command.
+
+    :param org: GitHub organisation login.
+    :param name: Exact project title to look for.
+    :raises SystemExit: when no matching project is found, or when more than
+        one project shares the title.
+    :return: Project number.
+    :rtype: int
+    """
+    query = """
+    query($org: String!, $cursor: String) {
+      organization(login: $org) {
+        projectsV2(first: 50, after: $cursor) {
+          pageInfo { hasNextPage endCursor }
+          nodes { number title }
+        }
+      }
+    }
+    """
+    matches = []
+    cursor = None
+    while True:
+        variables = {"org": org}
+        if cursor:
+            variables["cursor"] = cursor
+        data = _run_graphql(query, variables)
+        projects = data["organization"]["projectsV2"]
+        for project in projects["nodes"]:
+            if project["title"] == name:
+                matches.append(project["number"])
+        if not projects["pageInfo"]["hasNextPage"]:
+            break
+        cursor = projects["pageInfo"]["endCursor"]
+    if not matches:
+        click.secho(f"Project '{name}' not found in organisation {org}.", fg="red")
+        sys.exit(1)
+    if len(matches) > 1:
+        numbers = ", ".join(str(n) for n in matches)
+        click.secho(
+            f"Multiple projects in {org} are titled '{name}' (numbers: {numbers}). "
+            f"Re-run with --project NUMBER to disambiguate.",
+            fg="red",
+        )
+        sys.exit(1)
+    return matches[0]
+
+
+def _get_project_info(org, project_number):
+    """Return project id and fields for a GitHub Projects V2 project.
+
+    :param org: GitHub organisation login.
+    :param project_number: Project number within the organisation.
+    :return: Project node with ``id`` and ``fields``.
+    :rtype: dict
+    """
+    query = """
+    query($org: String!, $number: Int!) {
+      organization(login: $org) {
+        projectV2(number: $number) {
+          id
+          fields(first: 100) {
+            nodes {
+              ... on ProjectV2Field { id name }
+              ... on ProjectV2SingleSelectField {
+                id
+                name
+                options { id name }
+              }
+              ... on ProjectV2IterationField {
+                id
+                name
+                configuration {
+                  iterations { id title startDate duration }
+                  completedIterations { id title startDate duration }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    data = _run_graphql(query, {"org": org, "number": project_number})
+    project = data["organization"]["projectV2"]
+    if not project:
+        click.secho(
+            f"Project #{project_number} not found in organisation {org}.", fg="red"
+        )
+        sys.exit(1)
+    return project
+
+
+def _get_project_items_page(project_id, iter_field_name, status_field_name, after=None):
+    """Fetch one page of items from a GitHub Projects V2 project.
+
+    Each item node contains ``statusValue`` (the single-select value for
+    *status_field_name*) and ``iterValue`` (the iteration value for
+    *iter_field_name*), queried by name to avoid fieldValues connection
+    truncation. Both field names must match the project's actual casing —
+    ``fieldValueByName`` is case-sensitive.
+
+    :param project_id: Node ID of the project.
+    :param iter_field_name: Name of the iteration field.
+    :param status_field_name: Name of the Status single-select field.
+    :param after: Pagination cursor (``endCursor`` from a previous page).
+    :return: ``items`` connection dict with ``pageInfo`` and ``nodes``.
+    :rtype: dict
+    """
+    query = """
+    query($id: ID!, $iterFieldName: String!, $statusFieldName: String!, $after: String) {
+      node(id: $id) {
+        ... on ProjectV2 {
+          items(first: 100, after: $after) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              id
+              content {
+                ... on Issue {
+                  number
+                  title
+                  repository { name }
+                }
+                ... on PullRequest {
+                  number
+                  title
+                  repository { name }
+                }
+              }
+              statusValue: fieldValueByName(name: $statusFieldName) {
+                ... on ProjectV2ItemFieldSingleSelectValue { optionId }
+              }
+              iterValue: fieldValueByName(name: $iterFieldName) {
+                ... on ProjectV2ItemFieldIterationValue { iterationId }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    variables = {
+        "id": project_id,
+        "iterFieldName": iter_field_name,
+        "statusFieldName": status_field_name,
+    }
+    if after:
+        variables["after"] = after
+    data = _run_graphql(query, variables)
+    return data["node"]["items"]
+
+
+def _update_item_iteration(project_id, item_id, field_id, iteration_id):
+    """Update the iteration field value of a GitHub Projects V2 item.
+
+    :param project_id: Node ID of the project.
+    :param item_id: Node ID of the project item.
+    :param field_id: Node ID of the iteration field.
+    :param iteration_id: ID of the target iteration.
+    """
+    mutation = """
+    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $iterationId: String!) {
+      updateProjectV2ItemFieldValue(input: {
+        projectId: $projectId
+        itemId: $itemId
+        fieldId: $fieldId
+        value: { iterationId: $iterationId }
+      }) {
+        projectV2Item { id }
+      }
+    }
+    """
+    _run_graphql(
+        mutation,
+        {
+            "projectId": project_id,
+            "itemId": item_id,
+            "fieldId": field_id,
+            "iterationId": iteration_id,
+        },
+    )
+
+
+def _parse_issue_filter(issue):
+    """Parse the ``--issue`` option into ``(repo, number)`` components.
+
+    :param issue: Raw option value, must be ``"REPO#NUMBER"`` e.g. ``"reana-server#123"``.
+    :return: Tuple of ``(repo_name, issue_number)``, or ``(None, None)`` when *issue* is falsy.
+    :rtype: tuple
+    :raises click.ClickException: If the value is not in ``REPO#NUMBER`` format.
+    """
+    if not issue:
+        return None, None
+    if "#" not in issue:
+        raise click.ClickException(
+            f"--issue requires REPO#NUMBER format (e.g. reana-server#123), got: {issue!r}"
+        )
+    repo_part, num_part = issue.split("#", 1)
+    repo_part = repo_part.strip()
+    num_part = num_part.strip()
+    if not repo_part:
+        raise click.ClickException(
+            f"--issue requires a repository name before '#', got: {issue!r}"
+        )
+    try:
+        return repo_part, int(num_part)
+    except ValueError:
+        raise click.ClickException(
+            f"--issue requires an integer issue number after '#', got: {issue!r}"
+        )
+
+
+def _resolve_project_number(org, project):
+    """Return a numeric project number, looking up by name when necessary.
+
+    :param org: GitHub organisation login.
+    :param project: Project name or number string.
+    :return: Project number.
+    :rtype: int
+    """
+    try:
+        return int(project)
+    except ValueError:
+        return _find_project_number_by_name(org, project)
+
+
+def _find_iteration_field(fields):
+    """Return the first iteration field found in *fields*, or exit.
+
+    :param fields: List of project field nodes from the GraphQL response.
+    :return: Iteration field node.
+    :rtype: dict
+    """
+    iteration_field = None
+    for field in fields:
+        if "configuration" not in field or "iterations" not in field["configuration"]:
+            continue
+        if iteration_field is None:
+            iteration_field = field
+        else:
+            click.secho(
+                f"Warning: multiple iteration fields found, using '{iteration_field['name']}'.",
+                fg="yellow",
+            )
+            break
+    if not iteration_field:
+        click.secho("No iteration field found in this project.", fg="red")
+        sys.exit(1)
+    return iteration_field
+
+
+def _resolve_source_iteration(iteration_field, from_iteration):
+    """Return the source iteration node, auto-detecting if *from_iteration* is None.
+
+    Auto-detection picks the most recently completed iteration.
+
+    :param iteration_field: Iteration field node from the GraphQL response.
+    :param from_iteration: Explicit iteration title, or ``None`` to auto-detect.
+    :return: Iteration node with ``id``, ``title``, and ``startDate``.
+    :rtype: dict
+    """
+    completed = iteration_field["configuration"]["completedIterations"]
+    active = iteration_field["configuration"]["iterations"]
+    if from_iteration:
+        match = next(
+            (i for i in completed if i["title"] == from_iteration), None
+        ) or next((i for i in active if i["title"] == from_iteration), None)
+        if not match:
+            click.secho(f"Iteration '{from_iteration}' not found in project.", fg="red")
+            sys.exit(1)
+        return match
+    if not completed:
+        click.secho(
+            "No completed iterations found. Please specify --from explicitly.",
+            fg="red",
+        )
+        sys.exit(1)
+    return max(completed, key=lambda i: i["startDate"])
+
+
+def _resolve_target_iteration(iteration_field, to_iteration):
+    """Return the target iteration node, auto-detecting if *to_iteration* is None.
+
+    Auto-detection picks the earliest active (current) iteration.
+
+    :param iteration_field: Iteration field node from the GraphQL response.
+    :param to_iteration: Explicit iteration title, or ``None`` to auto-detect.
+    :return: Iteration node with ``id``, ``title``, and ``startDate``.
+    :rtype: dict
+    """
+    active = iteration_field["configuration"]["iterations"]
+    if to_iteration:
+        match = next((i for i in active if i["title"] == to_iteration), None)
+        if not match:
+            click.secho(
+                f"Iteration '{to_iteration}' not found among active iterations.",
+                fg="red",
+            )
+            sys.exit(1)
+        return match
+    if not active:
+        click.secho(
+            "No active iterations found. Please specify --to explicitly.", fg="red"
+        )
+        sys.exit(1)
+    return min(active, key=lambda i: i["startDate"])
+
+
+def _get_status_field_info(fields):
+    """Return the Status field's exact name and its "Done" option IDs.
+
+    Detects the field with a case-insensitive match on ``"status"`` but
+    returns the project's actual (case-sensitive) field name, so the per-item
+    GraphQL query in :func:`_get_project_items_page` can use the same name
+    and avoid casing mismatches against ``fieldValueByName``.
+
+    :param fields: List of project field nodes from the GraphQL response.
+    :return: Tuple of ``(status_field_name, done_option_ids)``.
+    :rtype: tuple[str, set]
+    :raises click.ClickException: If the Status field or its Done option is not found.
+    """
+    for field in fields:
+        if field.get("name", "").lower() == "status" and "options" in field:
+            done_ids = {
+                opt["id"] for opt in field["options"] if opt["name"].lower() == "done"
+            }
+            if not done_ids:
+                raise click.ClickException(
+                    "Project Status field has no 'Done' option. "
+                    "Cannot determine which items to skip."
+                )
+            return field["name"], done_ids
+    raise click.ClickException(
+        "Project has no 'Status' field with options. "
+        "Cannot determine which items are done."
+    )
+
+
+def _fetch_all_project_items(project_id, iter_field_name, status_field_name):
+    """Fetch every item in a project, following pagination.
+
+    :param project_id: Node ID of the GitHub Projects V2 project.
+    :param iter_field_name: Name of the iteration field, used to query each item's value.
+    :param status_field_name: Name of the Status field, used to query each item's value.
+    :return: List of item nodes.
+    :rtype: list
+    """
+    click.secho("Loading project items, this may take a moment...", fg="cyan")
+    items = []
+    cursor = None
+    while True:
+        page = _get_project_items_page(
+            project_id, iter_field_name, status_field_name, cursor
+        )
+        items.extend(page["nodes"])
+        if not page["pageInfo"]["hasNextPage"]:
+            break
+        cursor = page["pageInfo"]["endCursor"]
+    return items
+
+
+def _diagnose_issue_filter(
+    all_items, issue_repo, issue_number, prev_iter, iteration_title_by_id
+):
+    """Diagnose a ``--issue`` filter that would yield an empty migration.
+
+    When ``--issue`` is set the user expects a single specific item to be
+    rolled over, so silently performing no work and reporting "no items
+    found" hides the real failure. This helper inspects *all_items* before
+    the migration loop runs and exits non-zero with a specific diagnostic in
+    the three corner cases the user is likely to hit (typo, item left
+    unassigned, or item in a different iteration). Returns silently when the
+    requested item is in the source iteration, in which case the normal
+    migration loop handles it (including the Done-skip case).
+
+    :param all_items: List of item nodes from :func:`_fetch_all_project_items`.
+    :param issue_repo: Repository name from ``--issue``.
+    :param issue_number: Item number from ``--issue``.
+    :param prev_iter: Source iteration node.
+    :param iteration_title_by_id: Map from iteration ID to iteration title,
+        built from the iteration field's ``iterations`` and
+        ``completedIterations`` configuration.
+    :raises SystemExit: When the item is not in the project, is unassigned to
+        any iteration, or is in a different iteration than *prev_iter*.
+    """
+    matching = None
+    for item in all_items:
+        content = item.get("content")
+        if not content:
+            continue
+        if (
+            content.get("number") == issue_number
+            and content.get("repository", {}).get("name", "") == issue_repo
+        ):
+            matching = item
+            break
+    if matching is None:
+        click.secho(
+            f"Item {issue_repo}#{issue_number} is not in this project.", fg="red"
+        )
+        sys.exit(1)
+    item_iter_id = (matching.get("iterValue") or {}).get("iterationId")
+    if item_iter_id is None:
+        click.secho(
+            f"Item {issue_repo}#{issue_number} is not assigned to any iteration.",
+            fg="red",
+        )
+        sys.exit(1)
+    if item_iter_id != prev_iter["id"]:
+        actual_title = iteration_title_by_id.get(item_iter_id, "(unknown)")
+        click.secho(
+            f"Item {issue_repo}#{issue_number} is in iteration '{actual_title}', "
+            f"not '{prev_iter['title']}'. Use --from '{actual_title}' to roll it over.",
+            fg="red",
+        )
+        sys.exit(1)
+
+
+def _migrate_items(
+    all_items,
+    project_id,
+    prev_iter,
+    curr_iter,
+    iteration_field_id,
+    done_option_ids,
+    issue_number,
+    issue_repo,
+    dry_run,
+):
+    """Iterate over *all_items*, moving those in *prev_iter* to *curr_iter*.
+
+    Each item is expected to carry ``statusValue`` and ``iterValue`` keys as
+    returned by :func:`_get_project_items_page`. Items whose Status is Done
+    are skipped. Returns counts of moved and skipped items.
+
+    :return: ``(moved_count, skipped_count)``
+    :rtype: tuple[int, int]
+    """
+    moved_count = 0
+    skipped_count = 0
+
+    for item in all_items:
+        content = item.get("content")
+        if not content:
+            continue
+
+        item_number = content.get("number")
+        item_repo = content.get("repository", {}).get("name", "")
+        item_title = content.get("title", "")
+
+        if issue_number is not None:
+            if item_number != issue_number or item_repo != issue_repo:
+                continue
+
+        item_iter_id = (item.get("iterValue") or {}).get("iterationId")
+        item_status_option_id = (item.get("statusValue") or {}).get("optionId")
+
+        if item_iter_id != prev_iter["id"]:
+            continue
+
+        label = f"{item_repo}#{item_number} — {item_title}"
+
+        if item_status_option_id in done_option_ids:
+            click.secho(f"  Skipping (Done): {label}", fg="blue")
+            skipped_count += 1
+            continue
+
+        if dry_run:
+            click.secho(f"  Would move: {label}", fg="yellow")
+        else:
+            _update_item_iteration(
+                project_id, item["id"], iteration_field_id, curr_iter["id"]
+            )
+            click.secho(f"  Moved: {label}", fg="green")
+        moved_count += 1
+
+    return moved_count, skipped_count
+
+
+@git_commands.command(name="git-iteration-rollover")
+@click.option(
+    "--project",
+    "-p",
+    required=True,
+    help="GitHub Projects V2 project name or number.",
+)
+@click.option(
+    "--from",
+    "from_iteration",
+    default=None,
+    help="Title of the source iteration to move items from. "
+    "Auto-detected as the most recently completed iteration if not provided.",
+)
+@click.option(
+    "--to",
+    "to_iteration",
+    default=None,
+    help="Title of the target iteration to move items to. "
+    "Auto-detected as the first active iteration if not provided.",
+)
+@click.option(
+    "--issue",
+    "-i",
+    default=None,
+    help="Move only this specific issue or PR. "
+    "Format: REPO#NUMBER (e.g. reana-server#123).",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show what would be moved without making any changes.",
+)
+def git_iteration_rollover(project, from_iteration, to_iteration, issue, dry_run):
+    r"""Move issues/PRs from the previous iteration to the current one.
+
+    Fetches all items assigned to the previous GitHub Project iteration and
+    reassigns them to the current iteration, preserving each item's Status
+    column value (Backlog, Ready for work, In work, etc.). Items in the
+    Done column are skipped.
+
+    The source iteration is auto-detected as the most recently completed
+    iteration; the target is auto-detected as the first active one.
+    Use ``--from`` and ``--to`` to override.
+
+    Use ``--issue`` to move a single specific issue or pull request instead of
+    all items.
+
+    \b
+    :param project: GitHub Projects V2 project name or number (required).
+    :param from_iteration: Source iteration title. [auto-detected]
+    :param to_iteration: Target iteration title. [auto-detected]
+    :param issue: Move only REPO#NUMBER (e.g. reana-server#123). [all items]
+    :param dry_run: Show what would be moved without making changes. [default=False]
+    :type project: str
+    :type from_iteration: str
+    :type to_iteration: str
+    :type issue: str
+    :type dry_run: bool
+    """
+    org = "reanahub"
+    issue_repo, issue_number = _parse_issue_filter(issue)
+    project_number = _resolve_project_number(org, project)
+    project_info = _get_project_info(org, project_number)
+
+    fields = project_info["fields"]["nodes"]
+    iteration_field = _find_iteration_field(fields)
+    prev_iter = _resolve_source_iteration(iteration_field, from_iteration)
+    curr_iter = _resolve_target_iteration(iteration_field, to_iteration)
+
+    click.secho(
+        f"Source iteration : {prev_iter['title']} (started {prev_iter['startDate']})",
+        fg="cyan",
+    )
+    click.secho(
+        f"Target iteration : {curr_iter['title']} (started {curr_iter['startDate']})",
+        fg="cyan",
+    )
+    if dry_run:
+        click.secho("Dry run — no changes will be made.", fg="yellow")
+
+    status_field_name, done_option_ids = _get_status_field_info(fields)
+    all_items = _fetch_all_project_items(
+        project_info["id"], iteration_field["name"], status_field_name
+    )
+
+    if issue_number is not None:
+        iteration_title_by_id = {
+            i["id"]: i["title"]
+            for i in iteration_field["configuration"]["iterations"]
+            + iteration_field["configuration"]["completedIterations"]
+        }
+        _diagnose_issue_filter(
+            all_items, issue_repo, issue_number, prev_iter, iteration_title_by_id
+        )
+
+    moved_count, skipped_count = _migrate_items(
+        all_items=all_items,
+        project_id=project_info["id"],
+        prev_iter=prev_iter,
+        curr_iter=curr_iter,
+        iteration_field_id=iteration_field["id"],
+        done_option_ids=done_option_ids,
+        issue_number=issue_number,
+        issue_repo=issue_repo,
+        dry_run=dry_run,
+    )
+
+    if moved_count == 0 and skipped_count == 0:
+        click.secho(f"No items found in iteration '{prev_iter['title']}'.", fg="yellow")
+    else:
+        verb = "Would move" if dry_run else "Moved"
+        click.secho(
+            f"{verb} {moved_count} item(s) to '{curr_iter['title']}'"
+            + (f", skipped {skipped_count} Done item(s)." if skipped_count else "."),
+            fg="cyan",
+            bold=True,
+        )
+
+
 git_commands_list = list(git_commands.commands.values())
