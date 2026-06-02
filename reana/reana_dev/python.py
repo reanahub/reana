@@ -134,7 +134,7 @@ def python_unit_tests(
             )
             display_message(msg, component)
         elif is_component_python_package(component):
-            cmd_activate_venv = f"source  ~/.virtualenvs/_{component}/bin/activate"
+            cmd_activate_venv = f".  ~/.virtualenvs/_{component}/bin/activate"
             if does_component_need_db(component):
                 run_command(
                     f"docker stop postgres__{component}\n"
