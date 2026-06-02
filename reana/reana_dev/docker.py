@@ -89,7 +89,8 @@ def _run_command_prefix_output(cmd, component):
 @click.option(
     "--platform",
     multiple=True,
-    help="Platforms for multi-arch images [default=current architecture]",
+    help="Platform for the build [default=current architecture]. "
+    "For multi-arch builds, use 'release-docker' instead.",
 )
 @docker_commands.command(name="docker-build")
 @click.pass_context
@@ -134,7 +135,7 @@ def docker_build(
         tags. Useful when using `--tag auto` since every REANA component
         will have a different tag.
     :param parallel: Number of docker images to build in parallel.
-    :param platform: Platforms for multi-arch images. [default=current architecture]
+    :param platform: Platform for the build. [default=current architecture]
     :type component: str
     :type exclude_components: str
     :type user: str
@@ -152,7 +153,7 @@ def docker_build(
 
     if len(platform) > 1:
         click.secho(
-            "ERROR: The 'docker-build' command now supports single-platform builds\n"
+            "ERROR: The 'docker-build' command supports single-platform builds\n"
             "only. If you would like to build and push a multi-platform image, please\n"
             "use the 'release-docker' command instead. For example:\n\n"
             "$ reana-dev release-docker -c . --platform linux/amd64 --platform linux/arm64",
@@ -174,7 +175,13 @@ def docker_build(
             component_version_tag = "docker.io/{0}/{1}:{2}".format(
                 user, component, component_tag
             )
-            cmd = "docker build"
+            # Disable attestations so that locally built images stay a
+            # single, self-contained manifest. This is not strictly
+            # required for `reana-dev kind-load-docker-image` (which
+            # platform-filters at save time), but keeps the local image
+            # record clean and avoids carrying SLSA/SBOM blobs that have
+            # no destination outside of a registry push.
+            cmd = "docker buildx build --provenance=false --sbom=false --load"
             for arg in build_arg:
                 cmd += " --build-arg {0}".format(arg)
             if no_cache:
@@ -190,6 +197,10 @@ def docker_build(
         else:
             msg = "Ignoring this component that does not contain" " a Dockerfile."
             display_message(msg, component)
+
+    if commands:
+        # Fail fast with a clear message if buildx is absent
+        run_command("docker buildx version", display=False, return_output=True)
 
     execute_parallel(
         commands,

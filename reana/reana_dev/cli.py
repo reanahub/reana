@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -170,7 +170,7 @@ def reana_dev():  # noqa: D301
         $ cd ~/mysrc/reana-server
         $ reana-dev git-clean -c .
         $ # Build the docker image
-        $ reana-dev docker-build --platform linux/amd64 --platform linux/arm64 -c .
+        $ reana-dev docker-build -c .
         $ # Tag and release the image
         $ reana-dev git-tag -c .
         $ reana-dev release-docker --platform linux/amd64 --platform linux/arm64 -c .
