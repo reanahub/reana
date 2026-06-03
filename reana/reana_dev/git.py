@@ -1163,20 +1163,26 @@ def git_upgrade(component, exclude_components, create_branch, base):  # noqa: D3
         if not branch_exists(component, base):
             if create_branch:
                 # Check if upstream branch exists before creating local branch
-                cmd = f"git ls-remote --heads upstream refs/heads/{base}"
-                if not run_command(cmd, component, display=False, return_output=True):
+                if not run_command(
+                    ["git", "ls-remote", "--heads", "upstream", f"refs/heads/{base}"],
+                    component,
+                    display=False,
+                    return_output=True,
+                ):
                     display_message(
                         f"Branch {base} does not exist in upstream, skipping.",
                         component=component,
                     )
                     continue
 
-                run_command("git fetch upstream", component)
-                run_command(f"git checkout -b {base} upstream/{base}", component)
+                run_command(["git", "fetch", "upstream"], component)
+                run_command(
+                    ["git", "checkout", "-b", base, f"upstream/{base}"], component
+                )
                 try:
-                    run_command(f"git push -u origin {base}", component)
+                    run_command(["git", "push", "-u", "origin", base], component)
                 finally:
-                    run_command("git checkout -", component)
+                    run_command(["git", "checkout", "-"], component)
                 display_message(
                     f"Branch {base} created from upstream and pushed to origin.",
                     component=component,
@@ -1189,11 +1195,11 @@ def git_upgrade(component, exclude_components, create_branch, base):  # noqa: D3
             # Branch was just created fresh or is missing so skip the merge/push upgrade flow
             continue
 
-        run_command("git fetch upstream", component)
-        run_command(f"git checkout {base}", component)
-        run_command(f"git merge --ff-only upstream/{base}", component)
-        run_command(f"git push origin {base}", component)
-        run_command("git checkout -", component)
+        run_command(["git", "fetch", "upstream"], component)
+        run_command(["git", "checkout", base], component)
+        run_command(["git", "merge", "--ff-only", f"upstream/{base}"], component)
+        run_command(["git", "push", "origin", base], component)
+        run_command(["git", "checkout", "-"], component)
 
 
 @click.argument("range", default="")

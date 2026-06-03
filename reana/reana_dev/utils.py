@@ -14,11 +14,12 @@ import importlib.util
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from concurrent import futures
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import click
 import semver
@@ -335,7 +336,7 @@ def is_component_runnable_example(component):
 
 
 def run_command(
-    cmd: str,
+    cmd: Union[str, Sequence[str]],
     component: str = "",
     display: bool = True,
     return_output: bool = False,
@@ -347,24 +348,27 @@ def run_command(
 
     Exit in case of troubles.
 
-    :param cmd: shell command to run
+    :param cmd: shell command string or argument list; lists are executed
+        without a shell to avoid interpolation of metacharacters
     :param component: standard component name
     :param display: should we display command to run?
     :param return_output: shall the output of the command be returned?
     :param directory: directory where to run the command
     :param dry_run: should we only show the command without executing it?
-    :type cmd: str
+    :type cmd: str or list
     :type component: str
     :type display: bool
     :type return_output: bool
     :type directory: str
     :type dry_run: bool
     """
+    use_shell = isinstance(cmd, str)
+    display_cmd = cmd if use_shell else shlex.join(cmd)
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     if display:
         click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
         click.secho("{0}: ".format(component), bold=True, nl=False, fg="yellow")
-        click.secho("{0}".format(cmd), bold=True)
+        click.secho("{0}".format(display_cmd), bold=True)
     if dry_run:
         return
     if component and directory:
@@ -373,10 +377,10 @@ def run_command(
         os.chdir(get_srcdir(component))
     try:
         if return_output:
-            result = subprocess.check_output(cmd, shell=True)
+            result = subprocess.check_output(cmd, shell=use_shell)
             return result.decode().rstrip("\r\n")
         else:
-            subprocess.check_call(cmd, shell=True)
+            subprocess.check_call(cmd, shell=use_shell)
     except subprocess.CalledProcessError as err:
         if display:
             click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
