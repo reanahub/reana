@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2022, 2023, 2026 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -451,8 +451,7 @@ def release_docker_copy(
         if not overwrite_existing and not dry_run:
             try:
                 subprocess.check_output(
-                    f"docker buildx imagetools inspect {dst_image}",
-                    shell=True,
+                    ["docker", "buildx", "imagetools", "inspect", dst_image],
                     stderr=subprocess.DEVNULL,
                 )
                 display_message(

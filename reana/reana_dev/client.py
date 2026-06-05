@@ -89,10 +89,17 @@ def client_setup_environment(
                 env_var_value=server_hostname or "https://localhost:30443",
             )
         )
-        get_access_token_cmd = f"kubectl get secret -n {namespace} -o json {instance_name}-admin-access-token"
-        secret_json = json.loads(
-            subprocess.check_output(get_access_token_cmd, shell=True).decode()
-        )
+        get_access_token_cmd = [
+            "kubectl",
+            "get",
+            "secret",
+            "-n",
+            namespace,
+            "-o",
+            "json",
+            f"{instance_name}-admin-access-token",
+        ]
+        secret_json = json.loads(subprocess.check_output(get_access_token_cmd).decode())
         admin_access_token_b64 = secret_json["data"]["ADMIN_ACCESS_TOKEN"]
         admin_access_token = base64.b64decode(admin_access_token_b64).decode()
         export_lines.append(

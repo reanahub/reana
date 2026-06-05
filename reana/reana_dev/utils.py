@@ -148,7 +148,7 @@ def find_reana_srcdir():
     # second, try from the parent of git toplevel:
     try:
         toplevel = (
-            subprocess.check_output("git rev-parse --show-toplevel", shell=True)
+            subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
             .decode()
             .rstrip("\r\n")
         )
