@@ -98,14 +98,25 @@ def remote_ref_exists(srcdir, branch):
 
 
 def branch_exists(component, branch):
-    """Check whether a branch exists on a given component.
+    """Check whether a local branch exists on a given component.
+
+    Uses ``git show-ref --verify --quiet refs/heads/<branch>`` rather than
+    scanning ``git branch -a`` output — one cheap process, no shell, and no
+    false positives on remote-tracking ref aliases (e.g. ``origin/master``
+    appearing tokenised in ``remotes/origin/HEAD -> origin/master``).
 
     :param component: Component in which check whether the branch exists.
-    :param branch: Name of the branch.
+    :param branch: Name of the local branch.
     :return: Whether the branch exists in components git repo.
     :rtype: bool
     """
-    return branch in get_all_branches(get_srcdir(component))
+    return (
+        subprocess.run(
+            ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
+            cwd=get_srcdir(component),
+        ).returncode
+        == 0
+    )
 
 
 def get_current_branch(srcdir):
