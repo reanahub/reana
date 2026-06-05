@@ -71,11 +71,29 @@ def get_all_branches(srcdir):
     :return: checkout out branch in the component source code directory
     :rtype: str
     """
-    os.chdir(srcdir)
     return (
-        subprocess.check_output("git branch -a 2>/dev/null", shell=True)
+        subprocess.check_output(
+            ["git", "branch", "-a"],
+            cwd=srcdir,
+            stderr=subprocess.DEVNULL,
+        )
         .decode()
         .split()
+    )
+
+
+def remote_ref_exists(srcdir, branch):
+    """Return whether ``refs/remotes/<branch>`` exists in the given repo.
+
+    Cheaper than scanning ``git branch -a`` output: a single ``git show-ref``
+    call with no shell pipeline.
+    """
+    return (
+        subprocess.run(
+            ["git", "show-ref", "--verify", "--quiet", f"refs/remotes/{branch}"],
+            cwd=srcdir,
+        ).returncode
+        == 0
     )
 
 
@@ -93,16 +111,20 @@ def branch_exists(component, branch):
 def get_current_branch(srcdir):
     """Return current Git branch name checked out in the given directory.
 
+    Returns ``"HEAD"`` when the working tree is in a detached-HEAD state;
+    callers in the ``git-status`` hot path detect that and skip the
+    branch-comparison logic.
+
     :param srcdir: source code directory
     :type srcdir: str
 
     :return: checkout out branch in the component source code directory
     :rtype: str
     """
-    os.chdir(srcdir)
     return (
         subprocess.check_output(
-            'git branch 2>/dev/null | grep "^*" | colrm 1 2', shell=True
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=srcdir,
         )
         .decode()
         .rstrip("\r\n")
@@ -118,9 +140,11 @@ def get_current_commit(srcdir):
     :return: commit information composed of brief SHA1 and subject
     :rtype: str
     """
-    os.chdir(srcdir)
     return (
-        subprocess.check_output('git log --pretty=format:"%h %s" -n 1', shell=True)
+        subprocess.check_output(
+            ["git", "log", "--pretty=format:%h %s", "-n", "1"],
+            cwd=srcdir,
+        )
         .decode()
         .rstrip("\r\n")
     )
@@ -229,25 +253,29 @@ def git_create_release_commit(
     return True
 
 
-def compare_branches(branch_to_compare, current_branch):
-    """Compare two branches with ``git rev-list``."""
-    cmd = "git branch -a | grep -c remotes/{}".format(branch_to_compare)
-    try:
-        check = subprocess.check_output(cmd, shell=True)
-    except subprocess.CalledProcessError:
-        check = 0
-    if check == 0:
+def compare_branches(srcdir, branch_to_compare, current_branch):
+    """Compare two branches with ``git rev-list``.
+
+    Runs entirely in ``srcdir`` via ``cwd=`` — no global ``os.chdir`` side
+    effect and no shell pipeline, which keeps per-component overhead low on
+    platforms where ``fork``/``exec`` is slow (notably macOS).
+    """
+    if not remote_ref_exists(srcdir, branch_to_compare):
         click.secho(
             "ERROR: Branch {} does not exist.".format(branch_to_compare), fg="red"
         )
         return 0, 0
-
-    cmd = "git rev-list --left-right --count {0}...{1}".format(
-        branch_to_compare, current_branch
-    )
-    behind, ahead = [
-        int(x) for x in run_command(cmd, display=False, return_output=True).split()
-    ]
+    output = subprocess.check_output(
+        [
+            "git",
+            "rev-list",
+            "--left-right",
+            "--count",
+            "{0}...{1}".format(branch_to_compare, current_branch),
+        ],
+        cwd=srcdir,
+    ).decode()
+    behind, ahead = [int(x) for x in output.split()]
     return behind, ahead
 
 
@@ -257,8 +285,9 @@ def is_component_behind_branch(
     current_branch=None,
 ):
     """Report to stdout the differences between two branches."""
-    current_branch = current_branch or get_current_branch(get_srcdir(component))
-    behind, _ = compare_branches(branch_to_compare, current_branch)
+    srcdir = get_srcdir(component)
+    current_branch = current_branch or get_current_branch(srcdir)
+    behind, _ = compare_branches(srcdir, branch_to_compare, current_branch)
     return bool(behind)
 
 
@@ -269,29 +298,37 @@ def print_branch_difference_report(
     base=GIT_DEFAULT_BASE_BRANCH,
     commit=None,
     short=False,
+    srcdir=None,
 ):
-    """Report to stdout the differences between two branches."""
+    """Report to stdout the differences between two branches.
+
+    When ``branch_to_compare`` is ``None`` (e.g. detached HEAD), the
+    ahead/behind comparison is skipped entirely, but ``short=True`` still
+    prints ``git status --short`` so the report stays useful.
+    """
     # detect how far it is ahead/behind from pr/origin/upstream
-    current_branch = current_branch or get_current_branch(get_srcdir(component))
-    commit = commit or get_current_commit(get_srcdir(component))
+    srcdir = srcdir or get_srcdir(component)
+    current_branch = current_branch or get_current_branch(srcdir)
+    commit = commit or get_current_commit(srcdir)
     report = ""
-    behind, ahead = compare_branches(branch_to_compare, current_branch)
-    if ahead or behind:
-        report += "("
-        if ahead:
-            report += "{0} AHEAD ".format(ahead)
-        if behind:
-            report += "{0} BEHIND ".format(behind)
-        report += branch_to_compare + ")"
-    # detect rebase needs for local branches and PRs
-    if branch_to_compare != "upstream/{}".format(base):
-        branch_to_compare = "upstream/{}".format(base)
-        behind, ahead = compare_branches(branch_to_compare, current_branch)
-        if behind:
-            report += "(STEMS FROM "
+    if branch_to_compare is not None:
+        behind, ahead = compare_branches(srcdir, branch_to_compare, current_branch)
+        if ahead or behind:
+            report += "("
+            if ahead:
+                report += "{0} AHEAD ".format(ahead)
             if behind:
                 report += "{0} BEHIND ".format(behind)
             report += branch_to_compare + ")"
+        # detect rebase needs for local branches and PRs
+        if branch_to_compare != "upstream/{}".format(base):
+            branch_to_compare = "upstream/{}".format(base)
+            behind, ahead = compare_branches(srcdir, branch_to_compare, current_branch)
+            if behind:
+                report += "(STEMS FROM "
+                if behind:
+                    report += "{0} BEHIND ".format(behind)
+                report += branch_to_compare + ")"
 
     click.secho("{0}".format(component), nl=False, bold=True)
     click.secho(" @ ", nl=False, dim=True)
@@ -560,20 +597,29 @@ def git_status(component, exclude_components, short, base):  # noqa: D301
         exclude_components = exclude_components.split(",")
     components = select_components(component, exclude_components)
     for component in components:
-        current_branch = get_current_branch(get_srcdir(component))
-        # detect all local and remote branches
-        all_branches = get_all_branches(get_srcdir(component))
+        srcdir = get_srcdir(component)
+        current_branch = get_current_branch(srcdir)
+        commit = get_current_commit(srcdir)
         # detect branch to compare against
-        if current_branch == base:  # base branch
+        if current_branch == "HEAD":  # detached HEAD
+            branch_to_compare = None
+            current_branch = "(detached HEAD)"
+        elif current_branch == base:  # base branch
             branch_to_compare = "upstream/" + base
         elif current_branch.startswith("pr-"):  # other people's PR
             branch_to_compare = "upstream/" + current_branch.replace("pr-", "pr/")
         else:
             branch_to_compare = "origin/" + current_branch  # my PR
-            if "remotes/" + branch_to_compare not in all_branches:
+            if not remote_ref_exists(srcdir, branch_to_compare):
                 branch_to_compare = "origin/" + base  # local unpushed branch
         print_branch_difference_report(
-            component, branch_to_compare, base=base, short=short
+            component,
+            branch_to_compare,
+            current_branch=current_branch,
+            commit=commit,
+            base=base,
+            short=short,
+            srcdir=srcdir,
         )
 
 

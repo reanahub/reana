@@ -184,16 +184,18 @@ def get_srcdir(component=""):
 def get_current_branch(srcdir):
     """Return current Git branch name checked out in the given directory.
 
+    Returns ``"HEAD"`` when the working tree is in a detached-HEAD state.
+
     :param srcdir: source code directory
     :type srcdir: str
 
     :return: checkout out branch in the component source code directory
     :rtype: str
     """
-    os.chdir(srcdir)
     return (
         subprocess.check_output(
-            'git branch 2>/dev/null | grep "^*" | colrm 1 2', shell=True
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=srcdir,
         )
         .decode()
         .rstrip("\r\n")
