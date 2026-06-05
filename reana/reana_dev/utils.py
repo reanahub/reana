@@ -394,6 +394,20 @@ def run_command(
             raise
 
 
+def run_command_prefix_output(cmd, component):
+    """Run given command, showing the component's name before each output line.
+
+    Useful when commands run concurrently (e.g. via :func:`execute_parallel`)
+    and their output would otherwise be interleaved.
+
+    :param cmd: Command to be executed.
+    :param component: Name of the REANA component.
+    """
+    output = run_command(cmd, component, return_output=True)
+    for line in output.splitlines():
+        click.echo(click.style(f"[{component}] ", bold=True) + line)
+
+
 @dataclass
 class ExecutionProgress:
     """Progress of the parallel execution of multiple tasks."""

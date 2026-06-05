@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2023, 2026 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -18,6 +18,7 @@ from reana.reana_dev.utils import (
     get_docker_tag,
     is_component_dockerised,
     run_command,
+    run_command_prefix_output,
     execute_parallel,
     select_components,
 )
@@ -26,17 +27,6 @@ from reana.reana_dev.utils import (
 @click.group()
 def docker_commands():
     """Docker commands group."""
-
-
-def _run_command_prefix_output(cmd, component):
-    """Run given command, showing the component's name before each output line.
-
-    :param cmd: Command to be executed.
-    :param component: Name of the REANA component.
-    """
-    output = run_command(cmd, component, return_output=True)
-    for line in output.splitlines():
-        click.echo(click.style(f"[{component}] ", bold=True) + line)
 
 
 @click.option("--user", "-u", default="reanahub", help="DockerHub user name [reanahub]")
@@ -166,7 +156,7 @@ def docker_build(
     # show the component's name before each output line of `docker build` if there
     # are multiple parallel builds at the same time, as in this case build logs
     # from different components are mixed together
-    _run_command = run_command if parallel == 1 else _run_command_prefix_output
+    _run_command = run_command if parallel == 1 else run_command_prefix_output
 
     commands = []
     for component in components:

@@ -15,6 +15,7 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
 import click
@@ -1134,8 +1135,15 @@ def git_merge(branch, base, push):  # noqa: D301
     default="",
     help="Which components to exclude? [c1,c2,c3]",
 )
+@click.option(
+    "--parallel",
+    "-p",
+    default=8,
+    type=click.IntRange(min=1),
+    help="Number of components to fetch in parallel. [default=8]",
+)
 @git_commands.command(name="git-fetch")
-def git_fetch(component, exclude_components):  # noqa: D301
+def git_fetch(component, exclude_components, parallel):  # noqa: D301
     """Fetch REANA upstream source code repositories without upgrade.
 
     \b
@@ -1155,14 +1163,93 @@ def git_fetch(component, exclude_components):  # noqa: D301
                          * (7) special value 'ALL' that will expand to include
                                all REANA repositories.
     :param exclude_components: List of components to exclude.
+    :param parallel: How many components to fetch in parallel. [default=8]
     :type component: str
     :type exclude_components: str
+    :type parallel: int
     """
     if exclude_components:
         exclude_components = exclude_components.split(",")
-    for component in select_components(component, exclude_components):
-        cmd = "git fetch upstream"
-        run_command(cmd, component)
+    components = select_components(component, exclude_components)
+    if parallel == 1 or len(components) <= 1:
+        for component in components:
+            run_command("git fetch upstream", component)
+        return
+    # Pre-warm: fetch the first component serially before spinning up the
+    # parallel pool. If the user's ssh config enables `ControlMaster`,
+    # this lets the first connection establish the shared master socket
+    # so the parallel workers reuse it instead of racing to create it
+    # (and printing "ControlSocket already exists, disabling
+    # multiplexing" warnings as they lose the race). For users without
+    # `ControlMaster`, the pre-warm is harmless — the first component
+    # was going to be fetched anyway.
+    failed = []
+    prewarm = components[0]
+    try:
+        run_command("git fetch upstream", prewarm, exit_on_error=False)
+    except subprocess.CalledProcessError:
+        # `run_command` already logged the failure with a component prefix.
+        failed.append(prewarm)
+    # Concurrent fetches for the remaining components: each worker
+    # captures both stdout and stderr (`git fetch` writes progress and
+    # SSH ControlMaster warnings to stderr) and returns them to the
+    # parent, which prints every component's block atomically in
+    # completion order. Failures are collected and surfaced via a
+    # non-zero exit at the end so the parallel path keeps the same
+    # exit-status semantics as the serial path.
+    with ThreadPoolExecutor(max_workers=parallel) as executor:
+        future_to_component = {
+            executor.submit(_fetch_upstream_capture, component): component
+            for component in components[1:]
+        }
+        for future in as_completed(future_to_component):
+            component = future_to_component[future]
+            output, returncode = future.result()
+            # Match the serial `run_command` display: a timestamped header
+            # per component, followed by the captured output verbatim.
+            # With `as_completed` each component appears as a contiguous
+            # block, so the captured lines do not need a per-line prefix
+            # to stay attributable.
+            now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+            click.secho(f"[{now}] ", bold=True, nl=False, fg="green")
+            click.secho(f"{component}: ", bold=True, nl=False, fg="yellow")
+            click.secho("git fetch upstream", bold=True)
+            for line in output.splitlines():
+                click.echo(line)
+            if returncode != 0:
+                failed.append(component)
+                click.secho(f"[{now}] ", bold=True, nl=False, fg="green")
+                click.secho(f"{component}: ", bold=True, nl=False, fg="yellow")
+                click.secho(
+                    f"git fetch failed (exit {returncode})", bold=True, fg="red"
+                )
+    if failed:
+        display_message(
+            f"git fetch failed for {len(failed)} component(s): " f"{', '.join(failed)}",
+            component="reana",
+        )
+        sys.exit(1)
+
+
+def _fetch_upstream_capture(component):
+    """Run ``git fetch upstream`` for one component, capturing all output.
+
+    Returns ``(combined_output, returncode)`` rather than raising, so the
+    parent can prefix every line per component, collect failures across
+    all components and exit non-zero at the end. ``stderr`` is merged
+    into ``stdout`` because ``git fetch`` writes its progress lines, its
+    error messages and any SSH ``ControlMaster`` warnings to stderr —
+    leaving stderr uncaptured would interleave that traffic between
+    concurrent workers and lose the per-component attribution.
+    """
+    result = subprocess.run(
+        ["git", "fetch", "upstream"],
+        cwd=get_srcdir(component),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    return result.stdout, result.returncode
 
 
 @click.option(
