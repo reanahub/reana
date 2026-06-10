@@ -38,7 +38,8 @@ compute_backends:
   - kubernetes
 
 # When enabled, users can only run workflows that use container
-# images specified in the `allowlist`
+# images specified in the `allowlist`. Snakemake's default image must
+# also be listed when workflows omit an explicit container directive.
 vetted_container_images:
   enabled: false # Toggle container image vetting
   allowlist: [] # List of authorized container images

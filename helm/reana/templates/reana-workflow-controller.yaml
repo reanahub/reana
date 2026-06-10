@@ -217,7 +217,10 @@ spec:
             value: {{ .Values.components.reana_workflow_engine_yadage.environment | toJson | quote }}
           # Environment variables for job controller
           - name: REANA_JOB_CONTROLLER_ENV_VARS
-            value: {{ .Values.components.reana_job_controller.environment | toJson | quote }}
+            value: {{ (merge
+              (dict "REANA_VETTED_CONTAINER_IMAGES" (.Values.vetted_container_images | toJson))
+              (default (dict) .Values.components.reana_job_controller.environment)
+              ) | toJson | quote }}
           - name: REANA_INTERACTIVE_SESSIONS_ENVIRONMENTS
             value: {{ .Values.interactive_sessions.environments | toJson | quote }}
           - name: TRAEFIK_ENABLED
