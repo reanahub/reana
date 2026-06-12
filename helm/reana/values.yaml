@@ -217,6 +217,12 @@ ingress:
     hosts: []
   extra: []
 
+# Optionally, use a separate namespace for user workflow pods (run-batch, run-job, run-session, run-dask).
+# When set, the chart creates the namespace, runtime service account, and RBAC bindings
+# automatically; for cephfs on Kubernetes >= 1.21 a shared PV+PVC is also created there.
+# Leave empty (default) to run workflow pods in the same namespace as the REANA services.
+namespace_runtime: ""
+
 # Permissions
 serviceAccount:
   create: true
