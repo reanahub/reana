@@ -90,6 +90,14 @@ spec:
             value: {{ include "reana.prefix" . }}
           - name: REANA_COMPUTE_BACKENDS
             value: {{ .Values.compute_backends | toJson | quote }}
+          - name: REANA_MAX_CONCURRENT_K8S_BATCH_WORKFLOWS
+            value: {{ .Values.components.reana_server.concurrency_limits.kubernetes | quote }}
+          - name: REANA_MAX_CONCURRENT_EXTERNAL_BATCH_WORKFLOWS
+            value: {{ .Values.components.reana_server.concurrency_limits.external | quote }}
+          - name: REANA_MAX_CONCURRENT_DASK_WORKFLOWS
+            value: {{ .Values.components.reana_server.concurrency_limits.dask | quote }}
+          - name: REANA_MAX_CONCURRENT_BATCH_WORKFLOWS_PER_BACKEND
+            value: {{ .Values.components.reana_server.concurrency_limits.per_backend | default dict | toJson | quote }}
           - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
             value: {{ .Release.Namespace | quote }}
           - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
@@ -334,6 +342,14 @@ spec:
           value: {{ .Release.Namespace | quote }}
         - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
           value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
+        - name: REANA_MAX_CONCURRENT_K8S_BATCH_WORKFLOWS
+          value: {{ .Values.components.reana_server.concurrency_limits.kubernetes | quote }}
+        - name: REANA_MAX_CONCURRENT_EXTERNAL_BATCH_WORKFLOWS
+          value: {{ .Values.components.reana_server.concurrency_limits.external | quote }}
+        - name: REANA_MAX_CONCURRENT_DASK_WORKFLOWS
+          value: {{ .Values.components.reana_server.concurrency_limits.dask | quote }}
+        - name: REANA_MAX_CONCURRENT_BATCH_WORKFLOWS_PER_BACKEND
+          value: {{ .Values.components.reana_server.concurrency_limits.per_backend | default dict | toJson | quote }}
         {{- range $key, $value := .Values.components.reana_server.environment }}
         - name: {{ $key }}
           value: {{ $value | quote }}
