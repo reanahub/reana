@@ -279,7 +279,9 @@ this traffic is blocked.
 | `components.reana_message_broker.resources`                                                               | Kubernetes resource configuration (requests/limits) for the Message Broker container                                                                                                                                                                                                                                                                                                                                         | `{}`                                                                                                                                                                                                                                                                                   |
 | `components.reana_server.environment`                                                                     | REANA-Server environment variables                                                                                                                                                                                                                                                                                                                                                                                           |                                                                                                                                                                                                                                                                                        |
 | `components.reana_server.environment.REANA_LOG_LEVEL`                                                     | Log verbosity level for this component.                                                                                                                                                                                                                                                                                                                                                                                      | `INFO`                                                                                                                                                                                                                                                                                 |
-| `components.reana_server.environment.REANA_MAX_CONCURRENT_BATCH_WORKFLOWS`                                | Upper limit on concurrent REANA batch workflows running in the cluster.                                                                                                                                                                                                                                                                                                                                                      | `30`                                                                                                                                                                                                                                                                                   |
+| `components.reana_server.concurrency_limits.kubernetes`                                                   | Upper limit on concurrent workflows with at least one Kubernetes step (hybrid workflows count here too). Leave unset (`~`) to fall back to a deprecated `environment.REANA_MAX_CONCURRENT_BATCH_WORKFLOWS` entry, and to 30 otherwise.                                                                                                                                                                                       | `~` (resolves to `30`)                                                                                                                                                                                                                                                                 |
+| `components.reana_server.concurrency_limits.<backend>`                                                    | Upper limit on concurrent workflows using the external compute backend `<backend>` (e.g. `htcondorcern`, `slurmcern`, `compute4punch`). Required for every enabled compute backend other than `kubernetes`. `0` closes the backend.                                                                                                                                                                                          | None                                                                                                                                                                                                                                                                                   |
+| `components.reana_server.concurrency_limits.dask`                                                         | Upper limit on concurrent workflows that request a Dask cluster.                                                                                                                                                                                                                                                                                                                                                             | `5`                                                                                                                                                                                                                                                                                    |
 | `components.reana_server.environment.REANA_SCHEDULER_REQUEUE_SLEEP`                                       | Seconds to wait between attempting to schedule queued workflows.                                                                                                                                                                                                                                                                                                                                                             | `15`                                                                                                                                                                                                                                                                                   |
 | `components.reana_server.environment.REANA_SCHEDULER_REQUEUE_COUNT`                                       | Number of times to re-enqueue a workflow before marking it as failed (use "infinity" to disable failure).                                                                                                                                                                                                                                                                                                                    | `200`                                                                                                                                                                                                                                                                                  |
 | `components.reana_server.environment.REANA_QUOTA_MANAGEMENT_SECRET`                                       | Secret required in the `X-Quota-Management-Secret` header to authenticate quota-management REST API requests. Leave empty to disable these endpoints.                                                                                                                                                                                                                                                                        | `""`                                                                                                                                                                                                                                                                                   |
@@ -546,3 +548,60 @@ this traffic is blocked.
 | `components.reana_ui.nginx.security_headers.permissions_policy`                                           | Value of the `Permissions-Policy` HTTP response header. Set to empty string to disable.                                                                                                                                                                                                                                                                                                                                      | `accelerometer=(), ambient-light-sensor=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()`                                                                                                                           |
 | `components.reana_ui.nginx.security_headers.csp`                                                          | Value of the `Content-Security-Policy` HTTP response header. Set to empty string to disable.                                                                                                                                                                                                                                                                                                                                 | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; object-src 'self'; base-uri 'self';`                  |
 | `components.reana_ui.nginx.security_headers.root_viewer_csp`                                              | Value of the `Content-Security-Policy` HTTP response header of the sandboxed ROOT file viewer (`/root-viewer/`), which needs `'unsafe-eval'` to draw formulas stored in ROOT files. Keep the `sandbox` directive, which isolates the viewer from REANA's origin. An empty string removes the header without falling back to `csp`, so the viewer is then sandboxed only when REANA-UI embeds it. Not recommended.            | `sandbox allow-scripts allow-downloads; default-src 'none'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; frame-ancestors 'self'; form-action 'none'; object-src 'none'; base-uri 'none';` |
+
+## Workflow concurrency limits
+
+Concurrency is capped independently per compute backend and, orthogonally, for
+workflows requesting a Dask cluster. A workflow consumes one slot in every
+backend its steps use, plus a Dask slot if it declares
+`workflow.resources.dask`, and is admitted only while below every applicable
+limit. So a hybrid Kubernetes + HTCondor workflow is checked against both
+backend limits, and a Dask-on-HTCondor workflow against the HTCondor limit and
+the Dask limit.
+
+A limit of `0` closes that resource: no workflow using it is admitted, and the
+status dashboard reports it as 0% available.
+
+Every enabled compute backend has its own limit, keyed exactly as in
+`compute_backends`. `kubernetes` and `dask` have defaults. Every other enabled
+backend needs an explicit limit, otherwise the chart refuses to render. The
+chart also refuses a limit for a backend that is not enabled. For example, with
+HTCondor and Slurm enabled:
+
+```yaml
+compute_backends:
+  - kubernetes
+  - htcondorcern
+  - slurmcern
+components:
+  reana_server:
+    concurrency_limits:
+      kubernetes: 30
+      dask: 5
+      htcondorcern: 200
+      slurmcern: 100
+```
+
+### Upgrading from `REANA_MAX_CONCURRENT_BATCH_WORKFLOWS`
+
+The single cluster-wide
+`components.reana_server.environment.REANA_MAX_CONCURRENT_BATCH_WORKFLOWS`
+setting is deprecated in favour of `components.reana_server.concurrency_limits`.
+An existing values file keeps working: as long as
+`concurrency_limits.kubernetes` is left unset (`~`), the deprecated value is
+used as the Kubernetes limit. Setting `concurrency_limits.kubernetes` takes
+precedence over a non-zero deprecated value. Setting the deprecated variable to
+`0` is different: it pauses the scheduling of new workflows on every compute
+backend and Dask, whatever the other limits are, which is how new workflows are
+stopped before maintenance. `concurrency_limits.kubernetes: 0` closes Kubernetes
+only. Move the value across and drop the deprecated entry:
+
+```yaml
+components:
+  reana_server:
+    concurrency_limits:
+      kubernetes: 10
+```
+
+A deployment that enables HTCondor, Slurm or Compute4PUNCH must also add a limit
+for each of these backends, as shown above.

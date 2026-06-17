@@ -311,7 +311,6 @@ components:
     image: docker.io/reanahub/reana-server:0.95.0-alpha.7
     hostAliases: []
     environment:
-      REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
       REANA_SCHEDULER_REQUEUE_SLEEP: 15
       REANA_SCHEDULER_REQUEUE_COUNT: 200
       REANA_WORKFLOW_SCHEDULING_POLICY: "fifo"
@@ -342,6 +341,21 @@ components:
       REANA_FETCHER_MAXIMUM_EXTRACTED_SIZE: "1073741824"
       REANA_FETCHER_MAXIMUM_FILES: "10000"
       REANA_FETCHER_MAXIMUM_CLONE_SIZE: "2147483648"
+    # Upper limits on concurrently pending/running batch workflows, one per
+    # enabled compute backend, plus one for workflows requesting a Dask
+    # cluster. A workflow consumes one slot in every compute backend its
+    # steps use, plus a Dask slot if it requests a Dask cluster. It is
+    # admitted only while below every applicable limit. A limit of 0 closes
+    # that backend.
+    concurrency_limits:
+      # Leave unset (~) to fall back to a deprecated
+      # environment.REANA_MAX_CONCURRENT_BATCH_WORKFLOWS entry if present,
+      # and to 30 otherwise.
+      kubernetes: ~
+      dask: 5
+      # Every other enabled compute backend needs its own limit, e.g.:
+      # htcondorcern: 200
+      # slurmcern: 100
     uwsgi:
       processes: 6
       threads: 4
