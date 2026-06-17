@@ -163,7 +163,6 @@ components:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-server:0.95.0-alpha.6
     environment:
-      REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
       REANA_SCHEDULER_REQUEUE_SLEEP: 15
       REANA_SCHEDULER_REQUEUE_COUNT: 200
       REANA_USER_EMAIL_CONFIRMATION: true
@@ -175,6 +174,20 @@ components:
       REANA_ACCESS_TOKEN_ISSUANCE_POLICY: "manual"
       REANA_TOKEN_MANAGEMENT_SECRET: ""
       REANA_QUOTA_MANAGEMENT_SECRET: ""
+    # Upper limits on concurrently pending/running batch workflows.
+    # A running workflow consumes one slot in every compute backend
+    # its steps use, plus a Dask slot if it requests a Dask cluster.
+    # It is admitted only while below every applicable limit.
+    concurrency_limits:
+      # Leave unset (~) to fall back to a deprecated
+      # environment.REANA_MAX_CONCURRENT_BATCH_WORKFLOWS entry if present,
+      # and to 30 otherwise.
+      kubernetes: ~
+      external: 200 # default for any external backend (e.g. htcondorcern/slurmcern)
+      dask: 5
+      # Optional override to set concurrency limits per external backend
+      # per_backend:
+      #   htcondorcern: 3
     uwsgi:
       processes: 6
       threads: 4
