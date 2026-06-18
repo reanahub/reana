@@ -217,6 +217,18 @@ ingress:
     hosts: []
   extra: []
 
+# Optionally, use a separate namespace for user workflow pods (run-batch,
+# run-job, run-session, run-dask). When set, the chart creates and owns
+# the namespace. `helm uninstall` will delete it and every resource
+# inside, so do not place unrelated workloads there. The chart also creates
+# the runtime service account, and RBAC bindings automatically; for CephFS
+# on Kubernetes >= 1.21 a shared PV+PVC is also created there.
+# NOTE: any Secret listed in IMAGE_PULL_SECRETS must be created manually
+# in this namespace as well; the chart does not replicate it.
+# Leave empty (default) to run workflow pods in the same namespace as the
+# REANA services.
+namespace_runtime: ""
+
 # Permissions
 serviceAccount:
   create: true

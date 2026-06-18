@@ -6,10 +6,10 @@ metadata:
 data:
   REANA_DB_NAME: {{ .Values.db_env_config.REANA_DB_NAME | quote }}
   {{- if .Values.pgbouncer.enabled }}
-  REANA_DB_HOST: {{ include "reana.prefix" . }}-pgbouncer
+  REANA_DB_HOST: {{ include "reana.prefix" . }}-pgbouncer.{{ .Release.Namespace }}
   REANA_DB_PORT: "6432"
   {{- else if .Values.components.reana_db.enabled }}
-  REANA_DB_HOST: {{ include "reana.prefix" . }}-db
+  REANA_DB_HOST: {{ include "reana.prefix" . }}-db.{{ .Release.Namespace }}
   REANA_DB_PORT: "5432"
   {{- else }}
   REANA_DB_HOST: {{ .Values.db_env_config.REANA_DB_HOST | quote }}
