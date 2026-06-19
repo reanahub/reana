@@ -48,6 +48,21 @@ shared_storage:
   backend: hostpath # hostpath | cephfs | nfs
   volume_size: 200
   access_modes: ReadWriteMany
+  # Optional pod fsGroup to apply to REANA infrastructure pods mounting the
+  # shared workspace volume. Useful for storage backends that initialize the
+  # volume as root-owned but expect group-based write access, such as local
+  # CephFS dev deployments. When set, this value is also propagated to
+  # WORKFLOW_RUNTIME_USER_GID so runtime pods keep the same workspace group.
+  fs_group: ""
+  # Policy controlling when Kubernetes recursively updates mounted volume
+  # ownership for fsGroup-enabled shared storage. This value is also
+  # propagated to REANA_RUNTIME_FS_GROUP_CHANGE_POLICY for runtime pods.
+  # Accepted values: OnRootMismatch, Always.
+  fs_group_change_policy: OnRootMismatch
+  # Optional existing storage class to use for the shared PVC. When set,
+  # REANA will bind its shared PVC to this class instead of creating the
+  # backend-specific CephFS resources or expecting the default prefixed class.
+  storage_class_name: ""
   shared_volume_mount_path: "/var/reana"
   hostpath:
     root_path: "/var/reana"
@@ -62,6 +77,15 @@ shared_storage:
 
 # Storage used by REANA's infrastructure (i.e. message broker and database).
 # If not specified, the shared storage containing the workspaces will be used instead.
+# When configured, this block accepts the same storage options as `shared_storage`,
+# including `storage_class_name` to bind the infrastructure PVC to an existing
+# storage class.
+# Example:
+# infrastructure_storage:
+#   backend: cephfs
+#   access_modes: ReadWriteMany
+#   volume_size: 20
+#   storage_class_name: rook-cephfs
 infrastructure_storage: {}
 
 secrets:
@@ -153,6 +177,7 @@ components:
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.7
+    pod_security_context: {}
     environment:
       SHARED_VOLUME_PATH: /var/reana
       REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 10

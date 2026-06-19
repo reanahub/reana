@@ -1,6 +1,17 @@
 {{- $opensearchEnv := .Values.components.reana_workflow_controller.environment }}
 {{- $opensearchEnabled := $opensearchEnv.REANA_OPENSEARCH_ENABLED }}
 {{- $opensearchTlsEnabled := and $opensearchEnabled $opensearchEnv.REANA_OPENSEARCH_USE_SSL }}
+{{- $sharedStorageFsGroup := .Values.shared_storage.fs_group | toString }}
+{{- $sharedStorageFsGroupChangePolicy := .Values.shared_storage.fs_group_change_policy | toString }}
+{{- $runtimeFsGroupChangePolicy := default "OnRootMismatch" $sharedStorageFsGroupChangePolicy | toString }}
+{{- $workflowControllerPodSecurityContext := .Values.components.reana_workflow_controller.pod_security_context | default dict }}
+{{- $workflowControllerEnvValues := .Values.components.reana_workflow_controller.environment | default dict }}
+{{- $workflowRuntimeUserName := default "reana" $workflowControllerEnvValues.WORKFLOW_RUNTIME_USER_NAME | toString }}
+{{- $workflowRuntimeUserUid := default 1000 $workflowControllerEnvValues.WORKFLOW_RUNTIME_USER_UID | toString }}
+{{- $workflowRuntimeUserGid := ternary $sharedStorageFsGroup ((default 0 $workflowControllerEnvValues.WORKFLOW_RUNTIME_USER_GID) | toString) (ne $sharedStorageFsGroup "") }}
+{{- $workflowRuntimeGroupNameDefault := ternary "root" $workflowRuntimeUserName (eq $workflowRuntimeUserGid "0") }}
+{{- $workflowRuntimeGroupName := default $workflowRuntimeGroupNameDefault $workflowControllerEnvValues.WORKFLOW_RUNTIME_GROUP_NAME | toString }}
+{{- $workflowControllerEnv := omit $workflowControllerEnvValues "REANA_RUNTIME_FS_GROUP_CHANGE_POLICY" "WORKFLOW_RUNTIME_GROUP_NAME" "WORKFLOW_RUNTIME_USER_GID" "WORKFLOW_RUNTIME_USER_NAME" "WORKFLOW_RUNTIME_USER_UID" }}
 ---
 apiVersion: v1
 kind: Service
@@ -66,6 +77,18 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
+      {{- if or (ne $sharedStorageFsGroup "") $workflowControllerPodSecurityContext }}
+      securityContext:
+        {{- if ne $sharedStorageFsGroup "" }}
+        fsGroup: {{ $sharedStorageFsGroup | int64 }}
+        {{- if ne $sharedStorageFsGroupChangePolicy "" }}
+        fsGroupChangePolicy: {{ $sharedStorageFsGroupChangePolicy | quote }}
+        {{- end }}
+        {{- end }}
+        {{- with $workflowControllerPodSecurityContext }}
+{{ toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
       containers:
       - name: rest-api
         image: {{ .Values.components.reana_workflow_controller.image }}
@@ -138,10 +161,20 @@ spec:
           {{- end }}
           - name: WORKSPACE_PATHS
             value: {{ .Values.workspaces.paths | toJson | quote }}
-          {{- range $key, $value := .Values.components.reana_workflow_controller.environment }}
+          {{- range $key, $value := $workflowControllerEnv }}
           - name: {{ $key }}
             value: {{ $value | quote }}
           {{- end }}
+          - name: WORKFLOW_RUNTIME_GROUP_NAME
+            value: {{ $workflowRuntimeGroupName | quote }}
+          - name: WORKFLOW_RUNTIME_USER_GID
+            value: {{ $workflowRuntimeUserGid | quote }}
+          - name: WORKFLOW_RUNTIME_USER_NAME
+            value: {{ $workflowRuntimeUserName | quote }}
+          - name: WORKFLOW_RUNTIME_USER_UID
+            value: {{ $workflowRuntimeUserUid | quote }}
+          - name: REANA_RUNTIME_FS_GROUP_CHANGE_POLICY
+            value: {{ $runtimeFsGroupChangePolicy | quote }}
           - name: REANA_INFRASTRUCTURE_KUBERNETES_SERVICEACCOUNT_NAME
             value: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
           {{- if .Values.namespace_runtime }}
@@ -345,10 +378,20 @@ spec:
         - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
           value: {{ tpl .Values.quota.workflow_termination_update_policy . | quote }}
         {{- end }}
-        {{- range $key, $value := .Values.components.reana_workflow_controller.environment }}
+        {{- range $key, $value := $workflowControllerEnv }}
         - name: {{ $key }}
           value: {{ $value | quote }}
         {{- end }}
+        - name: WORKFLOW_RUNTIME_GROUP_NAME
+          value: {{ $workflowRuntimeGroupName | quote }}
+        - name: WORKFLOW_RUNTIME_USER_GID
+          value: {{ $workflowRuntimeUserGid | quote }}
+        - name: WORKFLOW_RUNTIME_USER_NAME
+          value: {{ $workflowRuntimeUserName | quote }}
+        - name: WORKFLOW_RUNTIME_USER_UID
+          value: {{ $workflowRuntimeUserUid | quote }}
+        - name: REANA_RUNTIME_FS_GROUP_CHANGE_POLICY
+          value: {{ $runtimeFsGroupChangePolicy | quote }}
         {{- if .Values.reana_hostname }}
         - name: REANA_HOSTNAME
           value: {{ .Values.reana_hostname | quote }}

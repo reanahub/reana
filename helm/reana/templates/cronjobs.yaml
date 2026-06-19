@@ -1,3 +1,5 @@
+{{- $sharedStorageFsGroup := .Values.shared_storage.fs_group | toString }}
+{{- $sharedStorageFsGroupChangePolicy := .Values.shared_storage.fs_group_change_policy | toString }}
 {{- if .Values.notifications.enabled }}
 {{- if .Values.notifications.system_status }}
 apiVersion: batch/v1
@@ -21,6 +23,13 @@ spec:
             app: {{ include "reana.prefix" . }}-system-status
         spec:
           serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
+          {{- if ne $sharedStorageFsGroup "" }}
+          securityContext:
+            fsGroup: {{ .Values.shared_storage.fs_group | int64 }}
+            {{- if ne $sharedStorageFsGroupChangePolicy "" }}
+            fsGroupChangePolicy: {{ $sharedStorageFsGroupChangePolicy | quote }}
+            {{- end }}
+          {{- end }}
           containers:
           - name: {{ include "reana.prefix" . }}-system-status
             image: {{ .Values.components.reana_server.image }}
@@ -146,6 +155,13 @@ spec:
           labels:
             app: {{ include "reana.prefix" . }}-resource-quota-update
         spec:
+          {{- if ne $sharedStorageFsGroup "" }}
+          securityContext:
+            fsGroup: {{ .Values.shared_storage.fs_group | int64 }}
+            {{- if ne $sharedStorageFsGroupChangePolicy "" }}
+            fsGroupChangePolicy: {{ $sharedStorageFsGroupChangePolicy | quote }}
+            {{- end }}
+          {{- end }}
           containers:
           - name: {{ include "reana.prefix" . }}-resource-quota-update
             image: {{ .Values.components.reana_server.image }}
@@ -232,6 +248,13 @@ spec:
           labels:
             app: {{ include "reana.prefix" . }}-retention-rules-apply
         spec:
+          {{- if ne $sharedStorageFsGroup "" }}
+          securityContext:
+            fsGroup: {{ .Values.shared_storage.fs_group | int64 }}
+            {{- if ne $sharedStorageFsGroupChangePolicy "" }}
+            fsGroupChangePolicy: {{ $sharedStorageFsGroupChangePolicy | quote }}
+            {{- end }}
+          {{- end }}
           containers:
           - name: {{ include "reana.prefix" . }}-retention-rules-apply
             image: {{ .Values.components.reana_server.image }}
@@ -327,6 +350,13 @@ spec:
             app: {{ include "reana.prefix" . }}-interactive-session-cleanup
         spec:
           serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
+          {{- if ne $sharedStorageFsGroup "" }}
+          securityContext:
+            fsGroup: {{ .Values.shared_storage.fs_group | int64 }}
+            {{- if ne $sharedStorageFsGroupChangePolicy "" }}
+            fsGroupChangePolicy: {{ $sharedStorageFsGroupChangePolicy | quote }}
+            {{- end }}
+          {{- end }}
           containers:
           - name: {{ include "reana.prefix" . }}-interactive-session-cleanup
             image: {{ .Values.components.reana_server.image }}

@@ -45,6 +45,13 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
+      {{- if ne (.Values.shared_storage.fs_group | toString) "" }}
+      securityContext:
+        fsGroup: {{ .Values.shared_storage.fs_group | int64 }}
+        {{- if ne (.Values.shared_storage.fs_group_change_policy | toString) "" }}
+        fsGroupChangePolicy: {{ .Values.shared_storage.fs_group_change_policy | quote }}
+        {{- end }}
+      {{- end }}
       containers:
       - name: rest-api
         image: {{ .Values.components.reana_server.image }}
