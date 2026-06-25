@@ -1,7 +1,10 @@
-# REANA components pointing to `latest`, locally built master branch
+# REANA local development configuration.
 
-reana_hostport: 30443
+# Access (host name and port).
+# reana_hostname: localhost  # uncomment to override the default ingress host
+reana_hostport: 30443 # NodePort for incoming HTTPS connections
 
+# Component images (locally built, pointing to `latest`).
 components:
   reana_db:
     image: docker.io/library/postgres:14.10
@@ -12,6 +15,13 @@ components:
       REANA_RATELIMIT_SLOW: "5 per second"
       REANA_RATELIMIT_GUEST_USER: "100 per second"
       REANA_RATELIMIT_AUTHENTICATED_USER: "100 per second"
+      # For local SSO/token testing, switch to "auto" to create tokens
+      # automatically after login when the user has none.
+      REANA_ACCESS_TOKEN_ISSUANCE_POLICY: "manual"
+      # REANA_TOKEN_MANAGEMENT_SECRET: reana-token-management-secret-for-development
+      # REANA_QUOTA_MANAGEMENT_SECRET: reana-quota-management-secret-for-development
+      # For local SSO-only testing:
+      # REANA_USER_EMAIL_CONFIRMATION: false
   reana_workflow_controller:
     image: docker.io/reanahub/reana-workflow-controller
     environment:
@@ -34,13 +44,20 @@ components:
     image: docker.io/reanahub/reana-message-broker
   reana_ui:
     image: docker.io/reanahub/reana-ui
+    # For local SSO-only testing, flip `eosc_sso`, `hide_signup`, and
+    # `local_users` after configuring the SSO provider and secrets.
+    cern_sso: false
+    eosc_sso: false
+    hide_signup: false
+    local_users: true
   reana_dask_kubernetes_operator:
     image: docker.io/reanahub/reana-dask-kubernetes-operator
 
+# PgBouncer database connection pooling (enabled for local development).
 pgbouncer:
   enabled: true
 
-# OpenSearch configuration for dev environment
+# OpenSearch configuration for dev environment.
 opensearch:
   enabled: false
   initialAdminPassword: reana-opensearch-initial-admin-password-for-development
@@ -74,7 +91,7 @@ opensearch:
   podSecurityContext:
     fsGroup: 0
 
-# FluentBit configuration for dev environment
+# FluentBit configuration for dev environment.
 fluent-bit:
   enabled: false
   outputConfig:
@@ -82,18 +99,6 @@ fluent-bit:
     tlsCaFile: ""
   extraVolumes: []
   extraVolumeMounts: []
-
-dask-kubernetes-operator:
-  image:
-    name: docker.io/reanahub/reana-dask-kubernetes-operator
-    tag: latest
-  volumeMounts:
-    - mountPath: /code/
-      name: reana-code
-  volumes:
-    - name: reana-code
-      hostPath:
-        path: /code/reana-dask-kubernetes-operator
 
 # Secrets for local development only. DO NOT USE THESE VALUES IN PRODUCTION.
 # Production deployments must override every value below with strong, randomly
@@ -113,3 +118,97 @@ secrets:
   opensearch:
     user: reana-opensearch-user-for-development
     password: reana-opensearch-password-for-development
+
+# Compute backends; only Kubernetes is active by default.
+compute_backends:
+  - kubernetes
+  # - htcondorcern
+  # - slurmcern
+  # - compute4punch
+
+# Dask; set `enabled: true` to test Dask-based workflows. The sizing knobs
+# below mirror the chart defaults.
+dask:
+  enabled: false
+  autoscaler_enabled: true
+  cluster_max_memory_limit: "16Gi"
+  cluster_default_number_of_workers: 2
+  cluster_max_number_of_workers: 20
+  cluster_default_single_worker_memory: "2Gi"
+  cluster_max_single_worker_memory: "8Gi"
+  cluster_default_single_worker_threads: 4
+  cluster_max_single_worker_threads: 8
+
+# Dask Kubernetes operator: deployed only when `dask.enabled` is true. Mounts
+# the local checkout so changes to the operator code are picked up.
+dask-kubernetes-operator:
+  image:
+    name: docker.io/reanahub/reana-dask-kubernetes-operator
+    tag: latest
+  volumeMounts:
+    - mountPath: /code/
+      name: reana-code
+  volumes:
+    - name: reana-code
+      hostPath:
+        path: /code/reana-dask-kubernetes-operator
+
+# Kueue: set `enabled: true` to test Kueue-managed job queueing.
+kueue:
+  enabled: false
+
+# Notifications: set `enabled: true` to test e-mail flows, then uncomment the
+# `email_config` fields you need.
+#   * --mode debug:  omit `smtp_server` — e-mails are caught by the bundled
+#     MailDev (<release>-mail:30025); read them at its web UI on :32580.
+#   * --mode latest: no MailDev exists, so set `smtp_server`/`smtp_port` (plus
+#     `smtp_starttls`/`login`/`password`) to a real, reachable SMTP server.
+# Never commit real credentials here — pass them via `--set` or a private file.
+notifications:
+  enabled: false
+  # email_config:
+  #   sender: reana@localhost
+  #   receiver: reana@localhost
+  #   smtp_server: smtp.example.org
+  #   smtp_port: "587"
+  #   smtp_starttls: true
+  #   smtp_ssl: false
+  #   login: ""
+  #   password: ""
+
+# Vetted container images: set `enabled: true` to restrict workflows to the
+# allowlist, which must then include the Snakemake default image and every
+# image used by your test workflows.
+vetted_container_images:
+  enabled: false
+  allowlist: ["docker.io/reanahub/reana-env-root6:6.18.04"]
+
+# Interactive sessions (Jupyter): flip `allow_custom` to test custom notebook
+# images, or shorten `maximum_inactivity_period` to test the cleanup cronjob.
+interactive_sessions:
+  maximum_inactivity_period: forever # e.g. "7" (days) to test cleanup
+  cronjob_schedule: "0 3 * * *"
+  environments:
+    jupyter:
+      allow_custom: false
+      recommended:
+        - image: "quay.io/jupyter/scipy-notebook:notebook-7.2.2"
+          name: "Jupyter SciPy Notebook 7.2.2"
+
+# Workspace retention: shorten `maximum_period` to test the retention cronjob.
+workspaces:
+  retention_rules:
+    maximum_period: forever # e.g. "3" (days) to test retention
+    cronjob_schedule: "0 2 * * *"
+
+# Quota (enabled by default; change zero values to test enforcement).
+quota:
+  enabled: true
+  default_disk_limit: 0 # bytes (0 = unlimited); e.g. 10737418240 = 10 GiB
+  default_cpu_limit: 0 # milliseconds (0 = unlimited); e.g. 3600000 = 1 hour
+  cpu_period_reset_months: 0 # 0 = no default reset; e.g. 1 = monthly for new users
+
+# Maintenance: set `enabled: true` to scale core REANA workloads down to zero
+# and suspend the periodic REANA cronjobs.
+maintenance:
+  enabled: false
