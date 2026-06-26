@@ -81,6 +81,14 @@ def create_build_status_page():
                 "reana-auth-vomsproxy": {},
             },
         },
+        "datastores": {
+            "simple": True,
+            "title": "Datastores",
+            "description": "Selected data store components.",
+            "packages": {
+                "reana-datastore-s3fs": {},
+            },
+        },
         "examples": {
             "simple": True,
             "title": "Examples",

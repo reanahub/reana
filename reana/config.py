@@ -47,6 +47,7 @@ REPO_LIST_ALL = [
     "reana-client",
     "reana-client-go",
     "reana-commons",
+    "reana-datastore-s3fs",
     "reana-db",
     "reana-env-aliphysics",
     "reana-env-jupyter",
@@ -108,6 +109,7 @@ REPO_LIST_CLUSTER = (
         "reana-auth-krb5",
         "reana-auth-rucio",
         "reana-auth-vomsproxy",
+        "reana-datastore-s3fs",
     ]
     + REPO_LIST_SHARED
     + REPO_LIST_CLUSTER_INFRASTRUCTURE
