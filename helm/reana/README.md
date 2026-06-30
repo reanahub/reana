@@ -11,6 +11,17 @@ This Helm automatically prefixes all names using the release name to avoid colli
 | `components.reana_db.enabled`                            | Instantiate a PostgreSQL database inside the cluster                                 | true                                            |
 | `components.reana_db.image`                              | [PostgreSQL image](https://hub.docker.com/_/postgres) to use                         | `docker.io/library/postgres:12.13`              |
 | `components.reana_job_controller.environment`            | [REANA-Job-Controller](https://github.com/reanahub/reana-job-controller) environment variables | `{}`                                  |
+| `components.reana_job_controller.environment.C4P_LOGIN_NODE`              | Hostname of the C4P login node                         | `"c4p-login.gridka.de"` |
+| `components.reana_job_controller.environment.C4P_LOGIN_NODE_PORT`         | SSH port of the C4P login node                         | `22`                    |
+| `components.reana_job_controller.environment.C4P_SSH_TIMEOUT`             | SSH connection timeout to C4P login node (seconds)     | `60`                    |
+| `components.reana_job_controller.environment.C4P_SSH_AUTH_TIMEOUT`        | SSH authentication timeout to C4P login node (seconds) | `60`                    |
+| `components.reana_job_controller.environment.C4P_CPU_CORES`               | Number of CPU cores allocated on C4P                   | `8`                     |
+| `components.reana_job_controller.environment.C4P_REQUEST_GPUS`            | Number of GPUs allocated on C4P                        | `""`                    |
+| `components.reana_job_controller.environment.C4P_MEMORY_LIMIT`            | Memory limit for C4P jobs (MB)                         | `20000`                 |
+| `components.reana_job_controller.environment.C4P_NOTIFICATION             | Notification option for C4P jobs                       | `""`	      	       |
+| `components.reana_job_controller.environment.C4P_EMAIL_ADDRESS            | User email address for C4P jobs                        | `""`                    |
+| `components.reana_job_controller.environment.C4P_ADDITIONAL_REQUIREMENTS` | Additional Python package requirements for C4P jobs    | `""`                    |
+| `components.reana_job_controller.environment.C4P_REANA_REL_WORKFLOW_PATH` | Relative workflow directory on C4P login node          | `"reana/workflows"`     |
 | `components.reana_job_controller.image`                  | [REANA-Job-Controller image](https://hub.docker.com/r/reanahub/reana-job-controller) to use  | `docker.io/reanahub/reana-job-controller:<chart-release-version>` |
 | `components.reana_message_broker.image`                  | [REANA-Message-Broker image](https://hub.docker.com/r/reanahub/reana-message-broker) to use | `docker.io/reanahub/reana-message-broker:<chart-release-version>` |
 | `components.reana_message_broker.imagePullPolicy`        | REANA-Message-Broker image pull policy                                               | IfNotPresent                                    |
