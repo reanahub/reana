@@ -40,6 +40,15 @@ components:
     image: docker.io/reanahub/reana-workflow-validator
   reana_job_controller:
     image: docker.io/reanahub/reana-job-controller
+    # For local Slurm testing, enable the slurmcern entry in the
+    # compute_backends list below and connect to a concrete Slurm gate
+    # node instead of the load-balanced hostname, so that SSH GSSAPI can
+    # use a valid Kerberos service principal. (Alternatively,
+    # SLURM_GSS_HOSTNAME can pin the Kerberos service principal
+    # explicitly, but its value must match the gate node that the SSH
+    # connection actually reaches.)
+    # environment:
+    #   SLURM_HOSTNAME: slurmgate01.cern.ch
   reana_message_broker:
     image: docker.io/reanahub/reana-message-broker
   reana_ui:
