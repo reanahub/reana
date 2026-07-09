@@ -50,3 +50,7 @@ dependencies:
     condition: dask.enabled
     tags:
       - dask
+  - name: prometheus
+    version: 27.13.0
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: prometheus.enabled
