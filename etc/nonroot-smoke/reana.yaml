@@ -1,0 +1,21 @@
+version: 0.9.0
+
+inputs:
+  files:
+    - code.sh
+  parameters:
+    hold_seconds: 60
+
+workflow:
+  type: serial
+  specification:
+    steps:
+      - name: inspect
+        environment: docker.io/library/bash:5.2
+        commands:
+          - SMOKE_HOLD_SECONDS="${hold_seconds}" bash code.sh
+
+outputs:
+  files:
+    - results/persist.txt
+    - results/proof.txt
