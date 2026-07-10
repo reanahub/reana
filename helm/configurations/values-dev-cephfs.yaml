@@ -1,0 +1,117 @@
+# REANA dev configuration for validating against an external CephFS-backed
+# storage class such as a local Rook deployment.
+#
+# Prerequisites:
+# - the cluster must already expose a RWX CephFS storage class named
+#   `rook-cephfs`
+# - the cluster underlay used by the Ceph operator must support raw block
+#   volumes for Ceph OSDs
+
+reana_hostport: 30443
+
+shared_storage:
+  backend: cephfs
+  volume_size: 200
+  access_modes: ReadWriteMany
+  fs_group: 0
+  storage_class_name: rook-cephfs
+
+infrastructure_storage:
+  backend: hostpath
+  hostpath:
+    root_path: /var/reana-infrastructure
+
+components:
+  reana_db:
+    image: docker.io/library/postgres:14.10
+  reana_server:
+    image: docker.io/reanahub/reana-server
+    environment:
+      REANA_SCHEDULER_REQUEUE_SLEEP: 2
+      REANA_RATELIMIT_SLOW: "5 per second"
+      REANA_RATELIMIT_GUEST_USER: "100 per second"
+      REANA_RATELIMIT_AUTHENTICATED_USER: "100 per second"
+      REANA_TOKEN_MANAGEMENT_SECRET: "testing"
+      REANA_USER_EMAIL_CONFIRMATION: false
+  reana_workflow_controller:
+    image: docker.io/reanahub/reana-workflow-controller
+    pod_security_context:
+      runAsUser: 1000
+      runAsGroup: 0
+    environment:
+      REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES: failed
+      REANA_OPENSEARCH_USE_SSL: false
+      REANA_OPENSEARCH_ENABLED: false
+  reana_workflow_engine_cwl:
+    image: docker.io/reanahub/reana-workflow-engine-cwl
+  reana_workflow_engine_yadage:
+    image: docker.io/reanahub/reana-workflow-engine-yadage
+  reana_workflow_engine_serial:
+    image: docker.io/reanahub/reana-workflow-engine-serial
+  reana_workflow_engine_snakemake:
+    image: docker.io/reanahub/reana-workflow-engine-snakemake
+  reana_workflow_validator:
+    image: docker.io/reanahub/reana-workflow-validator
+  reana_job_controller:
+    image: docker.io/reanahub/reana-job-controller
+  reana_message_broker:
+    image: docker.io/reanahub/reana-message-broker
+  reana_ui:
+    image: docker.io/reanahub/reana-ui
+  reana_dask_kubernetes_operator:
+    image: docker.io/reanahub/reana-dask-kubernetes-operator
+
+pgbouncer:
+  enabled: true
+
+opensearch:
+  enabled: false
+  tls:
+    generate: false
+  singleNode: true
+  config:
+    opensearch.yml: |
+      cluster.name: reana-opensearch
+      network.host: 0.0.0.0
+      plugins.security.disabled: true
+  securityConfig:
+    enabled: false
+    internalUsersSecret:
+    rolesSecret:
+    rolesMappingSecret:
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+  extraEnvs:
+    - name: DISABLE_INSTALL_DEMO_CONFIG
+      value: "false"
+    - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: reana-opensearch-secrets
+          key: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+  secretMounts: []
+  customSecurityConfig:
+  podSecurityContext:
+    fsGroup: 0
+
+fluent-bit:
+  enabled: false
+  outputConfig:
+    tls: "Off"
+    tlsCaFile: ""
+  extraVolumes: []
+  extraVolumeMounts: []
+
+dask-kubernetes-operator:
+  image:
+    name: docker.io/reanahub/reana-dask-kubernetes-operator
+    tag: latest
+  volumeMounts:
+    - mountPath: /code/
+      name: reana-code
+  volumes:
+    - name: reana-code
+      hostPath:
+        path: /code/reana-dask-kubernetes-operator
