@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -25,6 +25,14 @@ from reana.reana_dev.utils import (
     validate_mode_option,
 )
 
+SHARED_STORAGE_BACKENDS = ("hostpath", "cephfs")
+RESERVED_DEBUG_PORTS = {
+    "wdb": 31984,
+    "maildev": 32580,
+    "rabbitmq": 31672,
+    "postgresql": 30432,
+}
+
 
 def volume_mounts_to_list(ctx, param, value):
     """Convert tuple params to dictionary. e.g `(foo:bar)` to `{'foo': 'bar'}`.
@@ -45,6 +53,92 @@ def volume_mounts_to_list(ctx, param, value):
             fg="red",
         ),
         sys.exit(1)
+
+
+def merge_values_dicts(base_values, overlay_values):
+    """Recursively merge values dictionaries."""
+    for key, value in overlay_values.items():
+        if isinstance(value, dict) and isinstance(base_values.get(key), dict):
+            merge_values_dicts(base_values[key], value)
+        else:
+            base_values[key] = value
+    return base_values
+
+
+def default_cluster_values_files(mode, shared_storage_backend, values_files):
+    """Return the values files that should be layered for cluster deployment."""
+    if values_files:
+        values_files = tuple(values_files)
+    elif mode == "releasehelm" and shared_storage_backend == "hostpath":
+        values_files = ()
+    else:
+        values_files = ("helm/configurations/values-dev.yaml",)
+        if shared_storage_backend == "cephfs":
+            values_files += ("helm/configurations/values-dev-cephfs.yaml",)
+
+    if (
+        "helm/configurations/values-dev-cephfs.yaml" in values_files
+        and "helm/configurations/values-dev.yaml" not in values_files
+    ):
+        values_files = ("helm/configurations/values-dev.yaml",) + values_files
+
+    return values_files
+
+
+def load_cluster_values(values_files):
+    """Load and merge the requested Helm values files."""
+    values_dict = {}
+    for values_file in values_files:
+        with open(os.path.join(get_srcdir("reana"), values_file)) as values_stream:
+            merge_values_dicts(
+                values_dict,
+                yaml.safe_load(values_stream.read()) or {},
+            )
+    return values_dict
+
+
+def validate_shared_storage_backend(kubernetes, shared_storage_backend):
+    """Reject unsupported local shared storage combinations."""
+    if shared_storage_backend == "cephfs" and kubernetes != "kind":
+        display_message(
+            "[ERROR] Local CephFS shared storage is currently supported only with --kubernetes kind. Exiting.",
+            "reana",
+        )
+        sys.exit(1)
+
+
+def cephfs_helper_script(script_name):
+    """Return the absolute path to a local CephFS helper script."""
+    return os.path.join(get_srcdir("reana"), "scripts", script_name)
+
+
+def extend_kind_control_plane_for_debug(control_plane, mounts):
+    """Mount the source tree and reserved debug ports in Kind debug mode."""
+    mounts.append({"hostPath": find_reana_srcdir(), "containerPath": "/code"})
+    control_plane["extraPortMappings"].extend(
+        [
+            {"containerPort": port, "hostPort": port, "protocol": "TCP"}
+            for port in RESERVED_DEBUG_PORTS.values()
+        ]
+    )
+
+
+def validate_multi_node_mounts(mounts, worker_nodes):
+    """Require a shared volume mount when creating a multi-node cluster."""
+    if worker_nodes <= 0:
+        return
+
+    mount_targets = [x["containerPath"].strip("/") for x in mounts]
+    if "var/reana" in mount_targets or "var" in mount_targets:
+        return
+
+    click.echo(
+        "[ERROR] For multi-node deployments, one has to use a shared storage volume for cluster nodes."
+    )
+    click.echo(
+        "[ERROR] Example: reana-dev cluster-create -m /var/reana:/var/reana --worker-nodes 2."
+    )
+    sys.exit(1)
 
 
 @click.group()
@@ -89,6 +183,12 @@ def cluster_commands():
     default="kind",
     help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
 )
+@click.option(
+    "--shared-storage-backend",
+    type=click.Choice(SHARED_STORAGE_BACKENDS),
+    default="hostpath",
+    help="Which shared workspace backend to prepare? (hostpath, cephfs). [default=hostpath]",
+)
 @cluster_commands.command(name="cluster-create")
 def cluster_create(
     mounts,
@@ -98,6 +198,7 @@ def cluster_create(
     disable_default_cni,
     kind_node_version,
     kubernetes,
+    shared_storage_backend,
 ):  # noqa: D301
     """Create new REANA cluster.
 
@@ -108,6 +209,7 @@ def cluster_create(
                                   --mode debug
                                   --extra-ports 30080 30443 30444
     """
+    validate_shared_storage_backend(kubernetes, shared_storage_backend)
     if kubernetes == "colima/k3s":
         print_colima_start_help()
         sys.exit(1)
@@ -123,14 +225,6 @@ def cluster_create(
             """Add needed volumes mounts to the provided node."""
 
         yaml.add_representer(literal_str, literal_unicode_str)
-
-        # Reserved ports mapped to their respective services
-        RESERVED_DEBUG_PORTS = {
-            "wdb": 31984,
-            "maildev": 32580,
-            "rabbitmq": 31672,
-            "postgresql": 30432,
-        }
 
         # Get reserved port values
         reserved_ports = set(RESERVED_DEBUG_PORTS.values())
@@ -167,27 +261,9 @@ def cluster_create(
         }
 
         if mode == "debug":
-            mounts.append({"hostPath": find_reana_srcdir(), "containerPath": "/code"})
-            control_plane["extraPortMappings"].extend(
-                [
-                    {"containerPort": port, "hostPort": port, "protocol": "TCP"}
-                    for port in RESERVED_DEBUG_PORTS.values()
-                ]
-            )
+            extend_kind_control_plane_for_debug(control_plane, mounts)
 
-        # check whether we mount shared volume for multi-node deployments:
-        if worker_nodes > 0:
-            mount_targets = [x["containerPath"].strip("/") for x in mounts]
-            if "var/reana" in mount_targets or "var" in mount_targets:
-                pass
-            else:
-                click.echo(
-                    "[ERROR] For multi-node deployments, one has to use a shared storage volume for cluster nodes."
-                )
-                click.echo(
-                    "[ERROR] Example: reana-dev cluster-create -m /var/reana:/var/reana --worker-nodes 2."
-                )
-                sys.exit(1)
+        validate_multi_node_mounts(mounts, worker_nodes)
 
         nodes = [{"role": "worker"} for _ in range(worker_nodes)] + [control_plane]
         for node in nodes:
@@ -226,6 +302,12 @@ def cluster_create(
             "docker exec kind-control-plane sh -c 'mkdir -p /var/reana && chmod g+rwx /var/reana'",
             "reana",
         )
+        if shared_storage_backend == "cephfs":
+            for cmd in [
+                ["/bin/sh", cephfs_helper_script("setup-kind-rook-loop-devices.sh")],
+                ["/bin/sh", cephfs_helper_script("deploy-kind-rook-cephfs.sh")],
+            ]:
+                run_command(cmd, "reana")
     else:
         display_message(
             f"[ERROR] Unsupported --kubernetes option value '{kubernetes}'. Must be 'kind' [default] or 'colima/k3s'. Exiting.",
@@ -340,8 +422,8 @@ def cluster_build(
 @click.option(
     "-v",
     "--values",
-    default="helm/configurations/values-dev.yaml",
-    help="Which Helm configuration values file to use? [default=helm/configurations/values-dev.yaml]",
+    multiple=True,
+    help="Which Helm configuration values file(s) to use? Repeat to layer files in order.",
 )
 @click.option(
     "--exclude-components",
@@ -363,6 +445,12 @@ def cluster_build(
     default="reana",
     help="REANA instance name",
 )
+@click.option(
+    "--shared-storage-backend",
+    type=click.Choice(SHARED_STORAGE_BACKENDS),
+    default="hostpath",
+    help="Which shared workspace backend to configure? (hostpath, cephfs). [default=hostpath]",
+)
 def cluster_deploy(
     namespace,
     job_mounts,
@@ -372,6 +460,7 @@ def cluster_deploy(
     admin_email,
     admin_password,
     instance_name,
+    shared_storage_backend,
 ):  # noqa: D301
     """Deploy REANA cluster.
 
@@ -402,13 +491,11 @@ def cluster_deploy(
 
         return job_mount_config
 
-    if mode in ("releasehelm") and values == "helm/configurations/values-dev.yaml":
-        values = ""
+    values = default_cluster_values_files(mode, shared_storage_backend, values)
 
     values_dict = {}
     if values:
-        with open(os.path.join(get_srcdir("reana"), values)) as f:
-            values_dict = yaml.safe_load(f.read()) or {}
+        values_dict = load_cluster_values(values)
 
     job_mount_config = job_mounts_to_config(job_mounts)
     if job_mount_config:
@@ -599,8 +686,14 @@ def cluster_unpause(kubernetes):
     default="kind",
     help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
 )
+@click.option(
+    "--shared-storage-backend",
+    type=click.Choice(SHARED_STORAGE_BACKENDS),
+    default="hostpath",
+    help="Which shared workspace backend was prepared? (hostpath, cephfs). [default=hostpath]",
+)
 @cluster_commands.command(name="cluster-delete")
-def cluster_delete(mounts, kubernetes):  # noqa: D301
+def cluster_delete(mounts, kubernetes, shared_storage_backend):  # noqa: D301
     """Delete REANA cluster.
 
     \b
@@ -608,6 +701,14 @@ def cluster_delete(mounts, kubernetes):  # noqa: D301
        $ reana-dev cluster-delete -m /var/reana:/var/reana
     """
     cmds = []
+    validate_shared_storage_backend(kubernetes, shared_storage_backend)
+    if kubernetes == "kind" and shared_storage_backend == "cephfs":
+        cmds.extend(
+            [
+                ["/bin/sh", cephfs_helper_script("undeploy-kind-rook-cephfs.sh")],
+                ["/bin/sh", cephfs_helper_script("cleanup-kind-rook-loop-devices.sh")],
+            ]
+        )
     # delete cluster
     if kubernetes == "colima/k3s":
         pass  # not necessary
