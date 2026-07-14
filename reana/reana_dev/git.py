@@ -854,41 +854,41 @@ def git_checkout(branch, component, exclude_components, fetch):  # noqa: D301
 
 
 def _get_prs_from_issue(repo, issue_number):
-    """Return (component, pr_number) pairs for all PRs linked to a GitHub issue."""
-    # Use the issue timeline API to get all events for this issue
+    """Return sorted (component, pr_number) pairs for open PRs linked to an issue."""
     output = run_command(
-        f"gh api repos/reanahub/{repo}/issues/{issue_number}/timeline --paginate",
+        [
+            "gh",
+            "issue",
+            "view",
+            str(issue_number),
+            "--repo",
+            f"reanahub/{repo}",
+            "--json",
+            "closedByPullRequestsReferences",
+        ],
         display=False,
         return_output=True,
     )
 
     try:
-        events = json.loads(output)
-    except (json.JSONDecodeError, TypeError):
+        pull_requests = json.loads(output).get("closedByPullRequestsReferences", [])
+        prs = [
+            (component, str(pr_number))
+            for component, pr_number in sorted(
+                (
+                    pr["repository"]["name"],
+                    pr["number"],
+                )
+                for pr in pull_requests
+            )
+        ]
+    except (AttributeError, json.JSONDecodeError, KeyError, TypeError):
         click.secho("Failed to parse GitHub API results.", fg="red")
         sys.exit(1)
 
-    # Extract PRs from cross-referenced events
-    prs = set()
-    for event in events:
-        if event.get("event") != "cross-referenced":
-            # We're only looking for cross-referencing events (not e.g. comments)
-            continue
-
-        source_issue = event.get("source", {}).get("issue", {})
-        if not source_issue.get("pull_request"):
-            # We're only looking for events mentioning PRs
-            continue
-
-        component = source_issue.get("repository", {}).get("name", "")
-        pr_number = str(source_issue["number"])
-        prs.add((component, pr_number))
-
-    prs = list(prs)
-
     if not prs:
         click.secho(
-            f"No PRs found linked to reanahub/{repo}#{issue_number}.",
+            f"No open PRs currently linked to reanahub/{repo}#{issue_number}.",
             fg="yellow",
         )
 
@@ -1007,7 +1007,7 @@ def _pull_pr_branch(component, pull_request):
     "-i",
     nargs=2,
     default=None,
-    help="Derive PRs from a GitHub issue. [repo issue#]",
+    help="Derive open PRs currently linked to a GitHub issue. [repo issue#]",
 )
 @click.option(
     "--fetch",
@@ -1033,7 +1033,7 @@ def git_checkout_pr(branch, issue, fetch, pull, reset):  # noqa: D301
 
     The ``-b`` option can be repeated to check out several pull requests
     across several repositories at the same time. Use ``-i`` to automatically
-    derive the set of PRs from a GitHub issue's linked PRs instead.
+    derive the set of open PRs currently linked to a GitHub issue instead.
 
     For existing local PR branches, the default behaviour is to switch to them
     without modifying their state. Use ``--pull`` to fetch and fast-forward
@@ -1046,11 +1046,11 @@ def git_checkout_pr(branch, issue, fetch, pull, reset):  # noqa: D301
                    request number. For example, ``-b reana-workflow-controller
                    72`` will create a local branch called ``pr-72`` in the
                    reana-workflow-controller source code directory.
-    :param issue: Derive PRs to check out from the cross-references of a GitHub
-                  issue. The value consists of two strings: the reanahub
-                  repository name and the issue number. For example,
-                  ``-i reana-commons 123`` will check out all PRs that
-                  reference the reana-commons#123 issue.
+    :param issue: Derive PRs to check out from the open pull requests currently
+                  linked to a GitHub issue. The value consists of two strings:
+                  the reanahub repository name and the issue number. For
+                  example, ``-i reana-commons 123`` will check out all open PRs
+                  that reference the reana-commons#123 issue.
     :param fetch: Fetch latest upstream before checking out? [default=False]
     :param pull: Fetch and fast-forward existing local PR branches? [default=False]
     :param reset: Fetch and hard-reset existing local PR branches? [default=False]
