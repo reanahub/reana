@@ -1,0 +1,22 @@
+# REANA authentication profile for direct CERN Keycloak/OIDC.
+#
+# Use together with private values that provide:
+#   secrets.auth.REANA_AUTH_WEB_CLIENT_SECRET
+# and adjust client ids and audience to the registered CERN Application Portal
+# clients.
+
+keycloak:
+  enabled: false
+
+auth:
+  issuer: https://auth.cern.ch/auth/realms/cern
+  # Leave endpoint overrides empty so reana-server resolves them from
+  # /.well-known/openid-configuration. Set openidConfigUrl only if the
+  # server needs a different backchannel URL.
+  openidConfigUrl: ""
+  clientId: reana-cli
+  webClientId: reana-server
+  bffEnabled: true
+  scopes: "openid profile email"
+  rolesClaim: reana_roles
+  requiredRole: "reana:user"

@@ -18,6 +18,28 @@ from unittest.mock import patch
 from reana.reana_dev.cli import reana_dev
 
 
+def test_client_setup_environment_has_only_effective_url_option():
+    """The environment helper should not advertise ignored cluster options."""
+    runner = CliRunner()
+
+    help_result = runner.invoke(reana_dev, ["client-setup-environment", "--help"])
+    result = runner.invoke(
+        reana_dev,
+        [
+            "client-setup-environment",
+            "--server-hostname",
+            "http://reana.example.org:8080",
+        ],
+    )
+
+    assert help_result.exit_code == 0
+    assert "--insecure-url" not in help_result.output
+    assert "--namespace" not in help_result.output
+    assert "--instance-name" not in help_result.output
+    assert result.exit_code == 0
+    assert result.output == "export REANA_SERVER_URL=http://reana.example.org:8080\n"
+
+
 def test_shorten_component_name():
     """Tests for shorten_component_name()."""
     from reana.reana_dev.utils import shorten_component_name

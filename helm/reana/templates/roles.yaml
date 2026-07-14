@@ -6,8 +6,16 @@ metadata:
   namespace: {{ .Release.Namespace }}
 rules:
 - apiGroups: [""] # "" indicates the core API group
-  resources: ["nodes", "nodes/status", "pods", "pods/log", "secrets", "persistentvolumeclaims", "configmaps"]
+  resources: ["nodes", "nodes/status", "pods", "pods/log", "persistentvolumeclaims", "configmaps"]
   verbs: ["get", "list", "create", "update", "watch"]
+- apiGroups: [""] # "" indicates the core API group
+  # Interactive-session Secrets (the per-session notebook token) are created
+  # and, on a failed/aborted session launch, cleaned up by
+  # delete_k8s_objects_if_exist -> delete_namespaced_secret. A separate rule
+  # (rather than adding "delete" to the broader resource list above) keeps
+  # that verb scoped to secrets, not also nodes/pods/configmaps/pvcs.
+  resources: ["secrets"]
+  verbs: ["get", "list", "create", "update", "watch", "delete"]
 - apiGroups: ["storage.k8s.io"]
   resources: ["storageclasses"]
   verbs: ["*"]

@@ -1,0 +1,391 @@
+{{- if .Values.keycloak.enabled }}
+{{- $requiredRole := required "keycloak.required_role must be set when bundled development Keycloak is enabled" .Values.keycloak.required_role }}
+{{- $rolesClaim := required "keycloak.roles_claim must be set when bundled development Keycloak is enabled" .Values.keycloak.roles_claim }}
+{{- $databaseMode := required "keycloak.database.mode must be one of bundled, external, or ephemeral" .Values.keycloak.database.mode }}
+{{- if not (has $databaseMode (list "bundled" "external" "ephemeral")) }}
+  {{- fail "keycloak.database.mode must be one of bundled, external, or ephemeral" }}
+{{- end }}
+{{- if and (eq $databaseMode "bundled") (not .Values.components.reana_db.enabled) }}
+  {{- fail "keycloak.database.mode=bundled requires components.reana_db.enabled=true; use external mode with a pre-provisioned PostgreSQL database instead" }}
+{{- end }}
+{{- if and (eq $databaseMode "bundled") (has .Values.keycloak.database.name (list "reana" "postgres" "template0" "template1")) }}
+  {{- fail "keycloak.database.name must not collide with the REANA or PostgreSQL system databases in bundled mode" }}
+{{- end }}
+{{- if and (eq $databaseMode "bundled") (or (eq .Values.keycloak.database.username "postgres") (eq .Values.keycloak.database.username (.Values.secrets.database.user | default ""))) }}
+  {{- fail "keycloak.database.username must be a dedicated role in bundled mode" }}
+{{- end }}
+{{- if and (eq $databaseMode "external") (not .Values.keycloak.database.host) }}
+  {{- fail "keycloak.database.host must be set when keycloak.database.mode=external" }}
+{{- end }}
+{{- if and (eq $databaseMode "external") (eq .Values.keycloak.database.tls_mode "disabled") (not .Values.keycloak.database.allow_insecure) }}
+  {{- fail "external Keycloak PostgreSQL with tls_mode=disabled requires keycloak.database.allow_insecure=true explicitly" }}
+{{- end }}
+{{- if ne $databaseMode "ephemeral" }}
+  {{- $_ := required "keycloak.database.name must be set for persistent storage" .Values.keycloak.database.name }}
+  {{- $_ := required "keycloak.database.username must be set for persistent storage" .Values.keycloak.database.username }}
+  {{- $_ := required "keycloak.database.port must be set for persistent storage" .Values.keycloak.database.port }}
+  {{- $_ := required "keycloak.database.password_key must be set for persistent storage" .Values.keycloak.database.password_key }}
+  {{- if not (has .Values.keycloak.database.tls_mode (list "disabled" "verify-server")) }}
+    {{- fail "keycloak.database.tls_mode must be disabled or verify-server" }}
+  {{- end }}
+  {{- if and .Values.keycloak.database.tls_truststore_existing_secret (ne .Values.keycloak.database.tls_mode "verify-server") }}
+    {{- fail "keycloak.database.tls_truststore_existing_secret requires keycloak.database.tls_mode=verify-server" }}
+  {{- end }}
+{{- end }}
+{{- $databaseHost := .Values.keycloak.database.host }}
+{{- if eq $databaseMode "bundled" }}
+  {{- $databaseHost = printf "%s-db" (include "reana.prefix" .) }}
+{{- end }}
+{{- $databaseSecret := .Values.keycloak.database.existing_secret | default (printf "%s-keycloak-database" (include "reana.prefix" .)) }}
+{{- $bootstrapSecret := .Values.keycloak.database.bootstrap_existing_secret | default (printf "%s-db-secrets" (include "reana.prefix" .)) }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak-realm
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  reana-realm.json: |-
+    {{- tpl (.Files.Get "reana-keycloak-realm.json.tpl") . | nindent 4 }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak-bootstrap
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  username: {{ required "keycloak.admin_user must be set when bundled development Keycloak is enabled" .Values.keycloak.admin_user | quote }}
+  password: {{ required "keycloak.admin_password must be set when bundled development Keycloak is enabled" .Values.keycloak.admin_password | quote }}
+---
+{{- if .Values.keycloak.network_policy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "reana.prefix" . }}-keycloak
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ include "reana.prefix" . }}-server
+        {{- with .Values.keycloak.network_policy.ingress_controller_peers }}
+{{ toYaml . | nindent 8 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 8080
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ include "reana.prefix" . }}-keycloak-realm-reconciler
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include "reana.prefix" . }}-keycloak
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ if .Values.maintenance.enabled -}} 0 {{- else -}} 1 {{- end }}
+  selector:
+    matchLabels:
+      app: {{ include "reana.prefix" . }}-keycloak
+  template:
+    metadata:
+      labels:
+        app: {{ include "reana.prefix" . }}-keycloak
+      annotations:
+        checksum/realm: {{ tpl (.Files.Get "reana-keycloak-realm.json.tpl") . | sha256sum }}
+        checksum/database-config: {{ .Values.keycloak.database | toJson | sha256sum }}
+        {{- if ne $databaseMode "ephemeral" }}
+        checksum/database-secret: {{ include (print $.Template.BasePath "/keycloak-database-secrets.yaml") . | sha256sum }}
+        {{- else }}
+        reana.io/keycloak-storage-warning: "ephemeral-development-storage-data-will-be-lost"
+        {{- end }}
+    spec:
+      {{- if eq $databaseMode "bundled" }}
+      initContainers:
+        - name: provision-keycloak-database
+          image: {{ .Values.components.reana_db.image }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |-
+              attempt=0
+              until pg_isready --quiet; do
+                attempt=$((attempt + 1))
+                if [ "${attempt}" -ge 60 ]; then
+                  echo "PostgreSQL did not become ready for Keycloak database provisioning" >&2
+                  exit 1
+                fi
+                sleep 2
+              done
+              psql --set=ON_ERROR_STOP=1 \
+                --set=keycloak_database="${KEYCLOAK_DB_NAME}" \
+                --set=keycloak_user="${KEYCLOAK_DB_USERNAME}" <<'SQL'
+              -- \getenv (reads an env var straight into a psql variable) only
+              -- exists from PostgreSQL 16; this image's psql is 14. \set with
+              -- a backtick-executed shell command reads KEYCLOAK_DB_PASSWORD
+              -- the same way without ever putting the value in a process's
+              -- own argv: the spawned "sh -c" only ever contains the literal
+              -- variable *reference*, expanded by that inner shell, not this
+              -- script -- verified directly via /proc during execution.
+              \set keycloak_password `printf '%s' "$KEYCLOAK_DB_PASSWORD"`
+              SELECT format('CREATE ROLE %I LOGIN PASSWORD %L',
+                            :'keycloak_user', :'keycloak_password')
+              WHERE NOT EXISTS (
+                SELECT FROM pg_catalog.pg_roles
+                WHERE rolname = :'keycloak_user'
+              ) \gexec
+              SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L',
+                            :'keycloak_user', :'keycloak_password') \gexec
+              SELECT format('CREATE DATABASE %I OWNER %I ENCODING %L',
+                            :'keycloak_database', :'keycloak_user', 'UTF8')
+              WHERE NOT EXISTS (
+                SELECT FROM pg_catalog.pg_database
+                WHERE datname = :'keycloak_database'
+              ) \gexec
+              SELECT format('ALTER DATABASE %I OWNER TO %I',
+                            :'keycloak_database', :'keycloak_user') \gexec
+              SQL
+          env:
+            - name: PGHOST
+              value: {{ $databaseHost | quote }}
+            - name: PGPORT
+              value: {{ .Values.keycloak.database.port | quote }}
+            - name: PGDATABASE
+              value: postgres
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $bootstrapSecret }}
+                  key: user
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $bootstrapSecret }}
+                  key: password
+            - name: KEYCLOAK_DB_NAME
+              value: {{ .Values.keycloak.database.name | quote }}
+            - name: KEYCLOAK_DB_USERNAME
+              value: {{ .Values.keycloak.database.username | quote }}
+            - name: KEYCLOAK_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $databaseSecret }}
+                  key: {{ .Values.keycloak.database.password_key }}
+      {{- end }}
+      containers:
+        - name: keycloak
+          image: {{ .Values.keycloak.image }}
+          imagePullPolicy: {{ .Values.keycloak.imagePullPolicy | default "IfNotPresent" }}
+          args: ["start", "--import-realm", "--http-port=8080"]
+          env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-keycloak-bootstrap
+                  key: username
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-keycloak-bootstrap
+                  key: password
+            {{- if eq $databaseMode "ephemeral" }}
+            - name: KC_DB
+              value: dev-file
+            {{- else }}
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL_HOST
+              value: {{ $databaseHost | quote }}
+            - name: KC_DB_URL_PORT
+              value: {{ .Values.keycloak.database.port | quote }}
+            - name: KC_DB_URL_DATABASE
+              value: {{ .Values.keycloak.database.name | quote }}
+            - name: KC_DB_USERNAME
+              value: {{ .Values.keycloak.database.username | quote }}
+            # KCRAW preserves literal '$' characters in database passwords.
+            - name: KCRAW_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $databaseSecret }}
+                  key: {{ .Values.keycloak.database.password_key }}
+            - name: KC_DB_TLS_MODE
+              value: {{ .Values.keycloak.database.tls_mode | quote }}
+            {{- with .Values.keycloak.database.tls_truststore_existing_secret }}
+            - name: KC_DB_TLS_TRUST_STORE_FILE
+              value: {{ $.Values.keycloak.database.tls_truststore_path | quote }}
+            {{- end }}
+            {{- with .Values.keycloak.database.url_properties }}
+            - name: KC_DB_URL_PROPERTIES
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
+            # Served under the relative path through the REANA traefik ingress.
+            - name: KC_HTTP_RELATIVE_PATH
+              value: {{ .Values.keycloak.relative_path | quote }}
+            - name: REANA_KEYCLOAK_REALM
+              value: {{ .Values.keycloak.realm | quote }}
+            - name: REANA_KEYCLOAK_REQUIRED_ROLE
+              value: {{ $requiredRole | quote }}
+            - name: REANA_KEYCLOAK_ROLES_CLAIM
+              value: {{ $rolesClaim | quote }}
+            # Fixed browser-facing frontend URL -> stable token `iss`; the
+            # backchannel (token/jwks/userinfo) stays dynamic so in-cluster
+            # reana-server can reach it at the Service DNS name.
+            - name: KC_HOSTNAME
+              value: {{ .Values.keycloak.frontend_url | quote }}
+            - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.keycloak.relative_path }}/realms/{{ .Values.keycloak.realm }}
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 40
+          resources:
+            {{- toYaml .Values.keycloak.resources | nindent 12 }}
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import
+            {{- with .Values.keycloak.database.tls_truststore_existing_secret }}
+            - name: database-truststore
+              mountPath: {{ $.Values.keycloak.database.tls_truststore_path | quote }}
+              subPath: {{ $.Values.keycloak.database.tls_truststore_key | quote }}
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: realm
+          secret:
+            secretName: {{ include "reana.prefix" . }}-keycloak-realm
+        {{- with .Values.keycloak.database.tls_truststore_existing_secret }}
+        - name: database-truststore
+          secret:
+            secretName: {{ . }}
+        {{- end }}
+{{- if not .Values.maintenance.enabled }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak-realm-reconciler
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "10"
+spec:
+  activeDeadlineSeconds: 300
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: {{ include "reana.prefix" . }}-keycloak-realm-reconciler
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: reconcile-realm
+          image: {{ .Values.keycloak.image }}
+          imagePullPolicy: {{ .Values.keycloak.imagePullPolicy | default "IfNotPresent" }}
+          command: ["/bin/bash", "-ec"]
+          args:
+            - |-
+              config=/tmp/reana-kcadm.config
+              attempt=0
+              until /opt/keycloak/bin/kcadm.sh config credentials \
+                --config "${config}" \
+                --server "http://{{ include "reana.prefix" . }}-keycloak:8080{{ .Values.keycloak.relative_path }}" \
+                --realm master \
+                --user "${KEYCLOAK_ADMIN_USER}" >/dev/null 2>&1; do
+                attempt=$((attempt + 1))
+                if [ "${attempt}" -ge 90 ]; then
+                  echo "Keycloak did not become ready for realm reconciliation" >&2
+                  exit 1
+                fi
+                sleep 2
+              done
+              /opt/keycloak/bin/kcadm.sh create partialImport \
+                --config "${config}" \
+                -r "${KEYCLOAK_REALM}" \
+                -s ifResourceExists=OVERWRITE \
+                -f /opt/keycloak/data/import/reana-realm.json >/dev/null
+              # Both CLI clients request offline_access so their persisted
+              # credentials survive ordinary SSO-session expiry. Keycloak
+              # requires the user to hold this realm role in addition to the
+              # client exposing the optional scope. Make it part of the
+              # realm's default-role composite so every user-provisioning path
+              # (including identity brokering) behaves consistently. Posting
+              # an existing composite is idempotent, so this also repairs
+              # upgraded realms without special-case state detection.
+              offline_role=$(
+                /opt/keycloak/bin/kcadm.sh get roles/offline_access \
+                  --config "${config}" \
+                  -r "${KEYCLOAK_REALM}" \
+                  --compressed
+              )
+              printf '[%s]' "${offline_role}" | \
+                /opt/keycloak/bin/kcadm.sh create \
+                  "roles/default-roles-${KEYCLOAK_REALM}/composites" \
+                  --config "${config}" \
+                  -r "${KEYCLOAK_REALM}" \
+                  -f - >/dev/null
+          env:
+            - name: KEYCLOAK_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-keycloak-bootstrap
+                  key: username
+            # kcadm.sh reads this automatically for --password when it is
+            # omitted from the command line, so the admin password never
+            # appears in this container's argv (visible via `ps`/
+            # /proc/<pid>/cmdline to anything with exec/process-list access).
+            - name: KC_CLI_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-keycloak-bootstrap
+                  key: password
+            - name: KEYCLOAK_REALM
+              value: {{ .Values.keycloak.realm | quote }}
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+      volumes:
+        - name: realm
+          secret:
+            secretName: {{ include "reana.prefix" . }}-keycloak-realm
+{{- end }}
+{{- end }}

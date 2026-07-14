@@ -48,13 +48,15 @@ spec:
               name: {{ include "reana.prefix" $ }}-server
               port:
                 number: 80
-        - path: /oauth
+        {{- if $.Values.keycloak.enabled }}
+        - path: {{ $.Values.keycloak.relative_path }}
           pathType: Prefix
           backend:
             service:
-              name: {{ include "reana.prefix" $ }}-server
+              name: {{ include "reana.prefix" $ }}-keycloak
               port:
-                number: 80
+                number: 8080
+        {{- end }}
         {{- if $.Values.components.reana_ui.enabled }}
         - path: /
           pathType: Prefix

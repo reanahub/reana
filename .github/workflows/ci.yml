@@ -239,7 +239,9 @@ jobs:
           pip install -e .[all]
 
       - name: Run pytest
-        run: ./run-tests.sh --python-tests
+        run: |
+          helm dependency build helm/reana
+          ./run-tests.sh --python-tests
 
       - name: Codecov Coverage
         uses: codecov/codecov-action@v4
