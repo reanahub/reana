@@ -1,0 +1,58 @@
+# REANA authentication profile for a local ESCAPE/INDIGO IAM instance.
+#
+# The profile matches the seed output from a development IAM at:
+#   https://iam.local
+#
+# Use with:
+#   reana-dev cluster-deploy --mode debug \
+#     --admin-email you@example.org \
+#     --admin-password admin \
+#     -f helm/configurations/values-dev.yaml \
+#     -f helm/configurations/values-escape.yaml
+#
+# If iam.local runs on the host rather than inside the Kubernetes cluster, pass
+# a host alias override that points to the host-reachable address, for example:
+#   --set components.reana_server.hostAliases[0].ip=<host-gateway-ip> \
+#   --set components.reana_server.hostAliases[0].hostnames[0]=iam.local
+
+components:
+  reana_server:
+    hostAliases:
+      - ip: "172.17.0.1"
+        hostnames:
+          - "iam.local"
+auth:
+  tlsVerify: false
+
+
+keycloak:
+  enabled: false
+
+auth:
+  # The local IAM discovery document advertises "https://iam.local/", but the
+  # observed JWT issuer claim is "https://iam.local". REANA validates `iss`
+  # exactly, while discovery URL derivation still works via rstrip("/").
+  issuer: "https://iam.local/"
+  openidConfigUrl: ""
+  audience: ""
+  clientId: ""
+  webClientId: ""
+  bffEnabled: true
+  scopes: "openid profile email offline_access wlcg.groups"
+  tokenValidation: jwt
+  # Mount the local IAM certificate with:
+  #   --set-file auth.caBundle=/path/to/escape-iam-local/nginx/certs/iam.local.crt
+  caBundle: ""
+  caBundleMountPath: /etc/reana/auth-ca/iam-local.crt
+  tlsVerify: true
+  rolesClaim: reana_roles
+  requiredRole: "reana:user"
+  roleSources:
+    - path: groups
+      map:
+        /escape/reana-users: reana:user
+        escape/reana-users: reana:user
+
+secrets:
+  auth:
+    REANA_AUTH_WEB_CLIENT_SECRET: ""

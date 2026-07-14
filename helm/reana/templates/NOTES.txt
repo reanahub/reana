@@ -3,7 +3,7 @@ The REANA system has been installed!
 If you are upgrading from a previous REANA release series, you may need to
 upgrade database schema now:
 
-   $ kubectl -n {{ .Release.Namespace }} exec -i -t deployment/{{ .Release.Name }}-server -c rest-api -- reana-db alembic upgrade
+   $ kubectl -n {{ .Release.Namespace }} exec -i -t deployment/{{ include "reana.prefix" . }}-server -c rest-api -- reana-db alembic upgrade
 
 Please see the dedicated upgrade documentation at
 <https://docs.reana.io/administration/deployment/upgrading-db/>
@@ -13,18 +13,18 @@ finalise its configuration.
 
 1. Initialise the database:
 
-    $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
+    $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ include "reana.prefix" . }}-server -c rest-api -- \
         ./scripts/create-database.sh
 
 2. Create administrator user and corresponding access token:
 
-    $ mytoken=$(kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
+    $ mytoken=$(kubectl -n {{ .Release.Namespace }} exec deployment/{{ include "reana.prefix" . }}-server -c rest-api -- \
           flask reana-admin create-admin-user --email john.doe@example.org \
                                               --password mysecretpassword)
 
 3. Store administrator access token as Kubernetes secret:
 
-    $ kubectl -n {{ .Release.Namespace }} create secret generic {{ .Release.Name }}-admin-access-token \
+    $ kubectl -n {{ .Release.Namespace }} create secret generic {{ include "reana.prefix" . }}-admin-access-token \
         --from-literal=ADMIN_ACCESS_TOKEN="$mytoken"
 
 4. Try to run your first REANA example:

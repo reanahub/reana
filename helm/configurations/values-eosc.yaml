@@ -1,0 +1,47 @@
+# REANA authentication profile for the EOSC Core Innovation Sandbox AAI.
+#
+# Use together with private values that provide at least:
+#   auth.clientId
+#   auth.webClientId
+#   auth.eoscRequiredEntitlement
+#   secrets.auth.REANA_AUTH_WEB_CLIENT_SECRET
+#
+# The public profile intentionally contains no registered client secret and no
+# deployment-specific VO/project entitlement. It follows the Core Infrastructure
+# Proxy service-registration documentation for the sandbox. Register the web
+# client redirect URI as:
+#   https://<reana-hostname>/api/oauth/callback
+
+keycloak:
+  enabled: false
+
+auth:
+  # EOSC Core Innovation Sandbox Core Infrastructure Proxy.
+  # Preproduction:
+  #   https://core-proxy.sandbox.eosc-beyond.eu/auth/realms/core
+  # Integration/staging:
+  #   https://core-proxy.staging.sandbox.eosc-beyond.eu/auth/realms/core
+  issuer: "https://core-proxy.sandbox.eosc-beyond.eu/auth/realms/core"
+  openidConfigUrl: ""
+  audience: ""
+  clientId: ""
+  webClientId: ""
+  bffEnabled: true
+  scopes: "openid profile email entitlements"
+  tokenValidation: jwt
+  rolesClaim: reana_roles
+  requiredRole: "reana:user"
+  # Recommended EOSC gate: one AARC-G069 entitlement prefix that grants REANA
+  # access, e.g. "urn:mace:egi.eu:group:vo.example.org:role=member".
+  # The server maps both `entitlements` and legacy `eduperson_entitlement`.
+  eoscRequiredEntitlement: ""
+  roleSources: []
+  groupBackends:
+    - type: eosc
+      provider: eosc
+      entitlement_claims:
+        - entitlements
+        - eduperson_entitlement
+      urn_namespace: "urn:mace:egi.eu"
+      member_roles:
+        - member

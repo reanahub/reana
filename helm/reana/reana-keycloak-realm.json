@@ -1,0 +1,188 @@
+{
+  "realm": "reana",
+  "enabled": true,
+  "sslRequired": "none",
+  "roles": {
+    "realm": [
+      {
+        "name": "reana:user"
+      },
+      {
+        "name": "reana:admin"
+      },
+      {
+        "name": "offline_access"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "reana-server",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "reana-server-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "redirectUris": [
+        "https://localhost:30443/api/oauth/callback",
+        "https://localhost:30443/*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "protocolMappers": [
+        {
+          "name": "reana_roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "reana_roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        },
+        {
+          "name": "reana-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "reana",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "subject",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "access.token.claim": "false",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "reana-cli",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "defaultClientScopes": [
+        "basic",
+        "acr",
+        "profile",
+        "email",
+        "roles",
+        "web-origins"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
+      ],
+      "redirectUris": [
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "true",
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "reana_roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "reana_roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        },
+        {
+          "name": "reana-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "reana",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "subject",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "access.token.claim": "false",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-reana-server",
+      "enabled": true,
+      "serviceAccountClientId": "reana-server",
+      "clientRoles": {
+        "realm-management": [
+          "view-users"
+        ]
+      }
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "username": "jane",
+      "enabled": true,
+      "email": "jane@example.org",
+      "emailVerified": true,
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "jane",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "reana:user",
+        "offline_access"
+      ]
+    }
+  ]
+}

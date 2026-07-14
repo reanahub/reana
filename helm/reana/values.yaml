@@ -10,6 +10,56 @@ reana_hostname: localhost
 reana_hostport: 443
 # `reana_hostport` should be set to the port number where the REANA service will be exposed for incoming SSL connections.
 
+# Bundled Keycloak as the OIDC issuer for JWT/BFF authentication (standalone
+# default). Set `enabled: false` to trust an external issuer (topology B) and
+# configure REANA_AUTH_* directly via `components.reana_server.environment`.
+keycloak:
+  enabled: true
+  image: quay.io/keycloak/keycloak:26.0
+  imagePullPolicy: IfNotPresent
+  realm: reana
+  relative_path: /keycloak
+  # Browser-facing base URL; MUST include the relative path. Override per
+  # deployment, e.g. https://reana.example.org/keycloak. The kind dev cluster
+  # exposes REANA on the 30443 nodeport.
+  frontend_url: https://localhost:30443/keycloak
+  audience: reana
+  roles_claim: reana_roles
+  required_role: "reana:user"
+  cli_client_id: reana-cli
+  web_client_id: reana-server
+  # Dev-only defaults; replace the bundled example realm (which ships a
+  # `jane/jane` test user) for non-dev deployments.
+  admin_user: admin
+  admin_password: admin
+
+# OIDC/JWT authentication. When `keycloak.enabled` is true, the bundled
+# Keycloak values above provide the issuer and client defaults. When using an
+# external issuer such as CERN, set `keycloak.enabled=false` and configure this
+# block. Secrets live under `secrets.auth`, not in this public config block.
+auth:
+  issuer: ""
+  openidConfigUrl: ""
+  jwksUrl: ""
+  userinfoUrl: ""
+  authorizationUrl: ""
+  tokenUrl: ""
+  endSessionUrl: ""
+  deviceAuthorizationUrl: ""
+  audience: reana
+  rolesClaim: reana_roles
+  roleSources: []
+  requiredRole: "reana:user"
+  clientId: reana-cli
+  webClientId: reana-server
+  bffEnabled: true
+  scopes: "openid profile email"
+  tokenValidation: jwt
+  introspectionUrl: ""
+  introspectionClientId: ""
+  eoscRequiredEntitlement: ""
+  sessionTtl: 604800
+
 debug:
   enabled: false
 eos:
@@ -93,16 +143,9 @@ secrets:
   cache: {}
   message_broker: {}
   gitlab: {}
-  cern:
-    sso: {}
-  eosc:
-    sso: {}
   reana: {}
-  login: {}
+  auth: {}
   opensearch: {}
-
-# Enable and configure SSO authentication via a third-party Keycloak identity provider
-login: []
 
 # External database service configuration
 db_env_config:
@@ -165,11 +208,12 @@ components:
   reana_server:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-server:0.95.0-alpha.6
+    hostAliases: []
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
       REANA_SCHEDULER_REQUEUE_SLEEP: 15
       REANA_SCHEDULER_REQUEUE_COUNT: 200
-      REANA_USER_EMAIL_CONFIRMATION: true
+      REANA_USER_EMAIL_CONFIRMATION: false
       REANA_WORKFLOW_SCHEDULING_POLICY: "fifo"
       REANA_WORKFLOW_SCHEDULING_READINESS_CHECK_LEVEL: 9
       REANA_RATELIMIT_GUEST_USER: "40 per second"
@@ -178,6 +222,7 @@ components:
       REANA_ACCESS_TOKEN_ISSUANCE_POLICY: "manual"
       REANA_TOKEN_MANAGEMENT_SECRET: ""
       REANA_QUOTA_MANAGEMENT_SECRET: ""
+      FETCHER_ALLOWED_PRIVATE_HOSTNAMES: "[]"
     uwsgi:
       processes: 6
       threads: 4
@@ -287,7 +332,7 @@ components:
     #    memory: 6G
 
 notifications:
-  enabled: false
+  enabled: true
   email_config:
     smtp_starttls: true
     smtp_ssl: false

@@ -10,13 +10,15 @@
 
 from __future__ import absolute_import, print_function
 
+from io import StringIO
+
 import pytest
 
 from click.testing import CliRunner
 from mock import patch, mock_open
 from unittest.mock import call
 
-helm_command = """cat <<EOF | helm install reana helm/reana -n default --create-namespace --wait -f -
+helm_command = """cat <<EOF | helm upgrade --install reana helm/reana -n default --create-namespace --wait -f -
 components:
   reana_ui:
     enabled: false
@@ -70,7 +72,7 @@ EOF"""
             [
                 call("helm dep update helm/reana", "reana"),
                 call(
-                    "cat <<EOF | helm install reana helm/reana -n default --create-namespace --wait -f -\ncomponents:\n  reana_workflow_controller:\n    environment:\n      REANA_OPENSEARCH_ENABLED: true\ndebug:\n  enabled: true\n\nEOF",
+                    "cat <<EOF | helm upgrade --install reana helm/reana -n default --create-namespace --wait -f -\ncomponents:\n  reana_workflow_controller:\n    environment:\n      REANA_OPENSEARCH_ENABLED: true\ndebug:\n  enabled: true\n\nEOF",
                     "reana",
                 ),
                 call(
@@ -98,7 +100,7 @@ EOF"""
             [
                 call("helm dep update helm/reana", "reana"),
                 call(
-                    "cat <<EOF | helm install reana helm/reana -n default --create-namespace --wait -f -\n\nEOF",
+                    "cat <<EOF | helm upgrade --install reana helm/reana -n default --create-namespace --wait -f -\n\nEOF",
                     "reana",
                 ),
                 call(
@@ -124,7 +126,7 @@ EOF"""
             [
                 call("helm dep update helm/reana", "reana"),
                 call(
-                    "cat <<EOF | helm install reana helm/reana -n default --create-namespace --wait -f -\n\nEOF",
+                    "cat <<EOF | helm upgrade --install reana helm/reana -n default --create-namespace --wait -f -\n\nEOF",
                     "reana",
                 ),
                 call(
@@ -171,3 +173,70 @@ def test_cluster_deploy(
     assert result.exit_code == exit_code
     assert open_mock.call_count == len(open_calls)
     assert open_mock.call_args_list == open_calls
+
+
+@patch("reana.reana_dev.cluster.get_srcdir")
+@patch("reana.reana_dev.cluster.run_command")
+@patch("builtins.open")
+def test_cluster_deploy_with_multiple_values(
+    open_mock,
+    run_command_mock,
+    get_srcdir_mock,
+):
+    """Test cluster-deploy command with multiple layered values files."""
+    from reana.reana_dev.cluster import cluster_deploy
+
+    open_mock.side_effect = [
+        StringIO(
+            "components:\n"
+            "  reana_server:\n"
+            "    environment:\n"
+            "      REANA_RATELIMIT_SLOW: old\n"
+        ),
+        StringIO(
+            "components:\n"
+            "  reana_server:\n"
+            "    environment:\n"
+            "      REANA_RATELIMIT_SLOW: new\n"
+            "  reana_ui:\n"
+            "    enabled: false\n"
+        ),
+    ]
+    get_srcdir_mock.return_value = "/code/src/reana"
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cluster_deploy,
+        [
+            "--admin-email",
+            "john.doe@reana.io",
+            "--admin-password",
+            "admin",
+            "--mode",
+            "debug",
+            "-f",
+            "base.yaml",
+            "-f",
+            "override.yaml",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert run_command_mock.call_args_list[3] == call(
+        "cat <<EOF | helm upgrade --install reana helm/reana -n default --create-namespace --wait -f -\n"
+        "components:\n"
+        "  reana_server:\n"
+        "    environment:\n"
+        "      REANA_RATELIMIT_SLOW: new\n"
+        "  reana_ui:\n"
+        "    enabled: false\n"
+        "debug:\n"
+        "  enabled: true\n"
+        "\n"
+        "EOF",
+        "reana",
+    )
+    assert open_mock.call_args_list == [
+        call("/code/src/reana/base.yaml"),
+        call("/code/src/reana/override.yaml"),
+    ]

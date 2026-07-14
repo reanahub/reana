@@ -9,7 +9,7 @@ data:
     [uwsgi]
     stats = /tmp/stats.socket
     http = 0.0.0.0:5000
-    module = invenio_app.wsgi:application
+    module = reana_server.wsgi:application
     master = true
     processes = {{ .Values.components.reana_server.uwsgi.processes }}
     threads = {{ .Values.components.reana_server.uwsgi.threads }}

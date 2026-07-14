@@ -11,6 +11,8 @@ reana_hostport: 30443
 secrets:
   reana:
     REANA_SECRET_KEY: reana-secret-key-for-development
+  auth:
+    REANA_AUTH_WEB_CLIENT_SECRET: reana-server-secret
   database:
     user: reana-db-user-for-development
     password: reana-db-password-for-development
