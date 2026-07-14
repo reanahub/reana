@@ -8,13 +8,8 @@
 
 """`reana-dev`'s command line client commands."""
 
-import base64
-import json
-import logging
 import os
-import subprocess
 import sys
-import traceback
 
 import click
 
@@ -76,49 +71,14 @@ def client_setup_environment(
 ):  # noqa: D301
     """Display commands to set up shell environment for local cluster.
 
-    Display commands how to set up REANA_SERVER_URL and REANA_ACCESS_TOKEN
-    suitable for current local REANA cluster deployment. The output should be
-    passed to eval.
+    Display commands how to set up REANA_SERVER_URL suitable for current local
+    REANA cluster deployment. The output should be passed to eval.
     """
-    try:
-        export_lines = []
-        component_export_line = "export {env_var_name}={env_var_value}"
-        export_lines.append(
-            component_export_line.format(
-                env_var_name="REANA_SERVER_URL",
-                env_var_value=server_hostname or "https://localhost:30443",
-            )
+    click.echo(
+        "export REANA_SERVER_URL={}".format(
+            server_hostname or "https://localhost:30443"
         )
-        get_access_token_cmd = [
-            "kubectl",
-            "get",
-            "secret",
-            "-n",
-            namespace,
-            "-o",
-            "json",
-            f"{instance_name}-admin-access-token",
-        ]
-        secret_json = json.loads(subprocess.check_output(get_access_token_cmd).decode())
-        admin_access_token_b64 = secret_json["data"]["ADMIN_ACCESS_TOKEN"]
-        admin_access_token = base64.b64decode(admin_access_token_b64).decode()
-        export_lines.append(
-            component_export_line.format(
-                env_var_name="REANA_ACCESS_TOKEN", env_var_value=admin_access_token
-            )
-        )
-
-        click.echo("\n".join(export_lines))
-    except Exception as e:
-        logging.debug(traceback.format_exc())
-        logging.debug(str(e))
-        click.echo(
-            click.style(
-                "Environment variables could not be generated: \n{}".format(str(e)),
-                fg="red",
-            ),
-            err=True,
-        )
+    )
 
 
 client_commands_list = list(client_commands.commands.values())

@@ -27,6 +27,7 @@ import os
 from locust import HttpUser, TaskSet, between, task
 
 TOKEN = os.environ.get("REANA_ACCESS_TOKEN")
+AUTH_HEADERS = {"Authorization": f"Bearer {TOKEN}"}
 
 dummy_spec = {
     "workflow": {
@@ -57,7 +58,8 @@ class WorkflowsTaskSet(TaskSet):
         for _ in range(10):
             self.client.post(
                 "/api/workflows",
-                params=(("workflow_name", workflow_name), ("access_token", TOKEN)),
+                params=(("workflow_name", workflow_name),),
+                headers=AUTH_HEADERS,
                 json=dummy_spec,
                 verify=False,
             )
@@ -70,14 +72,12 @@ class WorkflowsTaskSet(TaskSet):
     @task
     def get_worflows(self):
         """Get workflows."""
-        self.client.get("/api/workflows", params=(("access_token", TOKEN),))
+        self.client.get("/api/workflows", headers=AUTH_HEADERS)
 
     @task
     def get_worflow_logs(self):
         """Get workflow logs."""
-        self.client.get(
-            f"/api/workflows/{workflow_name}/logs", params=(("access_token", TOKEN),)
-        )
+        self.client.get(f"/api/workflows/{workflow_name}/logs", headers=AUTH_HEADERS)
 
 
 class WebsiteUser(HttpUser):

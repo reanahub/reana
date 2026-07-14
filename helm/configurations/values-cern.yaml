@@ -2,8 +2,8 @@
 #
 # Use together with private values that provide:
 #   secrets.auth.REANA_AUTH_WEB_CLIENT_SECRET
-# and adjust client ids, audience, and role mappings to the registered CERN
-# Application Portal clients.
+# and adjust client ids and audience to the registered CERN Application Portal
+# clients.
 
 keycloak:
   enabled: false
@@ -14,18 +14,9 @@ auth:
   # /.well-known/openid-configuration. Set openidConfigUrl only if the
   # server needs a different backchannel URL.
   openidConfigUrl: ""
-  audience: ""
   clientId: reana-cli
   webClientId: reana-server
   bffEnabled: true
   scopes: "openid profile email"
   rolesClaim: reana_roles
   requiredRole: "reana:user"
-  roleSources:
-    # Example for a CERN/Keycloak client role named `user` on the REANA web
-    # client. Override in private values if the registered client id or role
-    # names differ.
-    - path: resource_access.reana-server.roles
-      map:
-        user: reana:user
-        admin: reana:admin

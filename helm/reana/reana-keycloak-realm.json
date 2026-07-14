@@ -22,14 +22,8 @@
       "publicClient": false,
       "secret": "reana-server-secret",
       "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": true,
       "redirectUris": [
-        "https://localhost:30443/api/oauth/callback",
-        "https://localhost:30443/*"
-      ],
-      "webOrigins": [
-        "+"
+        "https://localhost:30443/api/oauth/callback"
       ],
       "protocolMappers": [
         {
@@ -56,15 +50,6 @@
           }
         },
         {
-          "name": "subject",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-sub-mapper",
-          "config": {
-            "access.token.claim": "true",
-            "introspection.token.claim": "true"
-          }
-        },
-        {
           "name": "email",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-property-mapper",
@@ -84,7 +69,6 @@
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": true,
       "defaultClientScopes": [
         "basic",
         "acr",
@@ -129,15 +113,6 @@
           }
         },
         {
-          "name": "subject",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-sub-mapper",
-          "config": {
-            "access.token.claim": "true",
-            "introspection.token.claim": "true"
-          }
-        },
-        {
           "name": "email",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-property-mapper",
@@ -150,38 +125,6 @@
             "id.token.claim": "true"
           }
         }
-      ]
-    }
-  ],
-  "users": [
-    {
-      "username": "service-account-reana-server",
-      "enabled": true,
-      "serviceAccountClientId": "reana-server",
-      "clientRoles": {
-        "realm-management": [
-          "view-users"
-        ]
-      }
-    },
-    {
-      "id": "11111111-1111-4111-8111-111111111111",
-      "username": "jane",
-      "enabled": true,
-      "email": "jane@example.org",
-      "emailVerified": true,
-      "firstName": "Jane",
-      "lastName": "Doe",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "jane",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "reana:user",
-        "offline_access"
       ]
     }
   ]

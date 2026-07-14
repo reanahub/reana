@@ -47,12 +47,14 @@ spec:
           args: ["start-dev", "--import-realm", "--http-port=8080"]
           env:
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
-              value: {{ .Values.keycloak.admin_user | quote }}
+              value: {{ required "keycloak.admin_user must be set when bundled development Keycloak is enabled" .Values.keycloak.admin_user | quote }}
             - name: KC_BOOTSTRAP_ADMIN_PASSWORD
-              value: {{ .Values.keycloak.admin_password | quote }}
+              value: {{ required "keycloak.admin_password must be set when bundled development Keycloak is enabled" .Values.keycloak.admin_password | quote }}
             # Served under the relative path through the REANA traefik ingress.
             - name: KC_HTTP_RELATIVE_PATH
               value: {{ .Values.keycloak.relative_path | quote }}
+            - name: REANA_KEYCLOAK_REALM
+              value: {{ .Values.keycloak.realm | quote }}
             # Fixed browser-facing frontend URL -> stable token `iss`; the
             # backchannel (token/jwks/userinfo) stays dynamic so in-cluster
             # reana-server can reach it at the Service DNS name.

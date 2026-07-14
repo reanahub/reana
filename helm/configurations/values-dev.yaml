@@ -4,6 +4,13 @@
 # reana_hostname: localhost  # uncomment to override the default ingress host
 reana_hostport: 30443 # NodePort for incoming HTTPS connections
 
+# Bundled identity provider for local development only.
+keycloak:
+  enabled: true
+  frontend_url: https://localhost:30443/keycloak
+  admin_user: reana-dev-admin
+  admin_password: reana-keycloak-admin-password-for-development
+
 # Component images (locally built, pointing to `latest`).
 components:
   reana_db:
@@ -15,13 +22,7 @@ components:
       REANA_RATELIMIT_SLOW: "5 per second"
       REANA_RATELIMIT_GUEST_USER: "100 per second"
       REANA_RATELIMIT_AUTHENTICATED_USER: "100 per second"
-      # For local SSO/token testing, switch to "auto" to create tokens
-      # automatically after login when the user has none.
-      REANA_ACCESS_TOKEN_ISSUANCE_POLICY: "manual"
-      # REANA_TOKEN_MANAGEMENT_SECRET: reana-token-management-secret-for-development
       # REANA_QUOTA_MANAGEMENT_SECRET: reana-quota-management-secret-for-development
-      # For local SSO-only testing:
-      # REANA_USER_EMAIL_CONFIRMATION: false
   reana_workflow_controller:
     image: docker.io/reanahub/reana-workflow-controller
     environment:
@@ -44,12 +45,6 @@ components:
     image: docker.io/reanahub/reana-message-broker
   reana_ui:
     image: docker.io/reanahub/reana-ui
-    # For local SSO-only testing, flip `eosc_sso`, `hide_signup`, and
-    # `local_users` after configuring the SSO provider and secrets.
-    cern_sso: false
-    eosc_sso: false
-    hide_signup: false
-    local_users: true
   reana_dask_kubernetes_operator:
     image: docker.io/reanahub/reana-dask-kubernetes-operator
 

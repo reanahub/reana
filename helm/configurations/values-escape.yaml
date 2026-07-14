@@ -21,37 +21,21 @@ components:
       - ip: "172.17.0.1"
         hostnames:
           - "iam.local"
-auth:
-  tlsVerify: false
-
 
 keycloak:
   enabled: false
 
 auth:
-  # The local IAM discovery document advertises "https://iam.local/", but the
-  # observed JWT issuer claim is "https://iam.local". REANA validates `iss`
-  # exactly, while discovery URL derivation still works via rstrip("/").
-  issuer: "https://iam.local/"
+  # Match the JWT `iss` claim exactly; the local IAM tokens omit the trailing
+  # slash.
+  issuer: "https://iam.local"
   openidConfigUrl: ""
-  audience: ""
   clientId: ""
   webClientId: ""
   bffEnabled: true
-  scopes: "openid profile email offline_access wlcg.groups"
-  tokenValidation: jwt
-  # Mount the local IAM certificate with:
-  #   --set-file auth.caBundle=/path/to/escape-iam-local/nginx/certs/iam.local.crt
-  caBundle: ""
-  caBundleMountPath: /etc/reana/auth-ca/iam-local.crt
-  tlsVerify: true
+  scopes: "openid profile email offline_access"
   rolesClaim: reana_roles
   requiredRole: "reana:user"
-  roleSources:
-    - path: groups
-      map:
-        /escape/reana-users: reana:user
-        escape/reana-users: reana:user
 
 secrets:
   auth:

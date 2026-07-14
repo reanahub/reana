@@ -18,7 +18,7 @@ from click.testing import CliRunner
 from mock import patch, mock_open
 from unittest.mock import call
 
-helm_command = """cat <<EOF | helm upgrade --install reana helm/reana -n default --create-namespace --wait -f -
+helm_command = """cat <<EOF | helm install reana helm/reana -n default --create-namespace --wait -f -
 components:
   reana_ui:
     enabled: false
@@ -72,7 +72,7 @@ EOF"""
             [
                 call("helm dep update helm/reana", "reana"),
                 call(
-                    "cat <<EOF | helm upgrade --install reana helm/reana -n default --create-namespace --wait -f -\ncomponents:\n  reana_workflow_controller:\n    environment:\n      REANA_OPENSEARCH_ENABLED: true\ndebug:\n  enabled: true\n\nEOF",
+                    "cat <<EOF | helm install reana helm/reana -n default --create-namespace --wait -f -\ncomponents:\n  reana_workflow_controller:\n    environment:\n      REANA_OPENSEARCH_ENABLED: true\ndebug:\n  enabled: true\n\nEOF",
                     "reana",
                 ),
                 call(
@@ -100,7 +100,7 @@ EOF"""
             [
                 call("helm dep update helm/reana", "reana"),
                 call(
-                    "cat <<EOF | helm upgrade --install reana helm/reana -n default --create-namespace --wait -f -\n\nEOF",
+                    "cat <<EOF | helm install reana helm/reana -n default --create-namespace --wait -f -\n\nEOF",
                     "reana",
                 ),
                 call(
@@ -126,7 +126,7 @@ EOF"""
             [
                 call("helm dep update helm/reana", "reana"),
                 call(
-                    "cat <<EOF | helm upgrade --install reana helm/reana -n default --create-namespace --wait -f -\n\nEOF",
+                    "cat <<EOF | helm install reana helm/reana -n default --create-namespace --wait -f -\n\nEOF",
                     "reana",
                 ),
                 call(
@@ -223,7 +223,7 @@ def test_cluster_deploy_with_multiple_values(
 
     assert result.exit_code == 0
     assert run_command_mock.call_args_list[3] == call(
-        "cat <<EOF | helm upgrade --install reana helm/reana -n default --create-namespace --wait -f -\n"
+        "cat <<EOF | helm install reana helm/reana -n default --create-namespace --wait -f -\n"
         "components:\n"
         "  reana_server:\n"
         "    environment:\n"

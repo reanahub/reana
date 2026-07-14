@@ -433,7 +433,7 @@ def cluster_deploy(
             "reana_workflow_controller", {}
         ).setdefault("environment", {})["REANA_JOB_HOSTPATH_MOUNTS"] = job_mount_config
 
-    if mode == "debug":
+    if mode in ("debug"):
         values_dict.setdefault("debug", {})["enabled"] = True
 
     if exclude_components:
@@ -447,10 +447,10 @@ def cluster_deploy(
 
     # set arbitrary big value for `width` to prevent PyYAML from wrapping long lines
     values_yaml = yaml.dump(values_dict, width=100000) if values_dict else ""
-    helm_install = f"cat <<EOF | helm upgrade --install {instance_name} helm/reana -n {namespace} --create-namespace --wait -f -\n{values_yaml}\nEOF"
+    helm_install = f"cat <<EOF | helm install {instance_name} helm/reana -n {namespace} --create-namespace --wait -f -\n{values_yaml}\nEOF"
 
     cmds = []
-    if mode == "debug":
+    if mode in ("debug"):
         cmds.append("reana-dev python-install-eggs")
         cmds.append("reana-dev git-submodule --update")
     cmds.extend(

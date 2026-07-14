@@ -3,7 +3,6 @@
 # Use together with private values that provide at least:
 #   auth.clientId
 #   auth.webClientId
-#   auth.eoscRequiredEntitlement
 #   secrets.auth.REANA_AUTH_WEB_CLIENT_SECRET
 #
 # The public profile intentionally contains no registered client secret and no
@@ -23,25 +22,9 @@ auth:
   #   https://core-proxy.staging.sandbox.eosc-beyond.eu/auth/realms/core
   issuer: "https://core-proxy.sandbox.eosc-beyond.eu/auth/realms/core"
   openidConfigUrl: ""
-  audience: ""
   clientId: ""
   webClientId: ""
   bffEnabled: true
-  scopes: "openid profile email entitlements"
-  tokenValidation: jwt
+  scopes: "openid profile email"
   rolesClaim: reana_roles
   requiredRole: "reana:user"
-  # Recommended EOSC gate: one AARC-G069 entitlement prefix that grants REANA
-  # access, e.g. "urn:mace:egi.eu:group:vo.example.org:role=member".
-  # The server maps both `entitlements` and legacy `eduperson_entitlement`.
-  eoscRequiredEntitlement: ""
-  roleSources: []
-  groupBackends:
-    - type: eosc
-      provider: eosc
-      entitlement_claims:
-        - entitlements
-        - eduperson_entitlement
-      urn_namespace: "urn:mace:egi.eu"
-      member_roles:
-        - member

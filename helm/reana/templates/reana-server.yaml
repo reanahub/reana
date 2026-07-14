@@ -31,7 +31,7 @@ spec:
       annotations:
         checksum/database-config: {{ include (print $.Template.BasePath "/database-config.yaml") . | sha256sum }}
         checksum/database-secrets: {{ include (print $.Template.BasePath "/database-secrets.yaml") . | sha256sum }}
-        {{- if or .Values.keycloak.enabled .Values.auth.issuer }}
+        {{- if or .Values.keycloak.enabled (and .Values.auth.issuer .Values.auth.bffEnabled) }}
         checksum/auth-secrets: {{ include (print $.Template.BasePath "/auth-secrets.yaml") . | sha256sum }}
         {{- end }}
         checksum/gitlab-secrets: {{ include (print $.Template.BasePath "/gitlab-secrets.yaml") . | sha256sum }}
@@ -76,7 +76,7 @@ spec:
           {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
-          - mountPath: /code
+          - mountPath: /code/
             name: reana-code
           {{- end }}
           - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
@@ -258,38 +258,15 @@ spec:
             value: {{ .Values.auth.bffEnabled | quote }}
           - name: REANA_AUTH_SCOPES
             value: {{ .Values.auth.scopes | quote }}
-          - name: REANA_AUTH_TOKEN_VALIDATION
-            value: {{ .Values.auth.tokenValidation | quote }}
-          {{- if .Values.auth.introspectionUrl }}
-          - name: REANA_AUTH_INTROSPECTION_URL
-            value: {{ .Values.auth.introspectionUrl | quote }}
-          {{- end }}
-          {{- if .Values.auth.introspectionClientId }}
-          - name: REANA_AUTH_INTROSPECTION_CLIENT_ID
-            value: {{ .Values.auth.introspectionClientId | quote }}
-          {{- end }}
-          {{- if .Values.auth.eoscRequiredEntitlement }}
-          - name: REANA_AUTH_EOSC_REQUIRED_ENTITLEMENT
-            value: {{ .Values.auth.eoscRequiredEntitlement | quote }}
-          {{- end }}
           - name: REANA_AUTH_SESSION_TTL
             value: {{ .Values.auth.sessionTtl | quote }}
           {{- end }}
-          {{- if .Values.auth.roleSources }}
-          - name: REANA_AUTH_ROLE_SOURCES
-            value: {{ .Values.auth.roleSources | toJson | quote }}
-          {{- end }}
+          {{- if or .Values.keycloak.enabled .Values.auth.bffEnabled }}
           - name: REANA_AUTH_WEB_CLIENT_SECRET
             valueFrom:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-auth-secrets
                 key: REANA_AUTH_WEB_CLIENT_SECRET
-          {{- if .Values.secrets.auth.REANA_AUTH_INTROSPECTION_CLIENT_SECRET }}
-          - name: REANA_AUTH_INTROSPECTION_CLIENT_SECRET
-            valueFrom:
-              secretKeyRef:
-                name: {{ include "reana.prefix" . }}-auth-secrets
-                key: REANA_AUTH_INTROSPECTION_CLIENT_SECRET
           {{- end }}
           {{- end }}
           {{- if .Values.secrets.gitlab }}
@@ -337,12 +314,6 @@ spec:
           {{- if .Values.debug.enabled }}
           - name: PYTHONPATH
             value: "/code/reana-server:/code/modules/reana-commons:/code/modules/reana-db"
-          # Disable CORS in development environment, for example
-          # to connect from an external React application.
-          - name: INVENIO_CORS_SEND_WILDCARD
-            value: "False"
-          - name: INVENIO_CORS_SUPPORTS_CREDENTIALS
-            value: "True"
           - name: WDB_SOCKET_SERVER
             value: "{{ include "reana.prefix" . }}-wdb"
           - name: WDB_NO_BROWSER_AUTO_OPEN
@@ -406,7 +377,7 @@ spec:
           {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
-          - mountPath: /code
+          - mountPath: /code/
             name: reana-code
           {{- end }}
           - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
@@ -428,12 +399,6 @@ spec:
         {{- if .Values.debug.enabled }}
         - name: PYTHONPATH
           value: "/code/reana-server:/code/modules/reana-commons:/code/modules/reana-db"
-        # Disable CORS in development environment, for example
-        # to connect from an external React application.
-        - name: INVENIO_CORS_SEND_WILDCARD
-          value: "False"
-        - name: INVENIO_CORS_SUPPORTS_CREDENTIALS
-          value: "True"
         - name: WDB_SOCKET_SERVER
           value: "{{ include "reana.prefix" . }}-wdb"
         - name: WDB_NO_BROWSER_AUTO_OPEN
