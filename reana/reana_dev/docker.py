@@ -11,7 +11,7 @@
 import sys
 import click
 
-from reana.config import DOCKER_PREFETCH_IMAGES
+from reana.config import COMPONENTS_SELF_CONTAINED_IMAGE, DOCKER_PREFETCH_IMAGES
 from reana.reana_dev import utils
 from reana.reana_dev.utils import (
     display_message,
@@ -172,7 +172,17 @@ def docker_build(
             # record clean and avoids carrying SLSA/SBOM blobs that have
             # no destination outside of a registry push.
             cmd = "docker buildx build --provenance=false --sbom=false --load"
-            for arg in build_arg:
+            component_build_args = list(build_arg)
+            if component in COMPONENTS_SELF_CONTAINED_IMAGE:
+                # This image runs in the locked-down spec-validation sandbox
+                # (no host `/code` mount, non-root), so it must be built
+                # self-contained -- never as an editable/debug install -- even
+                # when the rest of the cluster is built in debug mode.
+                component_build_args = [
+                    arg for arg in component_build_args if not arg.startswith("DEBUG=")
+                ]
+                component_build_args.append("DEBUG=0")
+            for arg in component_build_args:
                 cmd += " --build-arg {0}".format(arg)
             if no_cache:
                 cmd += " --no-cache"

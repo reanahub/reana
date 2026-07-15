@@ -214,6 +214,13 @@ components:
       REANA_OPENSEARCH_ENABLED: false
       REANA_OPENSEARCH_USE_SSL: true
       REANA_OPENSEARCH_CA_CERTS: "/code/certs/ca.crt"
+      # Whether the sandboxed workflow specification validator may reach the
+      # public network (e.g. to resolve a remote yadage `toplevel` or CWL
+      # `$import`). The validator NetworkPolicy excludes configured internal
+      # ranges, but enforcement requires a NetworkPolicy-capable CNI, policies
+      # are additive, and standard NetworkPolicy permits resident-node traffic.
+      # Set to "false" to request denial of all egress.
+      REANA_SPEC_VALIDATION_ALLOW_EGRESS: true
     uwsgi:
       processes: 2
       threads: 2
