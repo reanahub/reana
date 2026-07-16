@@ -22,6 +22,12 @@ keycloak:
   # deployment, e.g. https://reana.example.org/keycloak. The kind dev cluster
   # exposes REANA on the 30443 nodeport.
   frontend_url: https://localhost:30443/keycloak
+  # Optional server-side transport base. Empty uses the in-cluster Keycloak
+  # Service URL generated from the Helm release name. Because the bundled
+  # development Keycloak currently serves HTTP, enabling it requires the
+  # explicit opt-in below (values-dev.yaml does so).
+  backchannel_url: ""
+  backchannel_allow_http: false
   audience: reana
   roles_claim: reana_roles
   required_role: "reana:user"
@@ -38,6 +44,9 @@ keycloak:
 auth:
   issuer: ""
   openidConfigUrl: ""
+  backchannelBaseUrl: ""
+  backchannelAllowHttp: false
+  caBundle: ""
   jwksUrl: ""
   userinfoUrl: ""
   authorizationUrl: ""

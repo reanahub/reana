@@ -1,13 +1,47 @@
 {{- if .Values.keycloak.enabled }}
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
   name: {{ include "reana.prefix" . }}-keycloak-realm
   namespace: {{ .Release.Namespace }}
-data:
+type: Opaque
+stringData:
   reana-realm.json: |-
-    {{- .Files.Get "reana-keycloak-realm.json" | nindent 4 }}
+    {{- tpl (.Files.Get "reana-keycloak-realm.json.tpl") . | nindent 4 }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak-bootstrap
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  username: {{ required "keycloak.admin_user must be set when bundled development Keycloak is enabled" .Values.keycloak.admin_user | quote }}
+  password: {{ required "keycloak.admin_password must be set when bundled development Keycloak is enabled" .Values.keycloak.admin_password | quote }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "reana.prefix" . }}-keycloak
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ include "reana.prefix" . }}-server
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -38,7 +72,7 @@ spec:
       labels:
         app: {{ include "reana.prefix" . }}-keycloak
       annotations:
-        checksum/realm: {{ .Files.Get "reana-keycloak-realm.json" | sha256sum }}
+        checksum/realm: {{ tpl (.Files.Get "reana-keycloak-realm.json.tpl") . | sha256sum }}
     spec:
       containers:
         - name: keycloak
@@ -47,9 +81,15 @@ spec:
           args: ["start-dev", "--import-realm", "--http-port=8080"]
           env:
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
-              value: {{ required "keycloak.admin_user must be set when bundled development Keycloak is enabled" .Values.keycloak.admin_user | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-keycloak-bootstrap
+                  key: username
             - name: KC_BOOTSTRAP_ADMIN_PASSWORD
-              value: {{ required "keycloak.admin_password must be set when bundled development Keycloak is enabled" .Values.keycloak.admin_password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-keycloak-bootstrap
+                  key: password
             # Served under the relative path through the REANA traefik ingress.
             - name: KC_HTTP_RELATIVE_PATH
               value: {{ .Values.keycloak.relative_path | quote }}
@@ -84,6 +124,6 @@ spec:
               mountPath: /opt/keycloak/data/import
       volumes:
         - name: realm
-          configMap:
-            name: {{ include "reana.prefix" . }}-keycloak-realm
+          secret:
+            secretName: {{ include "reana.prefix" . }}-keycloak-realm
 {{- end }}

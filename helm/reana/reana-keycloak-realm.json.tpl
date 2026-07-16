@@ -1,5 +1,5 @@
 {
-  "realm": "reana",
+  "realm": "{{ .Values.keycloak.realm }}",
   "enabled": true,
   "sslRequired": "none",
   "roles": {
@@ -17,13 +17,13 @@
   },
   "clients": [
     {
-      "clientId": "reana-server",
+      "clientId": "{{ .Values.keycloak.web_client_id }}",
       "enabled": true,
       "publicClient": false,
-      "secret": "reana-server-secret",
+      "secret": "{{ .Values.secrets.auth.REANA_AUTH_WEB_CLIENT_SECRET }}",
       "standardFlowEnabled": true,
       "redirectUris": [
-        "https://localhost:30443/api/oauth/callback"
+        "https://{{ .Values.reana_hostname }}{{ if ne (int .Values.reana_hostport) 443 }}:{{ .Values.reana_hostport }}{{ end }}/api/oauth/callback"
       ],
       "protocolMappers": [
         {
@@ -44,7 +44,7 @@
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "config": {
-            "included.custom.audience": "reana",
+            "included.custom.audience": "{{ .Values.keycloak.audience }}",
             "access.token.claim": "true",
             "id.token.claim": "false"
           }
@@ -65,7 +65,7 @@
       ]
     },
     {
-      "clientId": "reana-cli",
+      "clientId": "{{ .Values.keycloak.cli_client_id }}",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
@@ -107,7 +107,7 @@
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "config": {
-            "included.custom.audience": "reana",
+            "included.custom.audience": "{{ .Values.keycloak.audience }}",
             "access.token.claim": "true",
             "id.token.claim": "false"
           }

@@ -94,17 +94,19 @@ if kubectl -n "${kubernetes_namespace}" get "deployment/${resource_prefix}-keycl
             --email "${admin_email}" \
             --idp-issuer "${auth_issuer}" \
             --idp-subject "${keycloak_user_id}"
+    setup_result="Database initialised and bundled-Keycloak administrator created."
 else
-    echo "Error: Bundled Keycloak is not deployed; the OIDC subject cannot be discovered automatically."
-    echo "Create the administrator after obtaining their issuer and subject from the external identity provider:"
+    echo "Bundled Keycloak is not deployed; skipping automatic administrator creation."
+    echo "Before the administrator's first REANA login, obtain their issuer and subject from the external identity provider and run:"
     printf '  kubectl -n %s exec deployment/%s-server -c rest-api -- \\\n' \
         "${kubernetes_namespace}" "${resource_prefix}"
     echo "    flask reana-admin create-admin-user --email ${admin_email} --idp-issuer <issuer> --idp-subject <subject>"
-    exit 1
+    setup_result="Database initialised; external-issuer administrator creation was skipped."
 fi
 
 # Success!
-echo "Success! You may now set the following environment variables:"
+echo "Success! ${setup_result}"
+echo "You may now set the following environment variables:"
 echo ""
 echo "  $ export REANA_SERVER_URL=https://localhost:30443  # or use your URL"
 echo ""

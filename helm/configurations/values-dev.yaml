@@ -8,6 +8,9 @@ reana_hostport: 30443 # NodePort for incoming HTTPS connections
 keycloak:
   enabled: true
   frontend_url: https://localhost:30443/keycloak
+  # Deliberate development-only exception. The server restricts HTTP to the
+  # exact generated Keycloak Service/realm backchannel base.
+  backchannel_allow_http: true
   admin_user: reana-dev-admin
   admin_password: reana-keycloak-admin-password-for-development
 

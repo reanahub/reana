@@ -1,3 +1,31 @@
+{{- $bundledKeycloakBackchannelBase := .Values.keycloak.backchannel_url | default (printf "http://%s-keycloak:8080%s/realms/%s" (include "reana.prefix" .) .Values.keycloak.relative_path .Values.keycloak.realm) -}}
+{{- if .Values.keycloak.enabled -}}
+  {{- if not (hasPrefix "https://" (required "keycloak.frontend_url is required when bundled Keycloak is enabled" .Values.keycloak.frontend_url)) -}}
+    {{- fail "keycloak.frontend_url must use https:// because it is the public OIDC issuer." -}}
+  {{- end -}}
+  {{- if not .Values.keycloak.realm -}}
+    {{- fail "keycloak.realm is required when bundled Keycloak is enabled." -}}
+  {{- end -}}
+  {{- if and (hasPrefix "http://" $bundledKeycloakBackchannelBase) (not .Values.keycloak.backchannel_allow_http) -}}
+    {{- fail "Bundled Keycloak uses an HTTP backchannel. Set keycloak.backchannel_allow_http=true explicitly for the development deployment, or configure an HTTPS keycloak.backchannel_url." -}}
+  {{- end -}}
+  {{- if and .Values.keycloak.backchannel_allow_http (not (hasPrefix "http://" $bundledKeycloakBackchannelBase)) -}}
+    {{- fail "keycloak.backchannel_allow_http=true is valid only with an http:// keycloak.backchannel_url." -}}
+  {{- end -}}
+{{- else if .Values.auth.issuer -}}
+  {{- if not (hasPrefix "https://" .Values.auth.issuer) -}}
+    {{- fail "auth.issuer must use https://." -}}
+  {{- end -}}
+  {{- if and .Values.auth.backchannelAllowHttp (not .Values.auth.backchannelBaseUrl) -}}
+    {{- fail "auth.backchannelAllowHttp=true requires auth.backchannelBaseUrl." -}}
+  {{- end -}}
+  {{- if and .Values.auth.backchannelAllowHttp (not (hasPrefix "http://" .Values.auth.backchannelBaseUrl)) -}}
+    {{- fail "auth.backchannelAllowHttp=true is valid only with an http:// auth.backchannelBaseUrl." -}}
+  {{- end -}}
+  {{- if and (hasPrefix "http://" .Values.auth.backchannelBaseUrl) (not .Values.auth.backchannelAllowHttp) -}}
+    {{- fail "An http:// auth.backchannelBaseUrl requires auth.backchannelAllowHttp=true." -}}
+  {{- end -}}
+{{- end -}}
 ---
 apiVersion: v1
 kind: Service
@@ -190,6 +218,8 @@ spec:
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
             value: {{ .Values.reana_hostname | quote }}
+          - name: REANA_HOSTPORT
+            value: {{ .Values.reana_hostport | quote }}
           {{- end }}
           {{- if or .Values.keycloak.enabled .Values.auth.issuer }}
           {{- if .Values.keycloak.enabled }}
@@ -198,8 +228,18 @@ spec:
           # Service (backchannel), see reana-keycloak.yaml.
           - name: REANA_AUTH_ISSUER
             value: "{{ .Values.keycloak.frontend_url }}/realms/{{ .Values.keycloak.realm }}"
+          - name: REANA_AUTH_BACKCHANNEL_BASE_URL
+            value: {{ $bundledKeycloakBackchannelBase | quote }}
+          - name: REANA_AUTH_BACKCHANNEL_ALLOW_HTTP
+            value: {{ .Values.keycloak.backchannel_allow_http | quote }}
           - name: REANA_AUTH_OPENID_CONFIG_URL
-            value: "http://{{ include "reana.prefix" . }}-keycloak:8080{{ .Values.keycloak.relative_path }}/realms/{{ .Values.keycloak.realm }}/.well-known/openid-configuration"
+            value: {{ printf "%s/.well-known/openid-configuration" ($bundledKeycloakBackchannelBase | trimSuffix "/") | quote }}
+          # Browser redirects always use the canonical public HTTPS issuer,
+          # independently of Keycloak's dynamic backchannel endpoints.
+          - name: REANA_AUTH_AUTHORIZATION_URL
+            value: "{{ .Values.keycloak.frontend_url }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/auth"
+          - name: REANA_AUTH_END_SESSION_URL
+            value: "{{ .Values.keycloak.frontend_url }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/logout"
           - name: REANA_AUTH_AUDIENCE
             value: {{ .Values.keycloak.audience | default "reana" | quote }}
           - name: REANA_AUTH_ROLES_CLAIM
@@ -219,6 +259,16 @@ spec:
           {{- if .Values.auth.openidConfigUrl }}
           - name: REANA_AUTH_OPENID_CONFIG_URL
             value: {{ .Values.auth.openidConfigUrl | quote }}
+          {{- end }}
+          {{- if .Values.auth.backchannelBaseUrl }}
+          - name: REANA_AUTH_BACKCHANNEL_BASE_URL
+            value: {{ .Values.auth.backchannelBaseUrl | quote }}
+          - name: REANA_AUTH_BACKCHANNEL_ALLOW_HTTP
+            value: {{ .Values.auth.backchannelAllowHttp | quote }}
+          {{- end }}
+          {{- if .Values.auth.caBundle }}
+          - name: REANA_AUTH_CA_BUNDLE
+            value: {{ .Values.auth.caBundle | quote }}
           {{- end }}
           {{- if .Values.auth.jwksUrl }}
           - name: REANA_AUTH_JWKS_URL

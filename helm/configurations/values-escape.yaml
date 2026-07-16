@@ -8,7 +8,14 @@
 #     --admin-email you@example.org \
 #     --admin-password admin \
 #     -f helm/configurations/values-dev.yaml \
-#     -f helm/configurations/values-escape.yaml
+#     -f helm/configurations/values-escape.yaml \
+#     --set auth.clientId=<seeded-reana-client-id> \
+#     --set auth.webClientId=<seeded-reana-client-id> \
+#     --set secrets.auth.REANA_AUTH_WEB_CLIENT_SECRET=<seeded-reana-client-secret>
+#
+# Use the client ID and secret printed by `make seed` in escape-iam-local. Its
+# single REANA client supports both browser authorization-code and CLI
+# device-code flows, hence the same generated ID is used for both client IDs.
 #
 # If iam.local runs on the host rather than inside the Kubernetes cluster, pass
 # a host alias override that points to the host-reachable address, for example:

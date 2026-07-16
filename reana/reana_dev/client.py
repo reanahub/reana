@@ -61,14 +61,7 @@ def client_uninstall():  # noqa: D301
 
 @client_commands.command(name="client-setup-environment")
 @click.option("--server-hostname", help="Set customized REANA Server hostname.")
-@click.option("--insecure-url", is_flag=True, help="REANA Server URL with HTTP.")
-@click.option(
-    "--namespace", "-n", default="default", help="Kubernetes namespace [default]"
-)
-@click.option("--instance-name", default="reana", help="REANA instance name")
-def client_setup_environment(
-    server_hostname, insecure_url, namespace, instance_name
-):  # noqa: D301
+def client_setup_environment(server_hostname):  # noqa: D301
     """Display commands to set up shell environment for local cluster.
 
     Display commands how to set up REANA_SERVER_URL suitable for current local
