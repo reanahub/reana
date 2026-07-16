@@ -1,3 +1,31 @@
+{{- $bundledKeycloakBackchannelBase := .Values.keycloak.backchannel_url | default (printf "http://%s-keycloak:8080%s/realms/%s" (include "reana.prefix" .) .Values.keycloak.relative_path .Values.keycloak.realm) -}}
+{{- if .Values.keycloak.enabled -}}
+  {{- if not (hasPrefix "https://" (required "keycloak.frontend_url is required when bundled Keycloak is enabled" .Values.keycloak.frontend_url)) -}}
+    {{- fail "keycloak.frontend_url must use https:// because it is the public OIDC issuer." -}}
+  {{- end -}}
+  {{- if not .Values.keycloak.realm -}}
+    {{- fail "keycloak.realm is required when bundled Keycloak is enabled." -}}
+  {{- end -}}
+  {{- if and (hasPrefix "http://" $bundledKeycloakBackchannelBase) (not .Values.keycloak.backchannel_allow_http) -}}
+    {{- fail "Bundled Keycloak uses an HTTP backchannel. Set keycloak.backchannel_allow_http=true explicitly for the development deployment, or configure an HTTPS keycloak.backchannel_url." -}}
+  {{- end -}}
+  {{- if and .Values.keycloak.backchannel_allow_http (not (hasPrefix "http://" $bundledKeycloakBackchannelBase)) -}}
+    {{- fail "keycloak.backchannel_allow_http=true is valid only with an http:// keycloak.backchannel_url." -}}
+  {{- end -}}
+{{- else if .Values.auth.issuer -}}
+  {{- if not (hasPrefix "https://" .Values.auth.issuer) -}}
+    {{- fail "auth.issuer must use https://." -}}
+  {{- end -}}
+  {{- if and .Values.auth.backchannelAllowHttp (not .Values.auth.backchannelBaseUrl) -}}
+    {{- fail "auth.backchannelAllowHttp=true requires auth.backchannelBaseUrl." -}}
+  {{- end -}}
+  {{- if and .Values.auth.backchannelAllowHttp (not (hasPrefix "http://" .Values.auth.backchannelBaseUrl)) -}}
+    {{- fail "auth.backchannelAllowHttp=true is valid only with an http:// auth.backchannelBaseUrl." -}}
+  {{- end -}}
+  {{- if and (hasPrefix "http://" .Values.auth.backchannelBaseUrl) (not .Values.auth.backchannelAllowHttp) -}}
+    {{- fail "An http:// auth.backchannelBaseUrl requires auth.backchannelAllowHttp=true." -}}
+  {{- end -}}
+{{- end -}}
 ---
 apiVersion: v1
 kind: Service
@@ -31,9 +59,8 @@ spec:
       annotations:
         checksum/database-config: {{ include (print $.Template.BasePath "/database-config.yaml") . | sha256sum }}
         checksum/database-secrets: {{ include (print $.Template.BasePath "/database-secrets.yaml") . | sha256sum }}
-        checksum/sso-secrets: {{ include (print $.Template.BasePath "/sso-secrets.yaml") . | sha256sum }}
-        {{- if .Values.login }}
-        checksum/login-provider-secrets: {{ include (print $.Template.BasePath "/login-provider-secrets.yaml") . | sha256sum }}
+        {{- if or .Values.keycloak.enabled (and .Values.auth.issuer .Values.auth.bffEnabled) }}
+        checksum/auth-secrets: {{ include (print $.Template.BasePath "/auth-secrets.yaml") . | sha256sum }}
         {{- end }}
         checksum/gitlab-secrets: {{ include (print $.Template.BasePath "/gitlab-secrets.yaml") . | sha256sum }}
         checksum/app-secrets: {{ include (print $.Template.BasePath "/app-secrets.yaml") . | sha256sum }}
@@ -44,6 +71,10 @@ spec:
         checksum/mail-notification-secrets: {{ include (print $.Template.BasePath "/mail-notification-secrets.yaml") . | sha256sum }}
         {{- end }}
     spec:
+      {{- with .Values.components.reana_server.hostAliases }}
+      hostAliases:
+{{ toYaml . | indent 8 }}
+      {{- end }}
       serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
       {{- if ne (.Values.shared_storage.fs_group | toString) "" }}
       securityContext:
@@ -60,8 +91,7 @@ spec:
         - containerPort: 5000
           name: http
         {{- if .Values.debug.enabled }}
-        command: ["/bin/sh", "-c"]
-        args: ["invenio run -h 0.0.0.0 -p 5000"]
+        command: ["flask", "run", "-h", "0.0.0.0", "-p", "5000"]
         tty: true
         stdin: true
         {{- else }}
@@ -188,39 +218,106 @@ spec:
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
             value: {{ .Values.reana_hostname | quote }}
+          - name: REANA_HOSTPORT
+            value: {{ .Values.reana_hostport | quote }}
           {{- end }}
-          {{- if .Values.secrets.cern.sso }}
-          - name: CERN_CONSUMER_KEY
-            valueFrom:
-              secretKeyRef:
-                name: {{ include "reana.prefix" . }}-cern-sso-secrets
-                key: CERN_CONSUMER_KEY
-          - name: CERN_CONSUMER_SECRET
-            valueFrom:
-              secretKeyRef:
-                name: {{ include "reana.prefix" . }}-cern-sso-secrets
-                key: CERN_CONSUMER_SECRET
+          {{- if or .Values.keycloak.enabled .Values.auth.issuer }}
+          {{- if .Values.keycloak.enabled }}
+          # OIDC/JWT authentication against the bundled Keycloak. The issuer is
+          # browser-facing; discovery is fetched in-cluster via the Keycloak
+          # Service (backchannel), see reana-keycloak.yaml.
+          - name: REANA_AUTH_ISSUER
+            value: "{{ .Values.keycloak.frontend_url }}/realms/{{ .Values.keycloak.realm }}"
+          - name: REANA_AUTH_BACKCHANNEL_BASE_URL
+            value: {{ $bundledKeycloakBackchannelBase | quote }}
+          - name: REANA_AUTH_BACKCHANNEL_ALLOW_HTTP
+            value: {{ .Values.keycloak.backchannel_allow_http | quote }}
+          - name: REANA_AUTH_OPENID_CONFIG_URL
+            value: {{ printf "%s/.well-known/openid-configuration" ($bundledKeycloakBackchannelBase | trimSuffix "/") | quote }}
+          # Browser redirects always use the canonical public HTTPS issuer,
+          # independently of Keycloak's dynamic backchannel endpoints.
+          - name: REANA_AUTH_AUTHORIZATION_URL
+            value: "{{ .Values.keycloak.frontend_url }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/auth"
+          - name: REANA_AUTH_END_SESSION_URL
+            value: "{{ .Values.keycloak.frontend_url }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/logout"
+          - name: REANA_AUTH_AUDIENCE
+            value: {{ .Values.keycloak.audience | default "reana" | quote }}
+          - name: REANA_AUTH_ROLES_CLAIM
+            value: {{ .Values.keycloak.roles_claim | default "reana_roles" | quote }}
+          - name: REANA_AUTH_REQUIRED_ROLE
+            value: {{ .Values.keycloak.required_role | default "reana:user" | quote }}
+          - name: REANA_AUTH_CLIENT_ID
+            value: {{ .Values.keycloak.cli_client_id | default "reana-cli" | quote }}
+          - name: REANA_AUTH_WEB_CLIENT_ID
+            value: {{ .Values.keycloak.web_client_id | default "reana-server" | quote }}
+          - name: REANA_AUTH_BFF_ENABLED
+            value: "true"
+          {{- else }}
+          # OIDC/JWT authentication against an external issuer.
+          - name: REANA_AUTH_ISSUER
+            value: {{ required "auth.issuer must be set when keycloak.enabled=false" .Values.auth.issuer | quote }}
+          {{- if .Values.auth.openidConfigUrl }}
+          - name: REANA_AUTH_OPENID_CONFIG_URL
+            value: {{ .Values.auth.openidConfigUrl | quote }}
           {{- end }}
-          {{- if .Values.secrets.eosc.sso }}
-          - name: EOSC_CONSUMER_KEY
-            valueFrom:
-              secretKeyRef:
-                name: {{ include "reana.prefix" . }}-eosc-sso-secrets
-                key: EOSC_CONSUMER_KEY
-          - name: EOSC_CONSUMER_SECRET
-            valueFrom:
-              secretKeyRef:
-                name: {{ include "reana.prefix" . }}-eosc-sso-secrets
-                key: EOSC_CONSUMER_SECRET
+          {{- if .Values.auth.backchannelBaseUrl }}
+          - name: REANA_AUTH_BACKCHANNEL_BASE_URL
+            value: {{ .Values.auth.backchannelBaseUrl | quote }}
+          - name: REANA_AUTH_BACKCHANNEL_ALLOW_HTTP
+            value: {{ .Values.auth.backchannelAllowHttp | quote }}
           {{- end }}
-          {{- if .Values.login }}
-          - name: LOGIN_PROVIDERS_CONFIGS
-            value: {{ .Values.login | toJson | quote }}
-          - name: LOGIN_PROVIDERS_SECRETS
+          {{- if .Values.auth.caBundle }}
+          - name: REANA_AUTH_CA_BUNDLE
+            value: {{ .Values.auth.caBundle | quote }}
+          {{- end }}
+          {{- if .Values.auth.jwksUrl }}
+          - name: REANA_AUTH_JWKS_URL
+            value: {{ .Values.auth.jwksUrl | quote }}
+          {{- end }}
+          {{- if .Values.auth.userinfoUrl }}
+          - name: REANA_AUTH_USERINFO_URL
+            value: {{ .Values.auth.userinfoUrl | quote }}
+          {{- end }}
+          {{- if .Values.auth.authorizationUrl }}
+          - name: REANA_AUTH_AUTHORIZATION_URL
+            value: {{ .Values.auth.authorizationUrl | quote }}
+          {{- end }}
+          {{- if .Values.auth.tokenUrl }}
+          - name: REANA_AUTH_TOKEN_URL
+            value: {{ .Values.auth.tokenUrl | quote }}
+          {{- end }}
+          {{- if .Values.auth.endSessionUrl }}
+          - name: REANA_AUTH_END_SESSION_URL
+            value: {{ .Values.auth.endSessionUrl | quote }}
+          {{- end }}
+          {{- if .Values.auth.deviceAuthorizationUrl }}
+          - name: REANA_AUTH_DEVICE_AUTHORIZATION_URL
+            value: {{ .Values.auth.deviceAuthorizationUrl | quote }}
+          {{- end }}
+          - name: REANA_AUTH_AUDIENCE
+            value: {{ .Values.auth.audience | quote }}
+          - name: REANA_AUTH_ROLES_CLAIM
+            value: {{ .Values.auth.rolesClaim | quote }}
+          - name: REANA_AUTH_REQUIRED_ROLE
+            value: {{ .Values.auth.requiredRole | quote }}
+          - name: REANA_AUTH_CLIENT_ID
+            value: {{ .Values.auth.clientId | quote }}
+          - name: REANA_AUTH_WEB_CLIENT_ID
+            value: {{ .Values.auth.webClientId | quote }}
+          - name: REANA_AUTH_BFF_ENABLED
+            value: {{ .Values.auth.bffEnabled | quote }}
+          - name: REANA_AUTH_SCOPES
+            value: {{ .Values.auth.scopes | quote }}
+          - name: REANA_AUTH_SESSION_TTL
+            value: {{ .Values.auth.sessionTtl | quote }}
+          {{- end }}
+          {{- if or .Values.keycloak.enabled .Values.auth.bffEnabled }}
+          - name: REANA_AUTH_WEB_CLIENT_SECRET
             valueFrom:
               secretKeyRef:
-                name: {{ include "reana.prefix" $ }}-login-provider-secrets
-                key: PROVIDER_SECRETS
+                name: {{ include "reana.prefix" . }}-auth-secrets
+                key: REANA_AUTH_WEB_CLIENT_SECRET
+          {{- end }}
           {{- end }}
           {{- if .Values.secrets.gitlab }}
           - name: REANA_GITLAB_OAUTH_APP_ID
@@ -265,12 +362,8 @@ spec:
                 name: {{ include "reana.prefix" . }}-message-broker-secrets
                 key: password
           {{- if .Values.debug.enabled }}
-          # Disable CORS in development environment, for example
-          # to connect from an external React application.
-          - name: INVENIO_CORS_SEND_WILDCARD
-            value: "False"
-          - name: INVENIO_CORS_SUPPORTS_CREDENTIALS
-            value: "True"
+          - name: PYTHONPATH
+            value: "/code/reana-server:/code/modules/reana-commons:/code/modules/reana-db"
           - name: WDB_SOCKET_SERVER
             value: "{{ include "reana.prefix" . }}-wdb"
           - name: WDB_NO_BROWSER_AUTO_OPEN
@@ -354,12 +447,8 @@ spec:
           value: {{ $value | quote }}
         {{- end }}
         {{- if .Values.debug.enabled }}
-        # Disable CORS in development environment, for example
-        # to connect from an external React application.
-        - name: INVENIO_CORS_SEND_WILDCARD
-          value: "False"
-        - name: INVENIO_CORS_SUPPORTS_CREDENTIALS
-          value: "True"
+        - name: PYTHONPATH
+          value: "/code/reana-server:/code/modules/reana-commons:/code/modules/reana-db"
         - name: WDB_SOCKET_SERVER
           value: "{{ include "reana.prefix" . }}-wdb"
         - name: WDB_NO_BROWSER_AUTO_OPEN
@@ -382,15 +471,6 @@ spec:
             secretKeyRef:
               name: {{ include "reana.prefix" . }}-db-secrets
               key: password
-        {{- if .Values.login }}
-        - name: LOGIN_PROVIDERS_CONFIGS
-          value: {{ .Values.login | toJson | quote }}
-        - name: LOGIN_PROVIDERS_SECRETS
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "reana.prefix" $ }}-login-provider-secrets
-              key: PROVIDER_SECRETS
-        {{- end }}
         - name: RABBIT_MQ_USER
           valueFrom:
             secretKeyRef:

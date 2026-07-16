@@ -1,0 +1,129 @@
+{{- if .Values.keycloak.enabled }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak-realm
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  reana-realm.json: |-
+    {{- tpl (.Files.Get "reana-keycloak-realm.json.tpl") . | nindent 4 }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak-bootstrap
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  username: {{ required "keycloak.admin_user must be set when bundled development Keycloak is enabled" .Values.keycloak.admin_user | quote }}
+  password: {{ required "keycloak.admin_password must be set when bundled development Keycloak is enabled" .Values.keycloak.admin_password | quote }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "reana.prefix" . }}-keycloak
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ include "reana.prefix" . }}-server
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include "reana.prefix" . }}-keycloak
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "reana.prefix" . }}-keycloak
+  template:
+    metadata:
+      labels:
+        app: {{ include "reana.prefix" . }}-keycloak
+      annotations:
+        checksum/realm: {{ tpl (.Files.Get "reana-keycloak-realm.json.tpl") . | sha256sum }}
+    spec:
+      containers:
+        - name: keycloak
+          image: {{ .Values.keycloak.image }}
+          imagePullPolicy: {{ .Values.keycloak.imagePullPolicy | default "IfNotPresent" }}
+          args: ["start-dev", "--import-realm", "--http-port=8080"]
+          env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-keycloak-bootstrap
+                  key: username
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-keycloak-bootstrap
+                  key: password
+            # Served under the relative path through the REANA traefik ingress.
+            - name: KC_HTTP_RELATIVE_PATH
+              value: {{ .Values.keycloak.relative_path | quote }}
+            - name: REANA_KEYCLOAK_REALM
+              value: {{ .Values.keycloak.realm | quote }}
+            # Fixed browser-facing frontend URL -> stable token `iss`; the
+            # backchannel (token/jwks/userinfo) stays dynamic so in-cluster
+            # reana-server can reach it at the Service DNS name.
+            - name: KC_HOSTNAME
+              value: {{ .Values.keycloak.frontend_url | quote }}
+            - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.keycloak.relative_path }}/realms/{{ .Values.keycloak.realm }}
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 40
+          resources:
+            requests:
+              memory: "768Mi"
+              cpu: "250m"
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import
+      volumes:
+        - name: realm
+          secret:
+            secretName: {{ include "reana.prefix" . }}-keycloak-realm
+{{- end }}

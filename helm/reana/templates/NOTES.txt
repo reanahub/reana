@@ -16,18 +16,14 @@ finalise its configuration.
     $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
         ./scripts/create-database.sh
 
-2. Create administrator user and corresponding access token:
+2. Create an administrator linked to their OIDC identity:
 
-    $ mytoken=$(kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
+    $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
           flask reana-admin create-admin-user --email john.doe@example.org \
-                                              --password mysecretpassword)
+                                              --idp-issuer https://issuer.example.org \
+                                              --idp-subject oidc-subject
 
-3. Store administrator access token as Kubernetes secret:
-
-    $ kubectl -n {{ .Release.Namespace }} create secret generic {{ .Release.Name }}-admin-access-token \
-        --from-literal=ADMIN_ACCESS_TOKEN="$mytoken"
-
-4. Try to run your first REANA example:
+3. Try to run your first REANA example:
 
     $ firefox https://{{ .Values.reana_hostname }}:{{.Values.reana_hostport}}
 
@@ -37,8 +33,8 @@ finalise its configuration.
     $ pip install --user reana-client
     $ # set environment variables for REANA client
     $ export REANA_SERVER_URL=https://{{ .Values.reana_hostname }}:{{.Values.reana_hostport}}
-    $ export REANA_ACCESS_TOKEN="$mytoken"
-    $ # test connection to the REANA cluster
+    $ # authenticate and test connection to the REANA cluster
+    $ reana-client login
     $ reana-client ping
     $ # clone and run a simple analysis example
     $ git clone https://github.com/reanahub/reana-demo-root6-roofit
