@@ -18,6 +18,12 @@ rules:
 - apiGroups: ["", "apps", "networking.k8s.io"]
   resources: ["deployments", "services", "ingresses"]
   verbs: ["get", "create", "delete"]
+# NetworkPolicy for the sandboxed workflow specification validator. The
+# controller only ever creates the deny-egress policy and, on conflict, replaces
+# (updates) it, so only these two verbs are granted (least privilege).
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies"]
+  verbs: ["create", "update"]
 # Metrics (`kubectl top node/pod`)
 - apiGroups: ["metrics.k8s.io"]
   resources: ["pods", "nodes"]

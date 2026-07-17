@@ -245,6 +245,17 @@ COMPONENTS_USING_SHARED_MODULE_DB = [
 ]
 """List of components which use the module REANA-DB."""
 
+COMPONENTS_SELF_CONTAINED_IMAGE = [
+    "reana-workflow-validator",
+]
+"""Components whose Docker image must stay self-contained even in ``debug`` mode.
+
+These components run inside the locked-down spec-validation sandbox, which mounts
+no host ``/code`` and runs as a non-root user with a read-only root filesystem, so
+they cannot hot-reload source like the other debug-mode components. ``reana-dev``
+therefore always builds them with ``DEBUG=0`` (no editable installs), and they must
+be rebuilt and reloaded -- not hot-reloaded -- after a source change."""
+
 DOCKER_PREFETCH_IMAGES = {
     "reana": [
         "docker.io/library/postgres:14.10",

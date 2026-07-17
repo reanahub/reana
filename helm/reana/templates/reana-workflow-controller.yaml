@@ -165,6 +165,8 @@ spec:
           {{- end }}
           - name: WORKSPACE_PATHS
             value: {{ .Values.workspaces.paths | toJson | quote }}
+          - name: REANA_WORKFLOW_VALIDATOR_IMAGE
+            value: {{ .Values.components.reana_workflow_validator.image | quote }}
           {{- range $key, $value := $workflowControllerEnv }}
           - name: {{ $key }}
             value: {{ $value | quote }}
