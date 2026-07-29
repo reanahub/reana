@@ -175,6 +175,14 @@ components:
       REANA_ACCESS_TOKEN_ISSUANCE_POLICY: "manual"
       REANA_TOKEN_MANAGEMENT_SECRET: ""
       REANA_QUOTA_MANAGEMENT_SECRET: ""
+      # Maximum validation snapshot archive size and regular-file count.
+      REANA_SPEC_BUNDLE_MAX_BYTES: "104857600"
+      REANA_SPEC_BUNDLE_MAX_FILES: "1000"
+      # Bounded repository/archive fetch used by launch and GitLab webhooks.
+      REANA_FETCHER_MAXIMUM_FILE_SIZE: "1073741824"
+      REANA_FETCHER_MAXIMUM_EXTRACTED_SIZE: "1073741824"
+      REANA_FETCHER_MAXIMUM_FILES: "10000"
+      REANA_FETCHER_MAXIMUM_CLONE_SIZE: "2147483648"
     uwsgi:
       processes: 6
       threads: 4
@@ -211,6 +219,17 @@ components:
       REANA_OPENSEARCH_ENABLED: false
       REANA_OPENSEARCH_USE_SSL: true
       REANA_OPENSEARCH_CA_CERTS: "/code/certs/ca.crt"
+      # Whether the sandboxed workflow specification validator may reach the
+      # public network (e.g. to resolve a remote yadage `toplevel` or CWL
+      # `$import`). The validator NetworkPolicy excludes configured internal
+      # ranges, but enforcement requires a NetworkPolicy-capable CNI, policies
+      # are additive, and standard NetworkPolicy permits resident-node traffic.
+      # Set to "false" to request denial of all egress.
+      REANA_SPEC_VALIDATION_ALLOW_EGRESS: true
+      REANA_SPEC_BUNDLE_MAX_BYTES: "104857600"
+      REANA_SPEC_BUNDLE_MAX_FILES: "1000"
+      REANA_SPEC_VALIDATION_EPHEMERAL_STORAGE_REQUEST: "128Mi"
+      REANA_SPEC_VALIDATION_EPHEMERAL_STORAGE_LIMIT: "1Gi"
     uwsgi:
       processes: 2
       threads: 2
@@ -251,6 +270,10 @@ components:
     environment: {}
   reana_workflow_validator:
     image: docker.io/reanahub/reana-workflow-validator:0.95.0-alpha.1
+    # Non-secret environment variables passed to each short-lived validation
+    # Job. Workflow specifications execute as untrusted code in this container
+    # and can read these values. Loader paths and interpreter startup variables
+    # are reserved by the sandbox and rejected by the chart.
     environment: {}
   reana_job_controller:
     image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.5

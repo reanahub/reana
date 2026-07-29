@@ -325,6 +325,70 @@ def test_runtime_namespace_renders_static_cephfs_resources(tmp_path, shared_stor
     } in deployment_binding["subjects"]
 
 
+def test_workflow_validator_environment_and_network_policy_rbac(tmp_path):
+    """Validator settings and reconciliation permissions reach the controller."""
+    values_file = tmp_path / "values.yaml"
+    values_file.write_text(
+        yaml.dump(
+            {
+                "components": {
+                    "reana_workflow_validator": {
+                        "environment": {
+                            "REANA_LOG_LEVEL": "DEBUG",
+                            "FEATURE_FLAG": True,
+                        }
+                    }
+                },
+                "secrets": {
+                    "cache": {"user": "test", "password": "test"},
+                    "database": {"user": "test", "password": "test"},
+                    "message_broker": {"user": "test", "password": "test"},
+                    "reana": {"REANA_SECRET_KEY": "test"},
+                },
+            }
+        )
+    )
+
+    if not any((HELM_CHART / "charts").glob("*.tgz")):
+        subprocess.run(
+            ["helm", "dependency", "update", str(HELM_CHART)],
+            capture_output=True,
+            check=True,
+        )
+
+    rendered = subprocess.run(
+        ["helm", "template", "reana", str(HELM_CHART), "-f", str(values_file)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    controller_env = None
+    network_policy_verbs = None
+    for document in yaml.safe_load_all(rendered.stdout):
+        if not document:
+            continue
+        if document.get("kind") == "Deployment" and document["metadata"][
+            "name"
+        ].endswith("-workflow-controller"):
+            container = document["spec"]["template"]["spec"]["containers"][0]
+            controller_env = {
+                entry["name"]: entry["value"]
+                for entry in container.get("env", [])
+                if "value" in entry
+            }
+        if document.get("kind") == "ClusterRole":
+            for rule in document.get("rules", []):
+                if rule.get("resources") == ["networkpolicies"]:
+                    network_policy_verbs = rule["verbs"]
+
+    assert json.loads(controller_env["REANA_WORKFLOW_VALIDATOR_ENV_VARS"]) == {
+        "REANA_LOG_LEVEL": "DEBUG",
+        "FEATURE_FLAG": True,
+    }
+    assert network_policy_verbs == ["create", "get", "update"]
+
+
 @pytest.mark.skipif(
     not shutil.which("helm"),
     reason="helm must be installed",
@@ -538,3 +602,22 @@ def test_infrastructure_cephfs_binds_static_volume(tmp_path):
         and document["metadata"]["name"].endswith("-volume-storage-class")
         for document in documents
     )
+
+
+def test_workflow_validator_reserved_environment_is_rejected():
+    """The chart rejects attempts to replace the sandbox filesystem contract."""
+    rendered = subprocess.run(
+        [
+            "helm",
+            "template",
+            "reana",
+            str(HELM_CHART),
+            "--set",
+            "components.reana_workflow_validator.environment.PYTHONPATH=/tmp/inject",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert rendered.returncode != 0
+    assert "PYTHONPATH is reserved by the validation sandbox" in rendered.stderr

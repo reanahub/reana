@@ -11,7 +11,14 @@
 {{- $workflowRuntimeUserGid := ternary $sharedStorageFsGroup ((default 0 $workflowControllerEnvValues.WORKFLOW_RUNTIME_USER_GID) | toString) (ne $sharedStorageFsGroup "") }}
 {{- $workflowRuntimeGroupNameDefault := ternary "root" $workflowRuntimeUserName (eq $workflowRuntimeUserGid "0") }}
 {{- $workflowRuntimeGroupName := default $workflowRuntimeGroupNameDefault $workflowControllerEnvValues.WORKFLOW_RUNTIME_GROUP_NAME | toString }}
-{{- $workflowControllerEnv := omit $workflowControllerEnvValues "REANA_RUNTIME_FS_GROUP_CHANGE_POLICY" "WORKFLOW_RUNTIME_GROUP_NAME" "WORKFLOW_RUNTIME_USER_GID" "WORKFLOW_RUNTIME_USER_NAME" "WORKFLOW_RUNTIME_USER_UID" }}
+{{- $workflowControllerEnv := omit $workflowControllerEnvValues "REANA_RUNTIME_FS_GROUP_CHANGE_POLICY" "REANA_WORKFLOW_VALIDATOR_ENV_VARS" "WORKFLOW_RUNTIME_GROUP_NAME" "WORKFLOW_RUNTIME_USER_GID" "WORKFLOW_RUNTIME_USER_NAME" "WORKFLOW_RUNTIME_USER_UID" }}
+{{- $workflowValidatorEnv := .Values.components.reana_workflow_validator.environment | default dict }}
+{{- $reservedValidatorEnvNames := list "REANA_VALIDATION_INPUT_DIR" "REANA_VALIDATION_WORK_DIR" "HOME" "TMPDIR" "PATH" "PYTHONHOME" "PYTHONPATH" "BASH_ENV" "ENV" "GCONV_PATH" "HOSTALIASES" "SHELLOPTS" }}
+{{- range $key, $_ := $workflowValidatorEnv }}
+{{- if or (has $key $reservedValidatorEnvNames) (hasPrefix "LD_" $key) }}
+{{- fail (printf "components.reana_workflow_validator.environment.%s is reserved by the validation sandbox" $key) }}
+{{- end }}
+{{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -165,6 +172,10 @@ spec:
           {{- end }}
           - name: WORKSPACE_PATHS
             value: {{ .Values.workspaces.paths | toJson | quote }}
+          - name: REANA_WORKFLOW_VALIDATOR_IMAGE
+            value: {{ .Values.components.reana_workflow_validator.image | quote }}
+          - name: REANA_WORKFLOW_VALIDATOR_ENV_VARS
+            value: {{ $workflowValidatorEnv | toJson | quote }}
           {{- range $key, $value := $workflowControllerEnv }}
           - name: {{ $key }}
             value: {{ $value | quote }}
