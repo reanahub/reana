@@ -42,11 +42,11 @@ components:
     image: docker.io/reanahub/reana-job-controller
     # For local HTCondor testing (for example, with Colima/k3s on
     # macOS), enable the htcondorcern entry in the compute_backends list
-    # below and ensure that the cluster DNS can resolve CERN batch-host
-    # PTR records through the DNS servers provided by the CERN VPN. Use
-    # a concrete WTFIS endpoint and disable URL resolution, since the
-    # default wtfis.cern.ch discovery used on LXPLUS may not work from a
-    # local Kubernetes cluster.
+    # below. Run scripts/cern-coredns-local.sh install to configure the
+    # cluster DNS to resolve CERN batch-host PTR records through the DNS
+    # servers provided by the CERN VPN. Use a concrete WTFIS endpoint and
+    # disable URL resolution, since the default wtfis.cern.ch discovery
+    # used on LXPLUS may not work from a local Kubernetes cluster.
     #
     # For local Slurm testing, enable the slurmcern entry in the
     # compute_backends list below and connect to a concrete Slurm gate

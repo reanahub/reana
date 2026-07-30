@@ -1,0 +1,33 @@
+# This file is part of REANA.
+# Copyright (C) 2026 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
+
+# Local development only. Manage this configuration with
+# scripts/cern-coredns-local.sh so that other entries in the shared
+# coredns-custom ConfigMap are preserved.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  cern-reverse.server: |
+    # Forward CERN reverse-DNS zones to the DNS servers provided by the VPN.
+    # HTCondor needs these PTR records to construct Kerberos service principals.
+    138.137.in-addr.arpa:53 {
+        errors
+        cache 30
+        forward . 137.138.16.5 137.138.17.5
+    }
+    184.188.in-addr.arpa:53 {
+        errors
+        cache 30
+        forward . 137.138.16.5 137.138.17.5
+    }
+    185.188.in-addr.arpa:53 {
+        errors
+        cache 30
+        forward . 137.138.16.5 137.138.17.5
+    }
