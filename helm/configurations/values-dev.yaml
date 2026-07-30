@@ -40,6 +40,14 @@ components:
     image: docker.io/reanahub/reana-workflow-validator
   reana_job_controller:
     image: docker.io/reanahub/reana-job-controller
+    # For local HTCondor testing (for example, with Colima/k3s on
+    # macOS), enable the htcondorcern entry in the compute_backends list
+    # below and ensure that the cluster DNS can resolve CERN batch-host
+    # PTR records through the DNS servers provided by the CERN VPN. Use
+    # a concrete WTFIS endpoint and disable URL resolution, since the
+    # default wtfis.cern.ch discovery used on LXPLUS may not work from a
+    # local Kubernetes cluster.
+    #
     # For local Slurm testing, enable the slurmcern entry in the
     # compute_backends list below and connect to a concrete Slurm gate
     # node instead of the load-balanced hostname, so that SSH GSSAPI can
@@ -47,7 +55,13 @@ components:
     # SLURM_GSS_HOSTNAME can pin the Kerberos service principal
     # explicitly, but its value must match the gate node that the SSH
     # connection actually reaches.)
+    #
+    # Uncomment the environment clause and the variables of whichever
+    # backends you would like to test.
     # environment:
+    #   MYSCHEDD_WTFIS_ENDPOINT: https://batchkeeper1.cern.ch:9008
+    #   MYSCHEDD_WTFIS_RO_ENDPOINT: http://batchkeeper1.cern.ch:9009
+    #   MYSCHEDD_WTFIS_RESOLVE_URL: "false"
     #   SLURM_HOSTNAME: slurmgate01.cern.ch
   reana_message_broker:
     image: docker.io/reanahub/reana-message-broker
