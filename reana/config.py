@@ -47,13 +47,13 @@ REPO_LIST_ALL = [
     "reana-client",
     "reana-client-go",
     "reana-commons",
+    "reana-datastore-s3fs",
     "reana-db",
     "reana-env-aliphysics",
     "reana-env-jupyter",
     "reana-env-root6",
     "reana-github-actions",
     "reana-job-controller",
-    "pytest-reana",
     "reana-message-broker",
     "reana-server",
     "reana-ui",
@@ -70,7 +70,6 @@ REPO_LIST_ALL = [
 
 REPO_LIST_CLIENT = [
     # shared utils
-    "pytest-reana",
     "reana-commons",
     "reana-db",
     # client
@@ -106,12 +105,11 @@ REPO_LIST_SHARED = [
 
 REPO_LIST_CLUSTER = (
     [
-        # shared utils
-        "pytest-reana",
         # cluster helpers
         "reana-auth-krb5",
         "reana-auth-rucio",
         "reana-auth-vomsproxy",
+        "reana-datastore-s3fs",
     ]
     + REPO_LIST_SHARED
     + REPO_LIST_CLUSTER_INFRASTRUCTURE

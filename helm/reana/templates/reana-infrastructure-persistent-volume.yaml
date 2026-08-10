@@ -12,14 +12,16 @@ spec:
   resources:
     requests:
       storage: {{ .Values.infrastructure_storage.volume_size }}G
-  {{- if and (eq .Values.infrastructure_storage.backend "cephfs") (semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion) }}
+  {{- if .Values.infrastructure_storage.storage_class_name }}
+  storageClassName: {{ .Values.infrastructure_storage.storage_class_name }}
+  {{- else if and (eq .Values.infrastructure_storage.backend "cephfs") (semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion) }}
   storageClassName: ""
   volumeName: {{ include "reana.prefix" . }}-infrastructure-persistent-volume-storage
   {{- else }}
   storageClassName: {{ include "reana.prefix" . }}-infrastructure-volume-storage-class
   {{- end }}
 # Which storage class to create depending on the backend
-{{- if eq .Values.infrastructure_storage.backend "cephfs" }}
+{{- if and (eq .Values.infrastructure_storage.backend "cephfs") (not .Values.infrastructure_storage.storage_class_name) }}
 {{- if semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion }}
 ---
 apiVersion: v1

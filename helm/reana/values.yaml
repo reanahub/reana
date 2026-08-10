@@ -42,10 +42,32 @@ interactive_sessions:
 compute_backends:
   - kubernetes
 
+# When enabled, users can only run workflows that use container
+# images specified in the `allowlist`. Snakemake's default image must
+# also be listed when workflows omit an explicit container directive.
+vetted_container_images:
+  enabled: false # Toggle container image vetting
+  allowlist: [] # List of authorized container images
+
 shared_storage:
   backend: hostpath # hostpath | cephfs | nfs
   volume_size: 200
   access_modes: ReadWriteMany
+  # Optional pod fsGroup to apply to REANA infrastructure pods mounting the
+  # shared workspace volume. Useful for storage backends that initialize the
+  # volume as root-owned but expect group-based write access, such as local
+  # CephFS dev deployments. When set, this value is also propagated to
+  # WORKFLOW_RUNTIME_USER_GID so runtime pods keep the same workspace group.
+  fs_group: ""
+  # Policy controlling when Kubernetes recursively updates mounted volume
+  # ownership for fsGroup-enabled shared storage. This value is also
+  # propagated to REANA_RUNTIME_FS_GROUP_CHANGE_POLICY for runtime pods.
+  # Accepted values: OnRootMismatch, Always.
+  fs_group_change_policy: OnRootMismatch
+  # Optional existing storage class to use for the shared PVC. When set,
+  # REANA will bind its shared PVC to this class instead of creating the
+  # backend-specific CephFS resources or expecting the default prefixed class.
+  storage_class_name: ""
   shared_volume_mount_path: "/var/reana"
   hostpath:
     root_path: "/var/reana"
@@ -60,6 +82,15 @@ shared_storage:
 
 # Storage used by REANA's infrastructure (i.e. message broker and database).
 # If not specified, the shared storage containing the workspaces will be used instead.
+# When configured, this block accepts the same storage options as `shared_storage`,
+# including `storage_class_name` to bind the infrastructure PVC to an existing
+# storage class.
+# Example:
+# infrastructure_storage:
+#   backend: cephfs
+#   access_modes: ReadWriteMany
+#   volume_size: 20
+#   storage_class_name: rook-cephfs
 infrastructure_storage: {}
 
 secrets:
@@ -95,15 +126,50 @@ components:
     enabled: true
     docs_url: https://docs.reana.io
     forum_url: https://forum.reana.io
-    file_preview_size_limit: 5242880 # 5 * 1024**2 = 5 MiB
+    file_preview_size_limit: "5242880" # 5 * 1024**2 = 5 MiB
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-ui:0.95.0-alpha.2
+    image: docker.io/reanahub/reana-ui:0.95.0-alpha.4
+    resources: {} # UI pod resources.
+    #  limits:
+    #    cpu: 1.8
+    #    memory: 6G
+    #  requests:
+    #    cpu: 1.8
+    #    memory: 6G
+    nginx:
+      security_headers:
+        hsts: "max-age=31536000; includeSubDomains"
+        x_frame_options: "DENY"
+        x_content_type_options: "nosniff"
+        cross_origin_opener_policy: "same-origin"
+        cross_origin_resource_policy: "same-origin"
+        referrer_policy: "strict-origin-when-cross-origin"
+        permissions_policy:
+          "accelerometer=(), ambient-light-sensor=(), camera=(),
+          display-capture=(), geolocation=(), gyroscope=(), magnetometer=(),
+          microphone=(), payment=(), usb=()"
+        # NOTE: this CSP intentionally differs from reana-server's policy.
+        # The UI additionally permits Google Fonts, external HTTPS images, and
+        # same-origin objects. Shared directives should remain aligned; these
+        # UI-specific exceptions should not be copied to reana-server.
+        csp:
+          "default-src 'self'; script-src 'self'; style-src 'self'
+          'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:
+          https:; font-src 'self' data: https://fonts.gstatic.com; connect-src
+          'self'; frame-ancestors 'none'; object-src 'self'; base-uri 'self';"
   reana_db:
     enabled: true
     image: docker.io/library/postgres:12.13
+    resources: {} # Db pod resources.
+    #  limits:
+    #    cpu: 1.8
+    #    memory: 6G
+    #  requests:
+    #    cpu: 1.8
+    #    memory: 6G
   reana_server:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-server:0.95.0-alpha.4
+    image: docker.io/reanahub/reana-server:0.95.0-alpha.6
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
       REANA_SCHEDULER_REQUEUE_SLEEP: 15
@@ -115,43 +181,115 @@ components:
       REANA_RATELIMIT_AUTHENTICATED_USER: "40 per second"
       REANA_RATELIMIT_SLOW: "1/5 second"
       REANA_ACCESS_TOKEN_ISSUANCE_POLICY: "manual"
+      REANA_TOKEN_MANAGEMENT_SECRET: ""
+      REANA_QUOTA_MANAGEMENT_SECRET: ""
     uwsgi:
       processes: 6
       threads: 4
       log_all: true
       log_4xx: true
       log_5xx: true
+      idle: 0
+      max_requests: 1999
+      max_worker_lifetime: 0
+      reload_on_rss: 250
+    rest_api:
+      resources: {} # Reana Server REST API container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G
+    scheduler:
+      resources: {} # Reana Server scheduler container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.7
+    pod_security_context: {}
     environment:
       SHARED_VOLUME_PATH: /var/reana
       REANA_JOB_STATUS_CONSUMER_PREFETCH_COUNT: 10
       REANA_OPENSEARCH_ENABLED: false
       REANA_OPENSEARCH_USE_SSL: true
       REANA_OPENSEARCH_CA_CERTS: "/code/certs/ca.crt"
-      REANA_OPENSEARCH_USER: reana
+    uwsgi:
+      processes: 2
+      threads: 2
+      log_all: true
+      log_4xx: true
+      log_5xx: true
+      idle: 0
+      max_requests: 1999
+      max_worker_lifetime: 0
+      reload_on_rss: 1024
+    rest_api:
+      resources: {} # Reana Workflow Controller REST API container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G
+    job_status_consumer:
+      resources: {} # Reana Workflow Controller Job Status Consumer container resources.
+      #  limits:
+      #    cpu: 1.8
+      #    memory: 6G
+      #  requests:
+      #    cpu: 1.8
+      #    memory: 6G
   reana_workflow_engine_cwl:
-    image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.3
+    image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.5
     environment: {}
   reana_workflow_engine_yadage:
-    image: docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.3
+    image: docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.5
     environment: {}
   reana_workflow_engine_serial:
-    image: docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.3
+    image: docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.5
     environment: {}
   reana_workflow_engine_snakemake:
-    image: docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.3
+    image: docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.5
     environment: {}
   reana_workflow_validator:
-    image: docker.io/reanahub/reana-workflow-validator:0.95.0
+    image: docker.io/reanahub/reana-workflow-validator:0.95.0-alpha.1
     environment: {}
   reana_job_controller:
-    image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.3
+    image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.5
     environment: {}
+    uwsgi:
+      threads: 2
+      log_all: true
+      log_4xx: true
+      log_5xx: true
+      idle: 0
+      max_requests: 1999
+      max_worker_lifetime: 0
+      reload_on_rss: 250
+  reana_cache:
+    resources: {} # Cache pod resources.
+    #  limits:
+    #    cpu: 1.8
+    #    memory: 6G
+    #  requests:
+    #    cpu: 1.8
+    #    memory: 6G
   reana_message_broker:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-message-broker:0.95.0-alpha.2
+    image: docker.io/reanahub/reana-message-broker:0.95.0-alpha.3
+    resources: {} # Message broker pod resources.
+    #  limits:
+    #    cpu: 1.8
+    #    memory: 6G
+    #  requests:
+    #    cpu: 1.8
+    #    memory: 6G
 
 notifications:
   enabled: false
@@ -213,7 +351,7 @@ dask:
 dask-kubernetes-operator:
   image:
     name: docker.io/reanahub/reana-dask-kubernetes-operator
-    tag: 0.95.0
+    tag: 0.95.0-alpha.2
   serviceAccount:
     create: false
     # Change the reana prefix if you opted another prefix in your cluster
@@ -252,15 +390,25 @@ pgbouncer:
   max_client_conn: 1000
   max_db_connections: 100
   environment: {}
+  resources: {} # PgBouncer pod resources.
+  #  limits:
+  #    cpu: 1.8
+  #    memory: 6G
+  #  requests:
+  #    cpu: 1.8
+  #    memory: 6G
 
 # Quota
 quota:
   enabled: true
+  default_disk_limit: 0
+  default_cpu_limit: 0
   periodic_update_policy: "{{ .Values.quota.disk_update }}"
   workflow_termination_update_policy:
     "{{ .Values.quota.termination_update_policy }}"
+  cpu_period_reset_months: 0
   # backward compatibility
-  disk_update: "0 3 * * *" # everyday at 3am
+  disk_update: "0 3 * * *" # every day at 3am
   termination_update_policy: ""
 
 # OpenSearch chart values.yaml

@@ -1,6 +1,17 @@
 {{- $opensearchEnv := .Values.components.reana_workflow_controller.environment }}
 {{- $opensearchEnabled := $opensearchEnv.REANA_OPENSEARCH_ENABLED }}
 {{- $opensearchTlsEnabled := and $opensearchEnabled $opensearchEnv.REANA_OPENSEARCH_USE_SSL }}
+{{- $sharedStorageFsGroup := .Values.shared_storage.fs_group | toString }}
+{{- $sharedStorageFsGroupChangePolicy := .Values.shared_storage.fs_group_change_policy | toString }}
+{{- $runtimeFsGroupChangePolicy := default "OnRootMismatch" $sharedStorageFsGroupChangePolicy | toString }}
+{{- $workflowControllerPodSecurityContext := .Values.components.reana_workflow_controller.pod_security_context | default dict }}
+{{- $workflowControllerEnvValues := .Values.components.reana_workflow_controller.environment | default dict }}
+{{- $workflowRuntimeUserName := default "reana" $workflowControllerEnvValues.WORKFLOW_RUNTIME_USER_NAME | toString }}
+{{- $workflowRuntimeUserUid := default 1000 $workflowControllerEnvValues.WORKFLOW_RUNTIME_USER_UID | toString }}
+{{- $workflowRuntimeUserGid := ternary $sharedStorageFsGroup ((default 0 $workflowControllerEnvValues.WORKFLOW_RUNTIME_USER_GID) | toString) (ne $sharedStorageFsGroup "") }}
+{{- $workflowRuntimeGroupNameDefault := ternary "root" $workflowRuntimeUserName (eq $workflowRuntimeUserGid "0") }}
+{{- $workflowRuntimeGroupName := default $workflowRuntimeGroupNameDefault $workflowControllerEnvValues.WORKFLOW_RUNTIME_GROUP_NAME | toString }}
+{{- $workflowControllerEnv := omit $workflowControllerEnvValues "REANA_RUNTIME_FS_GROUP_CHANGE_POLICY" "WORKFLOW_RUNTIME_GROUP_NAME" "WORKFLOW_RUNTIME_USER_GID" "WORKFLOW_RUNTIME_USER_NAME" "WORKFLOW_RUNTIME_USER_UID" }}
 ---
 apiVersion: v1
 kind: Service
@@ -57,6 +68,7 @@ spec:
         checksum/gitlab-secrets: {{ include (print $.Template.BasePath "/gitlab-secrets.yaml") . | sha256sum }}
         checksum/app-secrets: {{ include (print $.Template.BasePath "/app-secrets.yaml") . | sha256sum }}
         checksum/message-broker-secrets: {{ include (print $.Template.BasePath "/message-broker-secrets.yaml") . | sha256sum }}
+        checksum/uwsgi-config: {{ include (print $.Template.BasePath "/uwsgi-config-reana-workflow-controller.yaml") . | sha256sum }}
         {{- if $opensearchEnabled }}
         checksum/opensearch-secrets: {{ include (print $.Template.BasePath "/opensearch-secrets.yaml") . | sha256sum }}
         {{- end }}
@@ -65,6 +77,18 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
+      {{- if or (ne $sharedStorageFsGroup "") $workflowControllerPodSecurityContext }}
+      securityContext:
+        {{- if ne $sharedStorageFsGroup "" }}
+        fsGroup: {{ $sharedStorageFsGroup | int64 }}
+        {{- if ne $sharedStorageFsGroupChangePolicy "" }}
+        fsGroupChangePolicy: {{ $sharedStorageFsGroupChangePolicy | quote }}
+        {{- end }}
+        {{- end }}
+        {{- with $workflowControllerPodSecurityContext }}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
       {{- if .Values.components.reana_workflow_controller.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml .Values.components.reana_workflow_controller.imagePullSecrets | nindent 8 }}
@@ -81,7 +105,14 @@ spec:
         args: ["flask run --host=0.0.0.0"]
         tty: true
         stdin: true
+        {{- else }}
+        # do not use "/bin/sh -c" here as that breaks signal propagation
+        command: ["uwsgi", "--ini", "/var/reana/uwsgi/uwsgi.ini"]
         {{- end }}
+        resources:
+          {{- with .Values.components.reana_workflow_controller.rest_api.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
           - mountPath: /code
@@ -89,6 +120,8 @@ spec:
           {{- end }}
           - mountPath: {{ .Values.shared_storage.shared_volume_mount_path }}
             name: reana-shared-volume
+          - name: uwsgi-config-reana-workflow-controller
+            mountPath: '/var/reana/uwsgi'
           {{- range $workspace_paths := .Values.workspaces.paths }}
           {{- if ne (typeOf $workspace_paths) "string" -}}
           {{- fail "The workspaces.paths should be a list of strings e.g node_host_path:pod_mount_path" -}}
@@ -111,9 +144,9 @@ spec:
           - name: REANA_COMPONENT_PREFIX
             value: {{ include "reana.prefix" . }}
           - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-            value: {{ .Release.Namespace }}
+            value: {{ .Release.Namespace | quote }}
           - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-            value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+            value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
           - name: REANA_INGRESS_ANNOTATIONS
             value: {{ .Values.ingress.annotations | toJson | quote }}
           {{- if .Values.ingress.ingress_class_name }}
@@ -121,25 +154,35 @@ spec:
             value: {{ .Values.ingress.ingress_class_name | quote }}
           {{- end }}
           - name: REANA_INGRESS_HOST
-            value: {{ .Values.reana_hostname | default "" | quote  }}
+            value: {{ .Values.reana_hostname | default "" | quote }}
           - name: REANA_DEFAULT_QUOTA_CPU_LIMIT
-            value: {{ .Values.quota.default_cpu_limit | default 0 | quote }}
+            value: {{ .Values.quota.default_cpu_limit | default 0 | int64 | quote }}
           - name: REANA_DEFAULT_QUOTA_DISK_LIMIT
-            value: {{ .Values.quota.default_disk_limit | default 0 | quote }}
+            value: {{ .Values.quota.default_disk_limit | default 0 | int64 | quote }}
           {{- if .Values.quota.enabled }}
           - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-            value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" }}
+            value: {{ tpl .Values.quota.workflow_termination_update_policy . | quote }}
           {{- end }}
           {{- if .Values.naming_scheme }}
           - name: REANA_COMPONENT_NAMING_SCHEME
-            value: {{ .Values.naming_scheme }}
+            value: {{ .Values.naming_scheme | quote }}
           {{- end }}
           - name: WORKSPACE_PATHS
             value: {{ .Values.workspaces.paths | toJson | quote }}
-          {{- range $key, $value := .Values.components.reana_workflow_controller.environment }}
+          {{- range $key, $value := $workflowControllerEnv }}
           - name: {{ $key }}
             value: {{ $value | quote }}
           {{- end }}
+          - name: WORKFLOW_RUNTIME_GROUP_NAME
+            value: {{ $workflowRuntimeGroupName | quote }}
+          - name: WORKFLOW_RUNTIME_USER_GID
+            value: {{ $workflowRuntimeUserGid | quote }}
+          - name: WORKFLOW_RUNTIME_USER_NAME
+            value: {{ $workflowRuntimeUserName | quote }}
+          - name: WORKFLOW_RUNTIME_USER_UID
+            value: {{ $workflowRuntimeUserUid | quote }}
+          - name: REANA_RUNTIME_FS_GROUP_CHANGE_POLICY
+            value: {{ $runtimeFsGroupChangePolicy | quote }}
           - name: REANA_INFRASTRUCTURE_KUBERNETES_SERVICEACCOUNT_NAME
             value: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
           {{- if .Values.namespace_runtime }}
@@ -148,15 +191,15 @@ spec:
           {{- end }}
           {{- if .Values.node_label_runtimebatch }}
           - name: REANA_RUNTIME_BATCH_KUBERNETES_NODE_LABEL
-            value: {{ .Values.node_label_runtimebatch }}
+            value: {{ .Values.node_label_runtimebatch | quote }}
           {{- end }}
           {{- if .Values.node_label_runtimejobs }}
           - name: REANA_RUNTIME_JOBS_KUBERNETES_NODE_LABEL
-            value: {{ .Values.node_label_runtimejobs }}
+            value: {{ .Values.node_label_runtimejobs | quote }}
           {{- end }}
           {{- if .Values.node_label_runtimesessions }}
           - name: REANA_RUNTIME_SESSIONS_KUBERNETES_NODE_LABEL
-            value: {{ .Values.node_label_runtimesessions }}
+            value: {{ .Values.node_label_runtimesessions | quote }}
           {{- end }}
           {{- if .Values.kubernetes_jobs_max_user_cpu_request }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_CPU_REQUEST
@@ -168,11 +211,11 @@ spec:
           {{- end }}
           {{- if .Values.kubernetes_jobs_max_user_memory_request }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_REQUEST
-            value: {{ .Values.kubernetes_jobs_max_user_memory_request }}
+            value: {{ .Values.kubernetes_jobs_max_user_memory_request | quote }}
           {{- end }}
           {{- if .Values.kubernetes_jobs_max_user_memory_limit }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_MEMORY_LIMIT
-            value: {{ .Values.kubernetes_jobs_max_user_memory_limit }}
+            value: {{ .Values.kubernetes_jobs_max_user_memory_limit | quote }}
           {{- end }}
           {{- if .Values.kubernetes_jobs_cpu_request }}
           - name: REANA_KUBERNETES_JOBS_CPU_REQUEST
@@ -184,28 +227,30 @@ spec:
           {{- end }}
           {{- if .Values.kubernetes_jobs_memory_request }}
           - name: REANA_KUBERNETES_JOBS_MEMORY_REQUEST
-            value: {{ .Values.kubernetes_jobs_memory_request }}
+            value: {{ .Values.kubernetes_jobs_memory_request | quote }}
           {{- end }}
           - name: REANA_KUBERNETES_JOBS_MEMORY_LIMIT
-            value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" }}
+            value: {{ .Values.kubernetes_jobs_memory_limit | default "4Gi" | quote }}
           - name: REANA_KUBERNETES_JOBS_MAX_USER_TIMEOUT_LIMIT
-            value: !!str {{ .Values.kubernetes_jobs_max_user_timeout_limit | default 1209600 }}  # 1209600 seconds = 14 days
+            value: {{ .Values.kubernetes_jobs_max_user_timeout_limit | default 1209600 | int64 | quote }}  # 1209600 seconds = 14 days
           - name: REANA_KUBERNETES_JOBS_TIMEOUT_LIMIT
-            value: !!str {{ .Values.kubernetes_jobs_timeout_limit | default 604800 }}  # 604800 seconds = 7 days
+            value: {{ .Values.kubernetes_jobs_timeout_limit | default 604800 | int64 | quote }}  # 604800 seconds = 7 days
+          - name: REANA_KUBERNETES_JOBS_MIN_USER_UID
+            value: {{ .Values.kubernetes_jobs_min_user_uid | default 100 | int64 | quote }}
           - name: REANA_JOB_CONTROLLER_IMAGE
-            value: {{ .Values.components.reana_job_controller.image }}
+            value: {{ .Values.components.reana_job_controller.image | quote }}
           {{- if .Values.components.reana_job_controller.imagePullSecrets }}
           - name: REANA_JOB_CONTROLLER_SECRET
-            value: {{ .Values.components.reana_job_controller.imagePullSecrets }}
+            value: {{ .Values.components.reana_job_controller.imagePullSecrets | quote }}
           {{- end }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_CWL
-            value: {{ .Values.components.reana_workflow_engine_cwl.image }}
+            value: {{ .Values.components.reana_workflow_engine_cwl.image | quote }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_YADAGE
-            value: {{ .Values.components.reana_workflow_engine_yadage.image }}
+            value: {{ .Values.components.reana_workflow_engine_yadage.image | quote }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_SERIAL
-            value: {{ .Values.components.reana_workflow_engine_serial.image }}
+            value: {{ .Values.components.reana_workflow_engine_serial.image | quote }}
           - name: REANA_WORKFLOW_ENGINE_IMAGE_SNAKEMAKE
-            value: {{ .Values.components.reana_workflow_engine_snakemake.image }}
+            value: {{ .Values.components.reana_workflow_engine_snakemake.image | quote }}
           # Environment variables for workflow engines
           - name: REANA_WORKFLOW_ENGINE_CWL_ENV_VARS
             value: {{ .Values.components.reana_workflow_engine_cwl.environment | toJson | quote }}
@@ -217,7 +262,10 @@ spec:
             value: {{ .Values.components.reana_workflow_engine_yadage.environment | toJson | quote }}
           # Environment variables for job controller
           - name: REANA_JOB_CONTROLLER_ENV_VARS
-            value: {{ .Values.components.reana_job_controller.environment | toJson | quote }}
+            value: {{ (merge
+              (dict "REANA_VETTED_CONTAINER_IMAGES" (.Values.vetted_container_images | toJson))
+              (default (dict) .Values.components.reana_job_controller.environment)
+              ) | toJson | quote }}
           - name: REANA_INTERACTIVE_SESSIONS_ENVIRONMENTS
             value: {{ .Values.interactive_sessions.environments | toJson | quote }}
           - name: TRAEFIK_ENABLED
@@ -230,15 +278,15 @@ spec:
           - name: DASK_AUTOSCALER_ENABLED
             value: {{ .Values.dask.autoscaler_enabled | quote | default "true" }}
           - name: REANA_DASK_CLUSTER_MAX_MEMORY_LIMIT
-            value: {{ .Values.dask.cluster_max_memory_limit | default "16Gi" }}
+            value: {{ .Values.dask.cluster_max_memory_limit | default "16Gi" | quote }}
           - name: REANA_DASK_CLUSTER_DEFAULT_NUMBER_OF_WORKERS
-            value: !!str {{ .Values.dask.cluster_default_number_of_workers | default 2 }}
+            value: {{ .Values.dask.cluster_default_number_of_workers | default "2" | quote }}
           - name: REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_MEMORY
-            value: {{ .Values.dask.cluster_default_single_worker_memory | default "2Gi" }}
+            value: {{ .Values.dask.cluster_default_single_worker_memory | default "2Gi" | quote }}
           - name: REANA_DASK_CLUSTER_MAX_SINGLE_WORKER_MEMORY
-            value: {{ .Values.dask.cluster_max_single_worker_memory | default "8Gi" }}
+            value: {{ .Values.dask.cluster_max_single_worker_memory | default "8Gi" | quote }}
           - name: REANA_DASK_CLUSTER_DEFAULT_SINGLE_WORKER_THREADS
-            value: !!str {{ .Values.dask.cluster_default_single_worker_threads | default 4 }}
+            value: {{ .Values.dask.cluster_default_single_worker_threads | default "4" | quote }}
           {{- end }}
           {{- if .Values.reana_hostname }}
           - name: REANA_HOSTNAME
@@ -256,11 +304,13 @@ spec:
           - name: REANA_STORAGE_BACKEND
             value: "network"
           {{ end }}
+          {{- if .Values.secrets.gitlab }}
           - name: REANA_GITLAB_HOST
             valueFrom:
               secretKeyRef:
                 name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
                 key: REANA_GITLAB_HOST
+          {{- end }}
           - name: REANA_SECRET_KEY
             valueFrom:
               secretKeyRef:
@@ -271,8 +321,8 @@ spec:
             value: "{{ include "reana.prefix" . }}-wdb"
           - name: WDB_NO_BROWSER_AUTO_OPEN
             value: "True"
-          - name: FLASK_ENV
-            value:  "development"
+          - name: FLASK_DEBUG
+            value:  "1"
           # Hack to not verify SSL connections https://stackoverflow.com/questions/48391750/disable-python-requests-ssl-validation-for-an-imported-module
           - name: CURL_CA_BUNDLE
             value: ""
@@ -304,6 +354,11 @@ spec:
                 name: {{ include "reana.prefix" . }}-message-broker-secrets
                 key: password
           {{- if $opensearchEnabled }}
+          - name: REANA_OPENSEARCH_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "reana.prefix" . }}-opensearch-secrets
+                key: REANA_OPENSEARCH_USER
           - name: REANA_OPENSEARCH_PASSWORD
             valueFrom:
               secretKeyRef:
@@ -325,6 +380,10 @@ spec:
         image: {{ .Values.components.reana_workflow_controller.image }}
         imagePullPolicy: {{ .Values.components.reana_workflow_controller.imagePullPolicy }}
         command: ["flask", "consume-job-queue"]
+        resources:
+          {{- with .Values.components.reana_workflow_controller.job_status_consumer.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         volumeMounts:
           {{- if .Values.debug.enabled }}
           - mountPath: /code
@@ -339,17 +398,27 @@ spec:
         - name: REANA_COMPONENT_PREFIX
           value: {{ include "reana.prefix" . }}
         - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
-          value: {{ .Release.Namespace }}
+          value: {{ .Release.Namespace | quote }}
         - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
-          value: {{ .Values.namespace_runtime | default .Release.Namespace }}
+          value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
         {{- if .Values.quota.enabled }}
         - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-          value: {{ tpl .Values.quota.workflow_termination_update_policy . | default "null" }}
+          value: {{ tpl .Values.quota.workflow_termination_update_policy . | quote }}
         {{- end }}
-        {{- range $key, $value := .Values.components.reana_workflow_controller.environment }}
+        {{- range $key, $value := $workflowControllerEnv }}
         - name: {{ $key }}
           value: {{ $value | quote }}
         {{- end }}
+        - name: WORKFLOW_RUNTIME_GROUP_NAME
+          value: {{ $workflowRuntimeGroupName | quote }}
+        - name: WORKFLOW_RUNTIME_USER_GID
+          value: {{ $workflowRuntimeUserGid | quote }}
+        - name: WORKFLOW_RUNTIME_USER_NAME
+          value: {{ $workflowRuntimeUserName | quote }}
+        - name: WORKFLOW_RUNTIME_USER_UID
+          value: {{ $workflowRuntimeUserUid | quote }}
+        - name: REANA_RUNTIME_FS_GROUP_CHANGE_POLICY
+          value: {{ $runtimeFsGroupChangePolicy | quote }}
         {{- if .Values.reana_hostname }}
         - name: REANA_HOSTNAME
           value: {{ .Values.reana_hostname | quote }}
@@ -363,8 +432,8 @@ spec:
           value: "{{ include "reana.prefix" . }}-wdb"
         - name: WDB_NO_BROWSER_AUTO_OPEN
           value: "True"
-        - name: FLASK_ENV
-          value:  "development"
+        - name: FLASK_DEBUG
+          value:  "1"
         # Hack to not verify SSL connections https://stackoverflow.com/questions/48391750/disable-python-requests-ssl-validation-for-an-imported-module
         - name: CURL_CA_BUNDLE
           value: ""
@@ -385,11 +454,13 @@ spec:
             secretKeyRef:
               name: {{ include "reana.prefix" . }}-db-secrets
               key: password
+        {{- if .Values.secrets.gitlab }}
         - name: REANA_GITLAB_HOST
           valueFrom:
             secretKeyRef:
               name: {{ include "reana.prefix" . }}-cern-gitlab-secrets
               key: REANA_GITLAB_HOST
+        {{- end }}
         - name: RABBIT_MQ_USER
           valueFrom:
             secretKeyRef:
@@ -418,6 +489,10 @@ spec:
             - key: ca.crt
               path: ca.crt
       {{- end }}
+      - name: uwsgi-config-reana-workflow-controller
+        configMap:
+          defaultMode: 420
+          name: uwsgi-config-reana-workflow-controller
       {{- if .Values.debug.enabled }}
       - name: reana-code
         hostPath:

@@ -14,11 +14,12 @@ import importlib.util
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from concurrent import futures
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import click
 import semver
@@ -147,7 +148,7 @@ def find_reana_srcdir():
     # second, try from the parent of git toplevel:
     try:
         toplevel = (
-            subprocess.check_output("git rev-parse --show-toplevel", shell=True)
+            subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
             .decode()
             .rstrip("\r\n")
         )
@@ -183,16 +184,18 @@ def get_srcdir(component=""):
 def get_current_branch(srcdir):
     """Return current Git branch name checked out in the given directory.
 
+    Returns ``"HEAD"`` when the working tree is in a detached-HEAD state.
+
     :param srcdir: source code directory
     :type srcdir: str
 
     :return: checkout out branch in the component source code directory
     :rtype: str
     """
-    os.chdir(srcdir)
     return (
         subprocess.check_output(
-            'git branch 2>/dev/null | grep "^*" | colrm 1 2', shell=True
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=srcdir,
         )
         .decode()
         .rstrip("\r\n")
@@ -335,7 +338,7 @@ def is_component_runnable_example(component):
 
 
 def run_command(
-    cmd: str,
+    cmd: Union[str, Sequence[str]],
     component: str = "",
     display: bool = True,
     return_output: bool = False,
@@ -347,24 +350,27 @@ def run_command(
 
     Exit in case of troubles.
 
-    :param cmd: shell command to run
+    :param cmd: shell command string or argument list; lists are executed
+        without a shell to avoid interpolation of metacharacters
     :param component: standard component name
     :param display: should we display command to run?
     :param return_output: shall the output of the command be returned?
     :param directory: directory where to run the command
     :param dry_run: should we only show the command without executing it?
-    :type cmd: str
+    :type cmd: str or list
     :type component: str
     :type display: bool
     :type return_output: bool
     :type directory: str
     :type dry_run: bool
     """
+    use_shell = isinstance(cmd, str)
+    display_cmd = cmd if use_shell else shlex.join(cmd)
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     if display:
         click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
         click.secho("{0}: ".format(component), bold=True, nl=False, fg="yellow")
-        click.secho("{0}".format(cmd), bold=True)
+        click.secho("{0}".format(display_cmd), bold=True)
     if dry_run:
         return
     if component and directory:
@@ -373,10 +379,10 @@ def run_command(
         os.chdir(get_srcdir(component))
     try:
         if return_output:
-            result = subprocess.check_output(cmd, shell=True)
+            result = subprocess.check_output(cmd, shell=use_shell)
             return result.decode().rstrip("\r\n")
         else:
-            subprocess.check_call(cmd, shell=True)
+            subprocess.check_call(cmd, shell=use_shell)
     except subprocess.CalledProcessError as err:
         if display:
             click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
@@ -386,6 +392,20 @@ def run_command(
             sys.exit(err.returncode)
         else:
             raise
+
+
+def run_command_prefix_output(cmd, component):
+    """Run given command, showing the component's name before each output line.
+
+    Useful when commands run concurrently (e.g. via :func:`execute_parallel`)
+    and their output would otherwise be interleaved.
+
+    :param cmd: Command to be executed.
+    :param component: Name of the REANA component.
+    """
+    output = run_command(cmd, component, return_output=True)
+    for line in output.splitlines():
+        click.echo(click.style(f"[{component}] ", bold=True) + line)
 
 
 @dataclass
@@ -522,8 +542,17 @@ def replace_string(
             ),
             sys.exit(1)
 
+    # When multiple lines match, build a sed expression addressing each line
+    # separately (e.g. "30s/…/…/;45s/…/…/") to avoid invalid multi-line address.
+    lines = (
+        [ln.strip() for ln in line.strip().splitlines() if ln.strip()] if line else []
+    )
+    if lines:
+        sed_expr = ";".join(f"{ln}s/{find}/{replace}/" for ln in lines)
+    else:
+        sed_expr = f"s/{find}/{replace}/"
     cmd = (
-        f"sed -i.bk '{line}s/{find}/{replace}/' {file_} && [ -e {file_}.bk ]"
+        f"sed -i.bk '{sed_expr}' {file_} && [ -e {file_}.bk ]"
         f" && rm {file_}.bk"  # Compatibility with BSD sed
     )
 
@@ -577,22 +606,16 @@ def update_module_in_cluster_components(
 
         new_version_obj = Version(new_version)
         next_minor_version = f"{new_version_obj.major}.{new_version_obj.minor + 1}.0"
-        if os.path.exists(get_srcdir(component) + os.sep + "setup.py"):
-            replace_string(
-                file_="setup.py",
-                find='>=.*,<.*[^",]',
-                replace=f">={new_version},<{next_minor_version}",
-                line_selector_regex=f"{module}.*>=",
-                component=component,
-            )
-        if os.path.exists(get_srcdir(component) + os.sep + "pyproject.toml"):
-            replace_string(
-                file_="pyproject.toml",
-                find='>=.*,<.*[^",]',
-                replace=f">={new_version},<{next_minor_version}",
-                line_selector_regex=f"{module}.*>=",
-                component=component,
-            )
+        for file_ in ("setup.py", "pyproject.toml"):
+            file_path = get_srcdir(component) + os.sep + file_
+            if os.path.exists(file_path) and module in open(file_path).read():
+                replace_string(
+                    file_=file_,
+                    find='>=.*,<.*[^",]',
+                    replace=f">={new_version},<{next_minor_version}",
+                    line_selector_regex=f"{module}.*>=",
+                    component=component,
+                )
         if os.path.exists(get_srcdir(component) + os.sep + "requirements.txt"):
             replace_string(
                 file_="requirements.txt",
@@ -692,9 +715,8 @@ def get_current_component_version_from_source_files(
         all_version_files = {version_file: all_version_files[version_file]}
 
     version = ""
-    if (
-        all_version_files.get(DOCKER_VERSION_FILE)
-        and component not in REPO_LIST_PYTHON_FIRST
+    if all_version_files.get(DOCKER_VERSION_FILE) and (
+        version_file or component not in REPO_LIST_PYTHON_FIRST
     ):
         with open(all_version_files.get(DOCKER_VERSION_FILE)) as f:
             for line in f.readlines():
@@ -1120,3 +1142,61 @@ $ colima start \\
     --vz-rosetta
 
 This script does not do this automatically. Exiting.""")
+
+
+def ensure_multiarch_builder() -> str:
+    """Ensure a docker-container driver buildx builder exists for multi-platform builds.
+
+    Multi-platform manifest-list builds (``--platform linux/amd64,linux/arm64``)
+    require buildx's ``docker-container`` driver. The default builder on Docker
+    Desktop and native Docker installs uses the ``docker`` driver, which cannot
+    build multi-platform manifest lists in a single command. This helper checks
+    for a ``docker-container`` builder named ``reana-multiarch``, creates it if
+    missing, and returns its name so callers can pass ``--builder <name>`` to
+    ``docker buildx build``. If a builder with that name exists but uses a
+    different driver, this exits with an error rather than silently failing the
+    later build.
+
+    :return: name of a usable docker-container driver builder
+    :rtype: str
+    """
+    builder_name = "reana-multiarch"
+    required_driver = "docker-container"
+    try:
+        output = run_command(
+            f"docker buildx inspect {builder_name}",
+            display=False,
+            return_output=True,
+            exit_on_error=False,
+        )
+    except subprocess.CalledProcessError:
+        click.secho(
+            f"Creating docker-container buildx builder '{builder_name}' "
+            "for multi-platform builds...",
+            fg="yellow",
+        )
+        run_command(
+            f"docker buildx create --name {builder_name} "
+            f"--driver {required_driver} --bootstrap"
+        )
+        return builder_name
+
+    match = re.search(r"^Driver:\s*(\S+)", output, re.MULTILINE)
+    if not match:
+        click.secho(
+            f"Could not determine driver of buildx builder '{builder_name}'. "
+            f"Inspect manually with 'docker buildx inspect {builder_name}'.",
+            fg="red",
+        )
+        sys.exit(1)
+    current_driver = match.group(1)
+    if current_driver != required_driver:
+        click.secho(
+            f"Buildx builder '{builder_name}' exists but uses driver "
+            f"'{current_driver}' instead of required '{required_driver}'. "
+            f"Remove it with 'docker buildx rm {builder_name}' and re-run "
+            "to let this helper recreate it.",
+            fg="red",
+        )
+        sys.exit(1)
+    return builder_name

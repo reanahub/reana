@@ -1,6 +1,6 @@
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -23,7 +23,9 @@ extras_require = {
         "Sphinx>=1.5.1",
     ],
     "tests": [
-        "pytest-reana>=0.9.2,<0.10.0",
+        "pytest>=7.0.0,<9.0.0",
+        "pytest-cov>=3.0.0,<4.0",
+        "mock>=3.0,<4",
     ],
     "benchmark": [
         "pandas>=1.1.5",

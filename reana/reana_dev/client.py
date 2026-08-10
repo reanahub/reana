@@ -11,13 +11,15 @@
 import base64
 import json
 import logging
+import os
 import subprocess
+import sys
 import traceback
 
 import click
 
 from reana.config import REPO_LIST_CLIENT
-from reana.reana_dev.utils import run_command
+from reana.reana_dev.utils import get_srcdir, run_command
 
 
 @click.group()
@@ -27,12 +29,30 @@ def client_commands():
 
 @client_commands.command(name="client-install")
 def client_install():  # noqa: D301
-    """Install latest REANA client and its dependencies."""
+    """Install latest REANA client and its dependencies.
+
+    All components are installed in a single pip invocation so that
+    pip can resolve version constraints from all local source
+    directories together, avoiding conflicts when local branches
+    have different dependency pins than published PyPI versions.
+    """
+    paths = []
     for component in REPO_LIST_CLIENT:
-        for cmd in [
-            "if [ -e setup.py ] || [ -e pyproject.toml ]; then pip install . --upgrade; fi",
-        ]:
-            run_command(cmd, component)
+        srcdir = get_srcdir(component)
+        if not os.path.isdir(srcdir):
+            click.secho(
+                f"[ERROR] Expected client component '{component}' is not "
+                f"checked out at {srcdir}.",
+                fg="red",
+            )
+            sys.exit(1)
+        if os.path.exists(os.path.join(srcdir, "setup.py")) or os.path.exists(
+            os.path.join(srcdir, "pyproject.toml")
+        ):
+            paths.append(srcdir)
+    if paths:
+        cmd = "pip install --upgrade " + " ".join(paths)
+        run_command(cmd, "reana")
     run_command("pip check", "reana")
 
 
@@ -69,10 +89,17 @@ def client_setup_environment(
                 env_var_value=server_hostname or "https://localhost:30443",
             )
         )
-        get_access_token_cmd = f"kubectl get secret -n {namespace} -o json {instance_name}-admin-access-token"
-        secret_json = json.loads(
-            subprocess.check_output(get_access_token_cmd, shell=True).decode()
-        )
+        get_access_token_cmd = [
+            "kubectl",
+            "get",
+            "secret",
+            "-n",
+            namespace,
+            "-o",
+            "json",
+            f"{instance_name}-admin-access-token",
+        ]
+        secret_json = json.loads(subprocess.check_output(get_access_token_cmd).decode())
         admin_access_token_b64 = secret_json["data"]["ADMIN_ACCESS_TOKEN"]
         admin_access_token = base64.b64decode(admin_access_token_b64).decode()
         export_lines.append(

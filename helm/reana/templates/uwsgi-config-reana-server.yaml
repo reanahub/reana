@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: uwsgi-config
+  name: uwsgi-config-reana-server
   namespace: {{ .Release.Namespace }}
 data:
   uwsgi.ini: |
@@ -34,10 +34,11 @@ data:
     {{- end }}
 
     # Workers management
-    max-requests = 1999
+    idle = {{ .Values.components.reana_server.uwsgi.idle }}
+    max-requests = {{ .Values.components.reana_server.uwsgi.max_requests }}
     max-requests-delta = 149
-    # max-worker-lifetime = 3600 # https://github.com/unbit/uwsgi/issues/1894
-    reload-on-rss = 250
+    max-worker-lifetime = {{ .Values.components.reana_server.uwsgi.max_worker_lifetime }}
+    reload-on-rss = {{ .Values.components.reana_server.uwsgi.reload_on_rss }}
 
     # fix up signal handling
     die-on-term = true

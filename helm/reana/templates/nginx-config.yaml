@@ -1,0 +1,54 @@
+{{- if .Values.components.reana_ui.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "reana.prefix" . }}-ui-nginx-config
+  namespace: {{ .Release.Namespace }}
+data:
+  reana-ui.conf: |
+    server {
+        listen       80;
+        root   /usr/share/nginx/html;
+        server_name  localhost;
+        index  index.html index.htm;
+{{- with .Values.components.reana_ui.nginx.security_headers.hsts }}
+        add_header Strict-Transport-Security {{ . | quote }} always;
+{{- end }}
+{{- with .Values.components.reana_ui.nginx.security_headers.x_frame_options }}
+        add_header X-Frame-Options {{ . | quote }} always;
+{{- end }}
+{{- with .Values.components.reana_ui.nginx.security_headers.x_content_type_options }}
+        add_header X-Content-Type-Options {{ . | quote }} always;
+{{- end }}
+{{- with .Values.components.reana_ui.nginx.security_headers.cross_origin_opener_policy }}
+        add_header Cross-Origin-Opener-Policy {{ . | quote }} always;
+{{- end }}
+{{- with .Values.components.reana_ui.nginx.security_headers.cross_origin_resource_policy }}
+        add_header Cross-Origin-Resource-Policy {{ . | quote }} always;
+{{- end }}
+{{- with .Values.components.reana_ui.nginx.security_headers.referrer_policy }}
+        add_header Referrer-Policy {{ . | quote }} always;
+{{- end }}
+{{- with .Values.components.reana_ui.nginx.security_headers.permissions_policy }}
+        add_header Permissions-Policy {{ . | quote }} always;
+{{- end }}
+{{- with .Values.components.reana_ui.nginx.security_headers.csp }}
+        add_header Content-Security-Policy {{ . | quote }} always;
+{{- end }}
+
+        #Enable serving of pre-compressed files
+        gzip_static on;
+
+        location / {
+            try_files $uri /index.html;
+        }
+        location = /index.html {
+            # If the file for the requested URL does not exist, then `/index.html` is always
+            # served. This might cause some issues given that `index.html` is cached by
+            # the browser (e.g. in case of an URL to an interactive session).
+            # This setting makes sure that `index.html` is revalidated on each request.
+            expires -1;
+        }
+    }
+{{- end }}

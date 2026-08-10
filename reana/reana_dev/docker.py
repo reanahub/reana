@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2023, 2026 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -18,6 +18,7 @@ from reana.reana_dev.utils import (
     get_docker_tag,
     is_component_dockerised,
     run_command,
+    run_command_prefix_output,
     execute_parallel,
     select_components,
 )
@@ -26,17 +27,6 @@ from reana.reana_dev.utils import (
 @click.group()
 def docker_commands():
     """Docker commands group."""
-
-
-def _run_command_prefix_output(cmd, component):
-    """Run given command, showing the component's name before each output line.
-
-    :param cmd: Command to be executed.
-    :param component: Name of the REANA component.
-    """
-    output = run_command(cmd, component, return_output=True)
-    for line in output.splitlines():
-        click.echo(click.style(f"[{component}] ", bold=True) + line)
 
 
 @click.option("--user", "-u", default="reanahub", help="DockerHub user name [reanahub]")
@@ -89,7 +79,8 @@ def _run_command_prefix_output(cmd, component):
 @click.option(
     "--platform",
     multiple=True,
-    help="Platforms for multi-arch images [default=current architecture]",
+    help="Platform for the build [default=current architecture]. "
+    "For multi-arch builds, use 'release-docker' instead.",
 )
 @docker_commands.command(name="docker-build")
 @click.pass_context
@@ -134,7 +125,7 @@ def docker_build(
         tags. Useful when using `--tag auto` since every REANA component
         will have a different tag.
     :param parallel: Number of docker images to build in parallel.
-    :param platform: Platforms for multi-arch images. [default=current architecture]
+    :param platform: Platform for the build. [default=current architecture]
     :type component: str
     :type exclude_components: str
     :type user: str
@@ -152,7 +143,7 @@ def docker_build(
 
     if len(platform) > 1:
         click.secho(
-            "ERROR: The 'docker-build' command now supports single-platform builds\n"
+            "ERROR: The 'docker-build' command supports single-platform builds\n"
             "only. If you would like to build and push a multi-platform image, please\n"
             "use the 'release-docker' command instead. For example:\n\n"
             "$ reana-dev release-docker -c . --platform linux/amd64 --platform linux/arm64",
@@ -165,7 +156,7 @@ def docker_build(
     # show the component's name before each output line of `docker build` if there
     # are multiple parallel builds at the same time, as in this case build logs
     # from different components are mixed together
-    _run_command = run_command if parallel == 1 else _run_command_prefix_output
+    _run_command = run_command if parallel == 1 else run_command_prefix_output
 
     commands = []
     for component in components:
@@ -174,7 +165,13 @@ def docker_build(
             component_version_tag = "docker.io/{0}/{1}:{2}".format(
                 user, component, component_tag
             )
-            cmd = "docker build"
+            # Disable attestations so that locally built images stay a
+            # single, self-contained manifest. This is not strictly
+            # required for `reana-dev kind-load-docker-image` (which
+            # platform-filters at save time), but keeps the local image
+            # record clean and avoids carrying SLSA/SBOM blobs that have
+            # no destination outside of a registry push.
+            cmd = "docker buildx build --provenance=false --sbom=false --load"
             for arg in build_arg:
                 cmd += " --build-arg {0}".format(arg)
             if no_cache:
@@ -190,6 +187,10 @@ def docker_build(
         else:
             msg = "Ignoring this component that does not contain" " a Dockerfile."
             display_message(msg, component)
+
+    if commands:
+        # Fail fast with a clear message if buildx is absent
+        run_command("docker buildx version", display=False, return_output=True)
 
     execute_parallel(
         commands,

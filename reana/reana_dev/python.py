@@ -134,7 +134,7 @@ def python_unit_tests(
             )
             display_message(msg, component)
         elif is_component_python_package(component):
-            cmd_activate_venv = f"source  ~/.virtualenvs/_{component}/bin/activate"
+            cmd_activate_venv = f".  ~/.virtualenvs/_{component}/bin/activate"
             if does_component_need_db(component):
                 run_command(
                     f"docker stop postgres__{component}\n"
@@ -154,8 +154,6 @@ def python_unit_tests(
                 ),
                 "{} && which python".format(cmd_activate_venv),
                 "{} && pip install pip --upgrade".format(cmd_activate_venv),
-                "{} && cd ../pytest-reana && "
-                " pip install . --upgrade".format(cmd_activate_venv),
                 "{} && cd ../reana-commons && "
                 " pip install . --upgrade".format(cmd_activate_venv),
                 "{} && cd ../reana-db && "
@@ -180,7 +178,7 @@ def python_unit_tests(
                 ),
                 # Now we can call installing regular test dependencies
                 '{} && pip install ".[tests]" --upgrade'.format(cmd_activate_venv),
-                "{} && {} ./run-tests.sh --check-pytest".format(
+                "{} && {} ./run-tests.sh --python-tests".format(
                     cmd_activate_venv, env_pytestarg
                 ),
             ]:

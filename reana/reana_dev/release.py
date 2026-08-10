@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2022, 2023, 2026 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -25,6 +25,7 @@ from reana.reana_dev.git import (
 )
 from reana.reana_dev.utils import (
     display_message,
+    ensure_multiarch_builder,
     fetch_latest_pypi_version,
     get_current_component_version_from_source_files,
     get_docker_tag,
@@ -152,6 +153,8 @@ def release_docker(
     if not tags_only:
         # check whether docker buildx is available
         run_command("docker buildx version", display=False, return_output=True)
+        # ensure a multi-platform-capable builder is available
+        multiarch_builder = ensure_multiarch_builder()
 
     cannot_release_on_dockerhub = []
     for component_ in components:
@@ -167,6 +170,7 @@ def release_docker(
 
         # Build and push image using buildx (like GitHub Actions)
         cmd = "docker buildx build"
+        cmd += f" --builder {multiarch_builder}"
         cmd += f" --platform {','.join(platform)}"
         cmd += " --provenance=false"
         cmd += " --sbom=false"
@@ -447,8 +451,7 @@ def release_docker_copy(
         if not overwrite_existing and not dry_run:
             try:
                 subprocess.check_output(
-                    f"docker buildx imagetools inspect {dst_image}",
-                    shell=True,
+                    ["docker", "buildx", "imagetools", "inspect", dst_image],
                     stderr=subprocess.DEVNULL,
                 )
                 display_message(
