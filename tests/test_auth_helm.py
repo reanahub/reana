@@ -40,24 +40,57 @@ def _helm_template(*extra_args):
     return result.stdout
 
 
-def _helm_install_dry_run(*extra_args):
-    """Render a dry-run install, including the chart's installation notes."""
+def _helm_major_version():
+    """Return Helm's major version number, or None when helm is unavailable."""
     if shutil.which("helm") is None:
+        return None
+    result = subprocess.run(
+        ["helm", "version", "--template", "{{.Version}}"],
+        capture_output=True,
+        text=True,
+    )
+    match = re.search(r"v?(\d+)\.", result.stdout)
+    return int(match.group(1)) if match else None
+
+
+def _helm_install_dry_run(*extra_args):
+    """Render a dry-run install, including the chart's installation notes.
+
+    Rendering NOTES without a reachable cluster needs ``--dry-run=client``,
+    which only Helm 4 honours (Helm 3 still contacts the cluster and fails). The
+    CI ``python-tests`` job pins Helm 4 for this reason; a local Helm 3 skips
+    with a clear reason rather than failing on cluster reachability. ``lint-helm``
+    keeps covering Helm 3 through chart-testing.
+    """
+    major = _helm_major_version()
+    if major is None:
         pytest.skip("helm is not installed")
+    if major < 4:
+        pytest.skip(
+            "rendering chart NOTES without a cluster requires Helm 4 "
+            "(`helm install --dry-run=client`); the CI python-tests job pins it"
+        )
     result = subprocess.run(
         [
             "helm",
             "install",
             "reana-auth-test",
             str(CHART),
-            "--dry-run",
+            "--dry-run=client",
             "--debug",
             *extra_args,
         ],
-        check=True,
         capture_output=True,
         text=True,
     )
+    if result.returncode != 0:
+        # Surface stderr so the decisive Helm error is visible in CI instead of
+        # a bare non-zero exit from ``check=True``.
+        raise AssertionError(
+            "helm install --dry-run=client failed "
+            f"(exit {result.returncode}).\n--- stderr ---\n{result.stderr}\n"
+            f"--- stdout ---\n{result.stdout}"
+        )
     return result.stdout + result.stderr
 
 
@@ -243,9 +276,7 @@ def test_bundled_keycloak_realm_tracks_chart_values_and_uses_secrets():
     realm = json.loads(realm_secret["stringData"]["reana-realm.json"])
     web_client, cli_client = realm["clients"]
     keycloak = _rendered_resource(rendered, "Deployment", "reana-keycloak")
-    reconciler = _rendered_resource(
-        rendered, "Job", "reana-keycloak-realm-reconciler"
-    )
+    reconciler = _rendered_resource(rendered, "Job", "reana-keycloak-realm-reconciler")
     environment = _container_environment(keycloak, "keycloak")
 
     assert realm["realm"] == "custom-realm"
@@ -292,9 +323,9 @@ def test_bundled_keycloak_realm_tracks_chart_values_and_uses_secrets():
     assert reconciler["metadata"]["annotations"]["helm.sh/hook"] == (
         "post-install,post-upgrade"
     )
-    reconcile_script = reconciler["spec"]["template"]["spec"]["containers"][0][
-        "args"
-    ][0]
+    reconcile_script = reconciler["spec"]["template"]["spec"]["containers"][0]["args"][
+        0
+    ]
     assert "create partialImport" in reconcile_script
     assert "ifResourceExists=OVERWRITE" in reconcile_script
     assert "get roles/offline_access" in reconcile_script

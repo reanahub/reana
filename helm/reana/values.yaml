@@ -288,6 +288,16 @@ components:
       REANA_RATELIMIT_GUEST_USER: "40 per second"
       REANA_RATELIMIT_AUTHENTICATED_USER: "40 per second"
       REANA_RATELIMIT_SLOW: "1/5 second"
+      # Users must periodically renew delegated GitLab webhook authorization.
+      # Renewal preserves the secret installed in existing GitLab projects.
+      # Quoted so Helm keeps it a string: an unquoted large number is parsed as
+      # a float and rendered in scientific notation (e.g. "2.592e+06").
+      REANA_GITLAB_WEBHOOK_SECRET_MAX_LIFETIME: "2592000"
+      # GitLab verifies REANA Server's TLS certificate when delivering webhooks
+      # (secure default). Set to "false" only for self-signed development
+      # endpoints; production private-PKI installs should configure GitLab to
+      # trust the relevant CA instead.
+      REANA_GITLAB_WEBHOOK_SSL_VERIFICATION: "true"
       # The bundled ingress is the sole HTTP proxy in front of REANA Server.
       # Trust exactly its right-most forwarded address so per-client rate
       # limits do not collapse into one ingress-wide bucket.

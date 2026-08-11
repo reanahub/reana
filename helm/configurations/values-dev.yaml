@@ -27,6 +27,10 @@ components:
       REANA_RATELIMIT_SLOW: "5 per second"
       REANA_RATELIMIT_GUEST_USER: "100 per second"
       REANA_RATELIMIT_AUTHENTICATED_USER: "100 per second"
+      # REANA Server serves a self-signed certificate in local development, so
+      # GitLab cannot verify it when delivering webhooks. Opt out of webhook TLS
+      # verification here; production installs keep the secure default (true).
+      REANA_GITLAB_WEBHOOK_SSL_VERIFICATION: "false"
       # REANA_QUOTA_MANAGEMENT_SECRET: reana-quota-management-secret-for-development
   reana_workflow_controller:
     image: docker.io/reanahub/reana-workflow-controller
