@@ -32,7 +32,7 @@ kubeVersion: ">= 1.21.0-0"
 dependencies:
   - name: traefik
     version: 31.1.0
-    repository: https://helm.traefik.io/traefik
+    repository: https://traefik.github.io/charts
     condition: traefik.enabled
     tags:
       - ingress
