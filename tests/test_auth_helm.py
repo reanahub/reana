@@ -233,6 +233,28 @@ def test_external_https_backchannel_renders_without_insecure_opt_in():
     assert environment["REANA_AUTH_CA_BUNDLE"]["value"] == ("/etc/reana/idp-ca.pem")
 
 
+def test_reana_server_readiness_probe_checks_auth_health():
+    """The rest-api container must be taken out of rotation on a real outage.
+
+    /api/ping only reflects process liveness; /api/health additionally
+    reflects Redis/issuer reachability, so the readiness probe must point at
+    the latter, not the former, for Kubernetes to actually detect an auth-
+    subsystem outage instead of routing traffic to a pod that can't serve
+    authenticated requests.
+    """
+    rendered = _helm_template("-f", str(VALUES_DEV))
+    server = _rendered_resource(rendered, "Deployment", "reana-server")
+    container = next(
+        item
+        for item in server["spec"]["template"]["spec"]["containers"]
+        if item["name"] == "rest-api"
+    )
+
+    probe = container["readinessProbe"]
+    assert probe["httpGet"]["path"] == "/api/health"
+    assert probe["httpGet"]["port"] == 5000
+
+
 @pytest.mark.parametrize("hostport", (443, 30443))
 def test_reana_server_receives_public_hostport(hostport):
     rendered = _helm_template(
@@ -360,7 +382,9 @@ def test_bundled_keycloak_resources_are_configurable():
     them.
     """
     default_rendered = _helm_template("-f", str(VALUES_DEV))
-    default_keycloak = _rendered_resource(default_rendered, "Deployment", "reana-keycloak")
+    default_keycloak = _rendered_resource(
+        default_rendered, "Deployment", "reana-keycloak"
+    )
     default_resources = default_keycloak["spec"]["template"]["spec"]["containers"][0][
         "resources"
     ]

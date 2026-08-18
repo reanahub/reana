@@ -98,6 +98,32 @@ spec:
         # do not use "/bin/sh -c" here as that breaks signal propagation
         command: ["uwsgi", "--ini", "/var/reana/uwsgi/uwsgi.ini"]
         {{- end }}
+        readinessProbe:
+          # Unlike /api/ping (process liveness only), /api/health reflects
+          # whether this pod can currently reach Redis (BFF sessions) and
+          # has usable cached OIDC issuer material -- so a pod that can't
+          # actually serve authenticated requests is taken out of the
+          # Service's endpoints instead of silently 401/503ing behind a
+          # "ready" status.
+          #
+          # kubelet's httpGet probe sends the pod IP as the Host header, not
+          # reana_hostname -- and TRUSTED_HOSTS (config.py) deliberately
+          # rejects any Host header that isn't reana_hostname, to guard
+          # against Host-header injection. Without this override every
+          # httpGet probe against this deployment 400s regardless of path,
+          # which is why no probe existed here before this one.
+          httpGet:
+            path: /api/health
+            port: 5000
+            {{- if .Values.reana_hostname }}
+            httpHeaders:
+              - name: Host
+                value: {{ .Values.reana_hostname | quote }}
+            {{- end }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         resources:
           {{- with .Values.components.reana_server.rest_api.resources }}
           {{- toYaml . | nindent 10 }}
