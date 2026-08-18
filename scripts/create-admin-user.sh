@@ -64,6 +64,7 @@ if kubectl -n "${kubernetes_namespace}" get "deployment/${resource_prefix}-keycl
     # Deployment spec) -- referencing it inside the single-quoted remote
     # script expands it in the remote shell, never touching this script's
     # own argv or the `kubectl exec` command line either.
+    # shellcheck disable=SC2016 # intentional: expands in the remote shell, not here.
     kubectl -n "${kubernetes_namespace}" exec "deployment/${resource_prefix}-keycloak" -- \
         sh -c 'KC_CLI_PASSWORD="$KC_BOOTSTRAP_ADMIN_PASSWORD" "$1" config credentials --server "$2" --realm master --user "$3"' \
         _ "${keycloak_cmd}" "${keycloak_server_url}" "${keycloak_admin_user}"
@@ -71,17 +72,17 @@ if kubectl -n "${kubernetes_namespace}" get "deployment/${resource_prefix}-keycl
     keycloak_user_id=$(
         kubectl -n "${kubernetes_namespace}" exec "deployment/${resource_prefix}-keycloak" -- \
             "${keycloak_cmd}" get users -r "${keycloak_realm}" \
-                -q "username=${admin_email}" -q exact=true \
-                --fields id --format csv --noquotes
+            -q "username=${admin_email}" -q exact=true \
+            --fields id --format csv --noquotes
     )
     if [ -z "${keycloak_user_id}" ]; then
         keycloak_user_id=$(
             kubectl -n "${kubernetes_namespace}" exec "deployment/${resource_prefix}-keycloak" -- \
                 "${keycloak_cmd}" create users -r "${keycloak_realm}" -i \
-                    -s "username=${admin_email}" \
-                    -s "email=${admin_email}" \
-                    -s enabled=true \
-                    -s emailVerified=true
+                -s "username=${admin_email}" \
+                -s "email=${admin_email}" \
+                -s enabled=true \
+                -s emailVerified=true
         )
     fi
 
@@ -98,12 +99,12 @@ if kubectl -n "${kubernetes_namespace}" get "deployment/${resource_prefix}-keycl
     # exposure for a filesystem one without a clear improvement.
     kubectl -n "${kubernetes_namespace}" exec "deployment/${resource_prefix}-keycloak" -- \
         "${keycloak_cmd}" set-password -r "${keycloak_realm}" \
-            --userid "${keycloak_user_id}" --new-password "${admin_password}"
+        --userid "${keycloak_user_id}" --new-password "${admin_password}"
     kubectl -n "${kubernetes_namespace}" exec "deployment/${resource_prefix}-keycloak" -- \
         "${keycloak_cmd}" add-roles -r "${keycloak_realm}" --uid "${keycloak_user_id}" \
-            --rolename "${keycloak_required_role}" \
-            --rolename reana:admin \
-            --rolename offline_access
+        --rolename "${keycloak_required_role}" \
+        --rolename reana:admin \
+        --rolename offline_access
 
     auth_issuer=$(
         kubectl -n "${kubernetes_namespace}" exec "deployment/${resource_prefix}-server" -c rest-api -- \
@@ -111,9 +112,9 @@ if kubectl -n "${kubernetes_namespace}" get "deployment/${resource_prefix}-keycl
     )
     kubectl -n "${kubernetes_namespace}" exec "deployment/${resource_prefix}-server" -c rest-api -- \
         flask reana-admin create-admin-user \
-            --email "${admin_email}" \
-            --idp-issuer "${auth_issuer}" \
-            --idp-subject "${keycloak_user_id}"
+        --email "${admin_email}" \
+        --idp-issuer "${auth_issuer}" \
+        --idp-subject "${keycloak_user_id}"
     setup_result="Database initialised and bundled-Keycloak administrator created."
 else
     echo "Bundled Keycloak is not deployed; skipping automatic administrator creation."

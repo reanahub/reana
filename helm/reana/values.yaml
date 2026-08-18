@@ -23,12 +23,12 @@ keycloak:
   # what was previously hardcoded, so this is override-only, not a behavior
   # change.
   resources:
-    requests:
-      cpu: 250m
-      memory: 768Mi
     #  limits:
     #    cpu: 1
     #    memory: 1536Mi
+    requests:
+      cpu: 250m
+      memory: 768Mi
   # Keycloak storage mode: "bundled" provisions a dedicated database and role
   # on components.reana_db, "external" connects to a pre-provisioned PostgreSQL
   # database, and "ephemeral" explicitly opts into Keycloak's development-only
