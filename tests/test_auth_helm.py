@@ -571,6 +571,22 @@ def test_external_keycloak_database_can_mount_private_ca_secret():
     } in keycloak["spec"]["template"]["spec"]["volumes"]
 
 
+def test_notes_warn_about_unlinked_identities_on_upgrade():
+    """Upgrading a pre-OIDC install must not silently lock out every user.
+
+    Existing accounts have no idp_issuer/idp_subject until linked; NOTES.txt
+    is the one place an upgrading operator reliably looks, so the warning
+    and the concrete fix (manual linking or REANA_AUTH_EMAIL_LINKING_*) must
+    render there, not only live in a docstring/plan document nobody reads
+    before running `helm upgrade`.
+    """
+    notes = _helm_install_dry_run("-f", str(VALUES_DEV))
+
+    assert "idp_issuer" in notes or "idp_subject" in notes
+    assert "REANA_AUTH_EMAIL_LINKING_ENABLED" in notes
+    assert "create-admin-user" in notes
+
+
 def test_ephemeral_keycloak_storage_requires_opt_in_and_emits_warning():
     rendered = _helm_template(
         "-f",
