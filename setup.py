@@ -31,13 +31,19 @@ extras_require = {
         "pandas>=1.1.5",
         "matplotlib>=3.3.4",
     ],
+    "release": [
+        "build",
+        "twine",
+    ],
 }
 
-extras_require["all"] = []
-for key, reqs in extras_require.items():
-    if ":" == key[0]:
-        continue
-    extras_require["all"].extend(reqs)
+# Keep publishing dependencies opt-in so docs and test environments stay lean.
+extras_require["all"] = [
+    requirement
+    for extra, requirements in extras_require.items()
+    if not extra.startswith(":") and extra != "release"
+    for requirement in requirements
+]
 
 
 install_requires = [
