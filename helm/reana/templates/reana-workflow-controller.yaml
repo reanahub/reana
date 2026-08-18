@@ -19,6 +19,16 @@
 {{- fail (printf "components.reana_workflow_validator.environment.%s is reserved by the validation sandbox" $key) }}
 {{- end }}
 {{- end }}
+{{- $sessionIngressAnnotations := deepCopy (.Values.ingress.annotations | default dict) }}
+{{- if or .Values.traefik.enabled .Values.traefik.external }}
+  {{- $sessionHeadersMiddleware := printf "%s-%s-session-headers@kubernetescrd" (.Values.namespace_runtime | default .Release.Namespace) (include "reana.prefix" .) }}
+  {{- $middlewaresKey := "traefik.ingress.kubernetes.io/router.middlewares" }}
+  {{- if hasKey $sessionIngressAnnotations $middlewaresKey }}
+    {{- $_ := set $sessionIngressAnnotations $middlewaresKey (printf "%s,%s" (get $sessionIngressAnnotations $middlewaresKey) $sessionHeadersMiddleware) }}
+  {{- else }}
+    {{- $_ := set $sessionIngressAnnotations $middlewaresKey $sessionHeadersMiddleware }}
+  {{- end }}
+{{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -151,7 +161,7 @@ spec:
           - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
             value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
           - name: REANA_INGRESS_ANNOTATIONS
-            value: {{ .Values.ingress.annotations | toJson | quote }}
+            value: {{ $sessionIngressAnnotations | toJson | quote }}
           {{- if .Values.ingress.ingress_class_name }}
           - name: REANA_INGRESS_CLASS_NAME
             value: {{ .Values.ingress.ingress_class_name | quote }}

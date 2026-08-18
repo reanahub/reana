@@ -1,0 +1,17 @@
+{{- if or .Values.traefik.enabled .Values.traefik.external }}
+# Interactive-session URLs necessarily carry the per-session notebook
+# access secret as a `?token=...` query parameter -- that's inherent to
+# how Jupyter authenticates a fresh request, and isn't something this
+# chart can change. This middleware closes the one sub-vector that's
+# entirely within its control: without it, a notebook page that loads any
+# cross-origin subresource would send the full request URL -- token
+# included -- to that third party in the Referer header.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "reana.prefix" . }}-session-headers
+  namespace: {{ .Values.namespace_runtime | default .Release.Namespace }}
+spec:
+  headers:
+    referrerPolicy: no-referrer
+{{- end }}

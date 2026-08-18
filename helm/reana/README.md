@@ -77,6 +77,27 @@ interactive sessions. User-secret configuration cannot override these reserved
 variables. The notebook token is stored in a dedicated Kubernetes Secret and is
 not included in the pod's command-line arguments.
 
+**Known residual exposure of the session URL.** Opening a session still
+requires putting that same token in the browser's URL bar as a `?token=...`
+query parameter — that's inherent to how Jupyter authenticates a fresh
+request, not something REANA controls. Two consequences to be aware of:
+
+- The URL (token included) is written to the browser's local history,
+  outliving the session's own lifetime.
+- Any reverse proxy or ingress controller in front of the deployment that
+  logs full request URIs (the common default access-log format) will record
+  the token in its own logs the moment the session is opened.
+
+This chart closes the one sub-vector fully within its control — a
+Referrer-Policy: no-referrer middleware on every interactive-session Ingress
+(see `reana-session-headers-middleware.yaml`), so the token cannot also leak
+via the Referer header if the notebook page loads a cross-origin subresource.
+Closing the other two would need a redesign of how the session is handed off
+(e.g. a one-time cookie exchange instead of a bearer-in-URL token) rather
+than a chart-level mitigation. Deployments with strict requirements here
+should configure their ingress controller's access-log fields to exclude or
+redact query strings for session paths.
+
 ## Uninstalling
 
 `helm uninstall` intentionally leaves the chart's Secrets in the cluster

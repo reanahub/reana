@@ -691,6 +691,100 @@ def test_bundled_keycloak_ingress_controller_peers_are_configurable():
     ]
 
 
+def test_interactive_session_ingress_gets_referrer_policy_middleware():
+    """Interactive-session URLs carry a bearer secret; Referer must not leak it.
+
+    The per-session notebook secret necessarily rides in the session URL's
+    query string (Jupyter's own auth model), which this chart cannot
+    change. Referrer-Policy: no-referrer closes the one sub-vector fully
+    within the chart's control: a notebook page loading any cross-origin
+    subresource must not send the full URL to that third party.
+    """
+    rendered = _helm_template("-f", str(VALUES_DEV))
+    controller = _rendered_resource(rendered, "Deployment", "reana-workflow-controller")
+    environment = _container_environment(controller, "rest-api")
+    annotations = json.loads(environment["REANA_INGRESS_ANNOTATIONS"]["value"])
+
+    assert annotations["traefik.ingress.kubernetes.io/router.middlewares"] == (
+        "default-reana-session-headers@kubernetescrd"
+    )
+    # The main /api, /keycloak, / ingress is unrelated to session URLs and
+    # must not pick up the session-only middleware.
+    ingress = _rendered_resource(rendered, "Ingress", "reana-ingress")
+    assert "router.middlewares" not in " ".join(
+        ingress["metadata"].get("annotations", {}).keys()
+    )
+
+    middleware = _rendered_resource(rendered, "Middleware", "reana-session-headers")
+    assert middleware["spec"]["headers"]["referrerPolicy"] == "no-referrer"
+
+
+def test_session_headers_middleware_is_namespaced_to_namespace_runtime():
+    """The session-headers Middleware and its CRD-reference annotation must agree.
+
+    PR976-19: the Middleware object and the
+    ``router.middlewares`` annotation that references it must live in --
+    and point at -- the same namespace. Session and Dask-dashboard Ingresses
+    are created by reana-workflow-controller in ``namespace_runtime``, so
+    both the Middleware and the annotation must follow ``namespace_runtime``
+    rather than ``Release.Namespace`` in a split-topology deployment.
+    """
+    rendered = _helm_template(
+        "-f", str(VALUES_DEV), "--set", "namespace_runtime=reana-runtime"
+    )
+    middleware = _rendered_resource(rendered, "Middleware", "reana-session-headers")
+    assert middleware["metadata"]["namespace"] == "reana-runtime"
+
+    controller = _rendered_resource(rendered, "Deployment", "reana-workflow-controller")
+    environment = _container_environment(controller, "rest-api")
+    annotations = json.loads(environment["REANA_INGRESS_ANNOTATIONS"]["value"])
+    assert annotations["traefik.ingress.kubernetes.io/router.middlewares"] == (
+        "reana-runtime-reana-session-headers@kubernetescrd"
+    )
+
+
+def test_session_headers_middleware_appends_to_an_existing_middlewares_annotation():
+    """A user-supplied router.middlewares annotation must be extended, not clobbered."""
+    rendered = _helm_template(
+        "-f",
+        str(VALUES_DEV),
+        "--set",
+        "ingress.annotations.traefik\\.ingress\\.kubernetes\\.io/router\\.middlewares="
+        "default-custom@kubernetescrd",
+    )
+    controller = _rendered_resource(rendered, "Deployment", "reana-workflow-controller")
+    environment = _container_environment(controller, "rest-api")
+    annotations = json.loads(environment["REANA_INGRESS_ANNOTATIONS"]["value"])
+
+    assert annotations["traefik.ingress.kubernetes.io/router.middlewares"] == (
+        "default-custom@kubernetescrd,default-reana-session-headers@kubernetescrd"
+    )
+
+
+def test_session_headers_middleware_survives_a_null_ingress_annotations_override():
+    """ingress.annotations: null (the standard Helm idiom for "no defaults") must render.
+
+    Sprig's `deepCopy` panics on a nil input; ingress.annotations has a
+    non-empty chart default, so this was only reachable by an operator
+    override, not caught by any shipped values profile.
+    """
+    rendered = _helm_template(
+        "-f",
+        str(VALUES_DEV),
+        "--set",
+        "ingress.annotations=null",
+    )
+    controller = _rendered_resource(rendered, "Deployment", "reana-workflow-controller")
+    environment = _container_environment(controller, "rest-api")
+    annotations = json.loads(environment["REANA_INGRESS_ANNOTATIONS"]["value"])
+
+    assert annotations == {
+        "traefik.ingress.kubernetes.io/router.middlewares": (
+            "default-reana-session-headers@kubernetescrd"
+        )
+    }
+
+
 def test_cern_profile_renders_without_bundled_keycloak():
     rendered = _helm_template("-f", str(VALUES_DEV), "-f", str(VALUES_CERN))
 
