@@ -6,14 +6,43 @@
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 
-"""Regression tests for the git-checkout-pr command."""
+"""Regression tests for the git checkout commands."""
 
 import json
 from unittest.mock import patch
 
 import pytest
 
-from reana.reana_dev.git import _collect_prs_to_checkout, _get_prs_from_issue
+from reana.reana_dev.git import (
+    _collect_prs_to_checkout,
+    _get_prs_from_issue,
+    git_checkout,
+)
+
+
+def test_git_checkout_restores_pruned_branch_from_canonical_remote():
+    """Recreate an explicitly requested canonical branch without DWIM ambiguity."""
+    with (
+        patch("reana.reana_dev.git.select_components", return_value=["reana"]),
+        patch("reana.reana_dev.git.branch_exists", return_value=False),
+        patch("reana.reana_dev.git.get_srcdir", return_value="/src/reana"),
+        patch("reana.reana_dev.git.remote_ref_exists", return_value=True) as exists,
+        patch("reana.reana_dev.git.run_command") as run,
+    ):
+        git_checkout.callback("feat-quota-period", ("CLUSTER",), "", False)
+
+    exists.assert_called_once_with("/src/reana", "local/feat-quota-period")
+    run.assert_called_once_with(
+        [
+            "git",
+            "checkout",
+            "--no-track",
+            "-b",
+            "feat-quota-period",
+            "local/feat-quota-period",
+        ],
+        "reana",
+    )
 
 
 def _reference(component, pull_request):
