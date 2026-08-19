@@ -24,6 +24,11 @@ workspaces:
   paths:
     - /var/reana:/var/reana
 
+logs:
+  retention_rules:
+    maximum_period: forever
+    cronjob_schedule: "0 3 * * *" # everyday at 3am
+
 interactive_sessions:
   cronjob_schedule: "0 3 * * *" # everyday at 3am
   environments:

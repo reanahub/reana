@@ -621,3 +621,76 @@ def test_workflow_validator_reserved_environment_is_rejected():
 
     assert rendered.returncode != 0
     assert "PYTHONPATH is reserved by the validation sandbox" in rendered.stderr
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    ("maximum_period", "expected_period", "cronjob_expected"),
+    [
+        pytest.param("forever", "forever", False, id="retention-disabled"),
+        pytest.param(0, "0", True, id="zero-day-retention"),
+        pytest.param(
+            "{{ .Values.test_log_retention_period }}",
+            "7",
+            True,
+            id="templated-finite-period",
+        ),
+    ],
+)
+def test_workflow_log_retention_resources(
+    tmp_path, maximum_period, expected_period, cronjob_expected
+):
+    """Workflow log retention must configure the server and optional CronJob."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        {
+            "logs": {
+                "retention_rules": {
+                    "maximum_period": maximum_period,
+                    "cronjob_schedule": "15 4 * * *",
+                }
+            },
+            "test_log_retention_period": "7",
+        },
+    )
+    documents = _rendered_documents(rendered)
+
+    server_period = None
+    for document in documents:
+        if document.get("kind") != "Deployment":
+            continue
+        if not document["metadata"]["name"].endswith("server"):
+            continue
+        for env_var in document["spec"]["template"]["spec"]["containers"][0].get(
+            "env", []
+        ):
+            if env_var["name"] == "LOG_RETENTION_PERIOD":
+                server_period = env_var["value"]
+
+    assert server_period == expected_period
+
+    log_cronjobs = [
+        document
+        for document in documents
+        if document.get("kind") == "CronJob"
+        and document["metadata"]["name"].endswith("logs-prune")
+    ]
+    assert bool(log_cronjobs) is cronjob_expected
+    if cronjob_expected:
+        cronjob = log_cronjobs[0]
+        assert cronjob["spec"]["schedule"] == "15 4 * * *"
+        container = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"][
+            "containers"
+        ][0]
+        assert container["args"] == ["flask reana-admin logs-prune"]
+        assert (
+            next(
+                item["value"]
+                for item in container["env"]
+                if item["name"] == "LOG_RETENTION_PERIOD"
+            )
+            == expected_period
+        )
