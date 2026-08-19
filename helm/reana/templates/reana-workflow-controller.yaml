@@ -202,10 +202,8 @@ spec:
             value: {{ $runtimeFsGroupChangePolicy | quote }}
           - name: REANA_INFRASTRUCTURE_KUBERNETES_SERVICEACCOUNT_NAME
             value: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
-          {{- if and .Values.namespace_runtime (ne .Values.namespace_runtime .Release.Namespace) }}
           - name: REANA_RUNTIME_KUBERNETES_SERVICEACCOUNT_NAME
             value: {{ include "reana.prefixed_runtime_svaccount_name" . }}
-          {{- end }}
           {{- if .Values.node_label_runtimebatch }}
           - name: REANA_RUNTIME_BATCH_KUBERNETES_NODE_LABEL
             value: {{ .Values.node_label_runtimebatch | quote }}

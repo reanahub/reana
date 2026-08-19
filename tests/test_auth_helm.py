@@ -428,6 +428,90 @@ def test_deployment_manager_role_can_delete_secrets():
     assert any("delete" in rule["verbs"] for rule in secrets_rules)
 
 
+def test_runtime_service_account_is_always_created():
+    """The runtime ServiceAccount must exist even in single-namespace mode.
+
+    PR976-17: previously it was only rendered when ``namespace_runtime``
+    differed from the release namespace, so single-namespace deployments (the
+    common case) had no distinct runtime identity for the batch pod to use.
+    """
+    rendered = _helm_template("-f", str(VALUES_DEV))
+    account = _rendered_resource(rendered, "ServiceAccount", "reana-runtime")
+    assert account["metadata"].get("namespace") in (None, "default")
+
+
+def test_runtime_service_account_is_not_bound_to_deployment_manager():
+    """The runtime ServiceAccount must not inherit the controller's own role.
+
+    PR976-17: the batch pod that executes user-submitted workflow/job code
+    must not carry the same cluster-wide privileges (including secret
+    delete) as the infrastructure ServiceAccount reana-workflow-controller
+    itself runs as.
+    """
+    rendered = _helm_template("-f", str(VALUES_DEV))
+    binding = _rendered_resource(
+        rendered, "ClusterRoleBinding", "reana-manage-deployments"
+    )
+    runtime_subjects = [
+        subject for subject in binding["subjects"] if subject["name"] == "reana-runtime"
+    ]
+    assert not runtime_subjects, "runtime SA must not be bound to deployment-manager"
+
+
+def test_runtime_worker_role_excludes_secret_delete_and_privileged_verbs():
+    """The runtime-worker role must be minimal, not a copy of deployment-manager.
+
+    Audited against reana-job-controller's actual Kubernetes API usage: it
+    only creates/deletes Jobs, lists/watches Pods and reads Pod logs, and
+    does one read-only fetch of the user's own secrets-store Secret.
+    """
+    rendered = _helm_template("-f", str(VALUES_DEV))
+    role = _rendered_resource(rendered, "Role", "reana-runtime-worker")
+    binding = _rendered_resource(rendered, "RoleBinding", "reana-runtime-worker")
+    assert binding["subjects"] == [
+        {
+            "kind": "ServiceAccount",
+            "name": "reana-runtime",
+            "namespace": "default",
+        }
+    ]
+
+    secrets_rules = [
+        rule
+        for rule in role["rules"]
+        if "" in rule["apiGroups"] and "secrets" in rule["resources"]
+    ]
+    assert secrets_rules, "runtime worker must still read its own secrets store"
+    for rule in secrets_rules:
+        assert rule["verbs"] == [
+            "get"
+        ], "runtime worker must not list/create/update/delete secrets"
+
+    forbidden_resources = {"storageclasses", "deployments", "services", "ingresses"}
+    for rule in role["rules"]:
+        assert not forbidden_resources & set(rule["resources"])
+
+
+def test_runtime_worker_role_is_namespaced_to_namespace_runtime():
+    """The runtime-worker Role/RoleBinding must live in the runtime namespace.
+
+    PR976-18: this pair used to be a ClusterRole/ClusterRoleBinding, so its
+    ``secrets: get`` rule -- however trimmed -- still let the runtime worker
+    read any named Secret in any namespace in the cluster. Scoping it down to
+    a namespaced Role confines that to the namespace the batch pod actually
+    runs in, which in a split-topology deployment is ``namespace_runtime``,
+    not ``Release.Namespace``.
+    """
+    rendered = _helm_template(
+        "-f", str(VALUES_DEV), "--set", "namespace_runtime=reana-runtime"
+    )
+    role = _rendered_resource(rendered, "Role", "reana-runtime-worker")
+    binding = _rendered_resource(rendered, "RoleBinding", "reana-runtime-worker")
+
+    assert role["metadata"]["namespace"] == "reana-runtime"
+    assert binding["metadata"]["namespace"] == "reana-runtime"
+
+
 def test_bundled_keycloak_uses_an_isolated_database_on_bundled_postgres():
     rendered = _helm_template("-f", str(VALUES_DEV))
     keycloak = _rendered_resource(rendered, "Deployment", "reana-keycloak")

@@ -19,7 +19,7 @@ rules:
 - apiGroups: ["storage.k8s.io"]
   resources: ["storageclasses"]
   verbs: ["*"]
-- apiGroups: ["batch", "networking.k8s.io"]
+- apiGroups: ["batch"]
   resources: ["jobs"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 # Interactive web notebooks permissions
@@ -62,8 +62,45 @@ subjects:
 - kind: ServiceAccount
   name: {{ include "reana.prefixed_infrastructure_svaccount_name" . }}
   namespace: {{ .Release.Namespace }}
-{{- if and .Values.namespace_runtime (ne .Values.namespace_runtime .Release.Namespace) }}
+---
+# Minimal RBAC for the runtime ServiceAccount. Its projected credential is
+# mounted only into the trusted job-controller sidecar; the workflow-engine
+# container that executes user-submitted code has ServiceAccount automounting
+# disabled and does not receive this credential. It must never carry the same
+# privileges as the infrastructure ServiceAccount that
+# reana-workflow-controller itself runs as (PR976-17) -- audited against
+# reana-job-controller's actual Kubernetes API usage
+# (kubernetes_job_manager.py, job_monitor.py): it only creates/deletes
+# Jobs, lists/watches Pods and reads Pod logs, and does a single
+# read-only fetch of the user's own secrets-store Secret. No list/create/
+# update/delete on secrets, no configmaps/pvc access, no deployment/
+# service/ingress or storageclass management.
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "reana.prefix" . }}-runtime-worker
+  namespace: {{ .Values.namespace_runtime | default .Release.Namespace }}
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "reana.prefix" . }}-runtime-worker
+  namespace: {{ .Values.namespace_runtime | default .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "reana.prefix" . }}-runtime-worker
+subjects:
 - kind: ServiceAccount
   name: {{ include "reana.prefixed_runtime_svaccount_name" . }}
-  namespace: {{ .Values.namespace_runtime }}
-{{- end }}
+  namespace: {{ .Values.namespace_runtime | default .Release.Namespace }}
