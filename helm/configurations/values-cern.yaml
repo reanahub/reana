@@ -2,8 +2,9 @@
 #
 # Use together with private values that provide:
 #   secrets.auth.REANA_AUTH_WEB_CLIENT_SECRET
-# and adjust client ids and audience to the registered CERN Application Portal
-# clients.
+# and adjust client ids, audience and required role to the registered CERN
+# Application Portal clients (verified empirically against a real CERN token,
+# see below).
 
 keycloak:
   enabled: false
@@ -16,7 +17,27 @@ auth:
   openidConfigUrl: ""
   clientId: reana-cli
   webClientId: reana-server
+  # REQUIRED: CERN Keycloak sets aud == azp == the client_id that requested
+  # the token, never a fixed "reana" string -- the base chart default
+  # (values.yaml auth.audience: reana) will never match a real CERN token
+  # and access is silently rejected. Set to the client_id(s) above,
+  # comma-separated if the CLI and web clients are registered separately
+  # (each mints tokens audienced to its own client_id; reana-server accepts
+  # a token when its `aud` matches any listed here). auth.audience is
+  # REQUIRED whenever an issuer is configured -- the chart refuses to
+  # render without it. Supply the real client_id(s) via private values or
+  # `--set auth.audience=<cli-client-id>,<web-client-id>`.
+  audience: ""
   bffEnabled: true
   scopes: "openid profile email"
-  rolesClaim: reana_roles
-  requiredRole: "reana:user"
+  # CERN's standard token already carries a top-level `cern_roles` array
+  # claim (confirmed against a real CERN access token); no CERN Application
+  # Portal protocol mapper is needed to project one, unlike a generic
+  # Keycloak client where roles are typically only nested under
+  # `resource_access.<client_id>.roles`.
+  rolesClaim: cern_roles
+  # Must exactly match one of the role names in that claim. CERN
+  # Application Portal roles are conventionally hyphenated (e.g.
+  # "reana-user", as defined for the registered app), NOT REANA's
+  # "reana:user" default -- adjust to whatever role you defined there.
+  requiredRole: "reana-user"
