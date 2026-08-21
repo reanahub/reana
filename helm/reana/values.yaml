@@ -10,6 +10,128 @@ reana_hostname: localhost
 reana_hostport: 443
 # `reana_hostport` should be set to the port number where the REANA service will be exposed for incoming SSL connections.
 
+# Bundled Keycloak for local development only. Production deployments should
+# configure an external issuer under `auth` instead.
+keycloak:
+  enabled: false
+  image: quay.io/keycloak/keycloak:26.7.0
+  imagePullPolicy: IfNotPresent
+  # Unlike every other component in this chart, Keycloak's resources were
+  # previously hardcoded in the template with no `limits` and no values.yaml
+  # override -- an operator sizing a production node pool had no way to set
+  # them and no ceiling on Keycloak's memory growth. Defaults below match
+  # what was previously hardcoded, so this is override-only, not a behavior
+  # change.
+  resources:
+    #  limits:
+    #    cpu: 1
+    #    memory: 1536Mi
+    requests:
+      cpu: 250m
+      memory: 768Mi
+  # Keycloak storage mode: "bundled" provisions a dedicated database and role
+  # on components.reana_db, "external" connects to a pre-provisioned PostgreSQL
+  # database, and "ephemeral" explicitly opts into Keycloak's development-only
+  # local storage. The ephemeral mode loses identity data when the pod is
+  # replaced and emits a warning in Helm's installation notes.
+  database:
+    mode: bundled
+    name: keycloak
+    username: keycloak
+    # Required in external mode. Bundled mode derives the REANA database
+    # Service name from the Helm release.
+    host: ""
+    port: 5432
+    # If set, use this Secret instead of creating one from
+    # secrets.keycloak.database_password.
+    existing_secret: ""
+    password_key: password
+    # In bundled mode, provisioning Keycloak's own database/role runs
+    # CREATE ROLE/CREATE DATABASE against the target PostgreSQL server,
+    # which needs a role with CREATEDB/CREATEROLE. By default this reuses
+    # secrets.database.user/password -- the same credential reana-server,
+    # reana-workflow-controller and every REANA CronJob use for ordinary
+    # CRUD. For the chart's own bundled PostgreSQL that is not a privilege
+    # *escalation* (that credential is already POSTGRES_USER, the server's
+    # superuser, by construction of the official postgres image), but it is
+    # still an unnecessarily broad credential to reuse for one bootstrap
+    # step. If set, this Secret (expecting "user"/"password" keys, like
+    # secrets.database.*) is used instead -- e.g. a narrower role on a
+    # hardened bundled PostgreSQL, or the admin credential of an external
+    # PostgreSQL server.
+    bootstrap_existing_secret: ""
+    # Use "verify-server" for external PostgreSQL over TLS. Additional JDBC
+    # properties such as certificate locations can be supplied here.
+    tls_mode: disabled
+    # External databases with TLS disabled require this explicit opt-in.
+    allow_insecure: false
+    url_properties: ""
+    # Optional Secret containing a private database CA certificate. Keycloak's
+    # JVM trust roots remain in use when this is empty.
+    tls_truststore_existing_secret: ""
+    tls_truststore_key: ca.crt
+    tls_truststore_path: /opt/keycloak/conf/database-ca.pem
+  realm: reana
+  relative_path: /keycloak
+  # Browser-facing base URL; MUST include the relative path. Override per
+  # deployment, e.g. https://reana.example.org/keycloak. The kind dev cluster
+  # exposes REANA on the 30443 nodeport.
+  frontend_url: https://localhost:30443/keycloak
+  # Optional server-side transport base. Empty uses the in-cluster Keycloak
+  # Service URL generated from the Helm release name. Because the bundled
+  # development Keycloak currently serves HTTP, enabling it requires the
+  # explicit opt-in below (values-dev.yaml does so).
+  backchannel_url: ""
+  backchannel_allow_http: false
+  audience: reana
+  roles_claim: reana_roles
+  required_role: "reana:user"
+  cli_client_id: reana-cli
+  web_client_id: reana-server
+  # Required when enabled; set only in development or private values.
+  admin_user: ""
+  admin_password: ""
+  network_policy:
+    enabled: true
+    # The first peer permits the bundled same-namespace Traefik. The second
+    # supports the Traefik bundled with K3s. Override this list when using an
+    # ingress controller with different namespace or pod labels.
+    ingress_controller_peers:
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/name: traefik
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: kube-system
+        podSelector:
+          matchLabels:
+            app.kubernetes.io/name: traefik
+
+# OIDC/JWT authentication. When `keycloak.enabled` is true, the bundled
+# Keycloak values above provide the issuer and client defaults. When using an
+# external issuer such as CERN, set `keycloak.enabled=false` and configure this
+# block. Secrets live under `secrets.auth`, not in this public config block.
+auth:
+  issuer: ""
+  openidConfigUrl: ""
+  backchannelBaseUrl: ""
+  backchannelAllowHttp: false
+  caBundle: ""
+  jwksUrl: ""
+  userinfoUrl: ""
+  authorizationUrl: ""
+  tokenUrl: ""
+  endSessionUrl: ""
+  deviceAuthorizationUrl: ""
+  audience: reana
+  rolesClaim: reana_roles
+  requiredRole: "reana:user"
+  clientId: reana-cli
+  webClientId: reana-server
+  bffEnabled: true
+  scopes: "openid profile email"
+  sessionTtl: 604800
+
 debug:
   enabled: false
 eos:
@@ -87,19 +209,13 @@ infrastructure_storage: {}
 
 secrets:
   database: {}
+  keycloak: {}
   cache: {}
   message_broker: {}
   gitlab: {}
-  cern:
-    sso: {}
-  eosc:
-    sso: {}
   reana: {}
-  login: {}
+  auth: {}
   opensearch: {}
-
-# Enable and configure SSO authentication via a third-party Keycloak identity provider
-login: []
 
 # External database service configuration
 db_env_config:
@@ -151,7 +267,7 @@ components:
           'self'; frame-ancestors 'none'; object-src 'self'; base-uri 'self';"
   reana_db:
     enabled: true
-    image: docker.io/library/postgres:12.13
+    image: docker.io/library/postgres:14.23
     resources: {} # Db pod resources.
     #  limits:
     #    cpu: 1.8
@@ -162,18 +278,30 @@ components:
   reana_server:
     imagePullPolicy: IfNotPresent
     image: docker.io/reanahub/reana-server:0.95.0-alpha.6
+    hostAliases: []
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
       REANA_SCHEDULER_REQUEUE_SLEEP: 15
       REANA_SCHEDULER_REQUEUE_COUNT: 200
-      REANA_USER_EMAIL_CONFIRMATION: true
       REANA_WORKFLOW_SCHEDULING_POLICY: "fifo"
       REANA_WORKFLOW_SCHEDULING_READINESS_CHECK_LEVEL: 9
       REANA_RATELIMIT_GUEST_USER: "40 per second"
       REANA_RATELIMIT_AUTHENTICATED_USER: "40 per second"
       REANA_RATELIMIT_SLOW: "1/5 second"
-      REANA_ACCESS_TOKEN_ISSUANCE_POLICY: "manual"
-      REANA_TOKEN_MANAGEMENT_SECRET: ""
+      # Users must periodically renew delegated GitLab webhook authorization.
+      # Renewal preserves the secret installed in existing GitLab projects.
+      # Quoted so Helm keeps it a string: an unquoted large number is parsed as
+      # a float and rendered in scientific notation (e.g. "2.592e+06").
+      REANA_GITLAB_WEBHOOK_SECRET_MAX_LIFETIME: "2592000"
+      # GitLab verifies REANA Server's TLS certificate when delivering webhooks
+      # (secure default). Set to "false" only for self-signed development
+      # endpoints; production private-PKI installs should configure GitLab to
+      # trust the relevant CA instead.
+      REANA_GITLAB_WEBHOOK_SSL_VERIFICATION: "true"
+      # The bundled ingress is the sole HTTP proxy in front of REANA Server.
+      # Trust exactly its right-most forwarded address so per-client rate
+      # limits do not collapse into one ingress-wide bucket.
+      PROXYFIX_CONFIG: '{"x_for":1,"x_proto":1}'
       REANA_QUOTA_MANAGEMENT_SECRET: ""
       # Maximum validation snapshot archive size and regular-file count.
       REANA_SPEC_BUNDLE_MAX_BYTES: "104857600"

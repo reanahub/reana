@@ -1,5 +1,12 @@
 The REANA system has been installed!
 
+{{- if and .Values.keycloak.enabled (eq .Values.keycloak.database.mode "ephemeral") }}
+
+WARNING: bundled Keycloak is using ephemeral development storage. Realm,
+user, client, session, and signing-key data will be lost when its pod is
+replaced. Use keycloak.database.mode=bundled or external for persistent data.
+{{- end }}
+
 If you are upgrading from a previous REANA release series, you may need to
 upgrade database schema now:
 
@@ -7,6 +14,40 @@ upgrade database schema now:
 
 Please see the dedicated upgrade documentation at
 <https://docs.reana.io/administration/deployment/upgrading-db/>
+
+On an installation with a large number of user accounts, note that some of
+this release's migrations briefly hold an exclusive lock on the `user_`
+table while building new constraints, blocking authenticated requests for
+the build's duration -- see the per-migration notes in reana-db's
+`alembic/versions/` for which ones and why. Consider a maintenance window.
+
+WARNING: if you are upgrading a REANA cluster with existing users from a
+release series that predates OIDC/JWT authentication, every existing account
+has no linked identity provider subject (`idp_issuer`/`idp_subject` are
+unset) and cannot sign in through the new authentication flow until it is
+linked to an identity from your configured issuer. By default nothing links
+these automatically: users will hit a clear "an account already exists"
+error on their first login rather than being silently locked out, but they
+will still be unable to sign in until an administrator resolves it. Options:
+
+  - Link each account by hand:
+      $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
+            flask reana-admin create-admin-user --email jane.doe@example.org \
+                                                --idp-issuer https://issuer.example.org \
+                                                --idp-subject oidc-subject
+    (works for any user, not just admins -- see `flask reana-admin --help`.)
+  - Enable automatic email-based linking for your issuer, so a user whose
+    verified IdP email matches their existing REANA account is linked on
+    first login without administrator action. This trusts your issuer's
+    email verification, so only enable it for issuers you control or trust
+    to verify email ownership. Set on reana-server:
+      REANA_AUTH_EMAIL_LINKING_ENABLED=true
+      REANA_AUTH_EMAIL_LINKING_ISSUER_ALLOWLIST=https://issuer.example.org
+      REANA_AUTH_EMAIL_LINKING_DOMAIN_ALLOWLIST=example.org
+    (the two allow-lists are optional but recommended; an empty allow-list
+    skips that particular check rather than rejecting everyone.)
+
+Fresh installs are unaffected by this.
 
 If you are deploying REANA for the first time, there are a few steps left to
 finalise its configuration.
@@ -16,18 +57,14 @@ finalise its configuration.
     $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
         ./scripts/create-database.sh
 
-2. Create administrator user and corresponding access token:
+2. Create an administrator linked to their OIDC identity:
 
-    $ mytoken=$(kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
+    $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
           flask reana-admin create-admin-user --email john.doe@example.org \
-                                              --password mysecretpassword)
+                                              --idp-issuer https://issuer.example.org \
+                                              --idp-subject oidc-subject
 
-3. Store administrator access token as Kubernetes secret:
-
-    $ kubectl -n {{ .Release.Namespace }} create secret generic {{ .Release.Name }}-admin-access-token \
-        --from-literal=ADMIN_ACCESS_TOKEN="$mytoken"
-
-4. Try to run your first REANA example:
+3. Try to run your first REANA example:
 
     $ firefox https://{{ .Values.reana_hostname }}:{{.Values.reana_hostport}}
 
@@ -37,8 +74,8 @@ finalise its configuration.
     $ pip install --user reana-client
     $ # set environment variables for REANA client
     $ export REANA_SERVER_URL=https://{{ .Values.reana_hostname }}:{{.Values.reana_hostport}}
-    $ export REANA_ACCESS_TOKEN="$mytoken"
-    $ # test connection to the REANA cluster
+    $ # authenticate and test connection to the REANA cluster
+    $ reana-client login
     $ reana-client ping
     $ # clone and run a simple analysis example
     $ git clone https://github.com/reanahub/reana-demo-root6-roofit

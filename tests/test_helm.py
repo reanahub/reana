@@ -312,17 +312,17 @@ def test_runtime_namespace_renders_static_cephfs_resources(tmp_path, shared_stor
         and document["metadata"]["name"].endswith("-krb5-conf")
         for document in documents
     )
-    deployment_binding = next(
+    runtime_worker_binding = next(
         document
         for document in documents
         if document["kind"] == "ClusterRoleBinding"
-        and document["metadata"]["name"].endswith("-manage-deployments")
+        and document["metadata"]["name"].endswith("-runtime-worker")
     )
     assert {
         "kind": "ServiceAccount",
         "name": runtime_service_account["metadata"]["name"],
         "namespace": "runtime",
-    } in deployment_binding["subjects"]
+    } in runtime_worker_binding["subjects"]
 
 
 def test_workflow_validator_environment_and_network_policy_rbac(tmp_path):
@@ -463,7 +463,7 @@ def test_runtime_namespace_hostpath_does_not_create_pvc(tmp_path):
 def test_runtime_namespace_disabled_does_not_create_resources(
     tmp_path, namespace_runtime
 ):
-    """An unset or same-as-release value should not duplicate resources."""
+    """An unset or same-as-release value should not duplicate namespaced resources."""
     values = {}
     if namespace_runtime:
         values["namespace_runtime"] = namespace_runtime
@@ -479,11 +479,16 @@ def test_runtime_namespace_disabled_does_not_create_resources(
         and document["metadata"]["name"] == "infrastructure"
         for document in documents
     )
-    assert not any(
-        document["kind"] == "ServiceAccount"
-        and document["metadata"]["name"].endswith("-runtime")
+    # The runtime ServiceAccount is always created (PR976-17), but without a
+    # dedicated namespace it must land alongside infrastructure, not in a
+    # duplicated one.
+    runtime_service_account = next(
+        document
         for document in documents
+        if document["kind"] == "ServiceAccount"
+        and document["metadata"]["name"].endswith("-runtime")
     )
+    assert runtime_service_account["metadata"]["namespace"] == "infrastructure"
 
 
 @pytest.mark.skipif(
