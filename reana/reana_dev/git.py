@@ -844,6 +844,18 @@ def git_checkout(branch, component, exclude_components, fetch):  # noqa: D301
             run_command("git fetch upstream", component)
         if branch_exists(component, branch):
             run_command("git checkout {}".format(branch), component)
+        elif remote_ref_exists(get_srcdir(component), f"local/{branch}"):
+            run_command(
+                [
+                    "git",
+                    "checkout",
+                    "--no-track",
+                    "-b",
+                    branch,
+                    f"local/{branch}",
+                ],
+                component,
+            )
         else:
             click.secho(
                 "No branch {} in component {}, staying on current one.".format(
