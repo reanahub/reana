@@ -1,0 +1,18 @@
+# REANA dev overlay for validating against an existing RWX CephFS storage
+# class, for example the local Rook stack prepared by:
+#
+#   reana-dev cluster-create --shared-storage-backend cephfs
+#   reana-dev cluster-deploy --shared-storage-backend cephfs ...
+#
+# This file intentionally layers on top of `values-dev.yaml`; it only contains
+# the CephFS-specific overrides for that local development flow.
+
+shared_storage:
+  backend: cephfs
+  fs_group: 0
+  storage_class_name: rook-cephfs
+
+infrastructure_storage:
+  backend: hostpath
+  hostpath:
+    root_path: /var/reana-infrastructure
