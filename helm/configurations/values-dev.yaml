@@ -233,6 +233,12 @@ workspaces:
     maximum_period: forever # e.g. "3" (days) to test retention
     cronjob_schedule: "0 2 * * *"
 
+# Workflow log retention: shorten `maximum_period` to test log pruning.
+logs:
+  retention_rules:
+    maximum_period: forever # e.g. "3" (days) to test retention
+    cronjob_schedule: "0 3 * * *"
+
 # Quota (enabled by default; change zero values to test enforcement).
 quota:
   enabled: true

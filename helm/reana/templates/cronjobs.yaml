@@ -1,5 +1,6 @@
 {{- $sharedStorageFsGroup := .Values.shared_storage.fs_group | toString }}
 {{- $sharedStorageFsGroupChangePolicy := .Values.shared_storage.fs_group_change_policy | toString }}
+{{- $logRetentionPeriod := tpl (.Values.logs.retention_rules.maximum_period | toString) . }}
 {{- if .Values.notifications.enabled }}
 {{- if .Values.notifications.system_status }}
 apiVersion: batch/v1
@@ -327,6 +328,89 @@ spec:
           - name: reana-code
             hostPath:
               path: /code/reana-server
+---
+{{- if ne $logRetentionPeriod "forever" }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "reana.prefix" . }}-logs-prune
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: {{ tpl (.Values.logs.retention_rules.cronjob_schedule | toString) . | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  {{- if .Values.maintenance.enabled }}
+  suspend: true
+  {{- end }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: {{ include "reana.prefix" . }}-logs-prune
+        spec:
+          containers:
+          - name: {{ include "reana.prefix" . }}-logs-prune
+            image: {{ .Values.components.reana_server.image }}
+            command:
+            - '/bin/sh'
+            - '-c'
+            args:
+            - 'flask reana-admin logs-prune'
+            {{- if .Values.debug.enabled }}
+            tty: true
+            stdin: true
+            {{- end }}
+            envFrom:
+              - configMapRef:
+                  name: {{ include "reana.prefix" . }}-database-config
+            env:
+            - name: LOG_RETENTION_PERIOD
+              value: {{ $logRetentionPeriod | quote }}
+            {{- if .Values.reana_hostname }}
+            - name: REANA_HOSTNAME
+              value: {{ .Values.reana_hostname | quote }}
+            {{- end }}
+            {{- if .Values.debug.enabled }}
+            - name: FLASK_DEBUG
+              value: "1"
+            {{- end }}
+            - name: REANA_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-db-secrets
+                  key: user
+            - name: REANA_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-db-secrets
+                  key: password
+            - name: REANA_COMPONENT_PREFIX
+              value: {{ include "reana.prefix" . }}
+            - name: REANA_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-secrets
+                  key: REANA_SECRET_KEY
+            - name: REANA_INFRASTRUCTURE_KUBERNETES_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            - name: REANA_RUNTIME_KUBERNETES_NAMESPACE
+              value: {{ .Values.namespace_runtime | default .Release.Namespace | quote }}
+            {{- if .Values.debug.enabled }}
+            volumeMounts:
+              - mountPath: /code/
+                name: reana-code
+            {{- end }}
+            imagePullPolicy: IfNotPresent
+          restartPolicy: Never
+          {{- if .Values.debug.enabled }}
+          volumes:
+          - name: reana-code
+            hostPath:
+              path: /code/reana-server
+          {{- end }}
+{{- end }}
 ---
 {{- if not (contains "forever" (.Values.interactive_sessions.maximum_inactivity_period | quote)) }}
 apiVersion: batch/v1

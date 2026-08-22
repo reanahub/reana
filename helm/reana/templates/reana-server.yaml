@@ -177,6 +177,8 @@ spec:
             value: {{ .Values.workspaces.paths | toJson | quote }}
           - name: WORKSPACE_RETENTION_PERIOD
             value: {{ .Values.workspaces.retention_rules.maximum_period | default "forever" | quote }}
+          - name: LOG_RETENTION_PERIOD
+            value: {{ tpl (.Values.logs.retention_rules.maximum_period | toString) . | quote }}
           {{- if .Values.quota.enabled }}
           - name: REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
             value: {{ tpl .Values.quota.workflow_termination_update_policy . | quote }}
