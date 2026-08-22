@@ -33,6 +33,11 @@ interactive_sessions:
           name: "Jupyter SciPy Notebook 7.2.2"
       allow_custom: false
   maximum_inactivity_period: forever
+  sidecars:
+    datastore:
+      enabled: false
+      image: ""
+      imagePullSecret: ""
 
 compute_backends:
   - kubernetes
