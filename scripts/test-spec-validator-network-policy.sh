@@ -25,8 +25,7 @@ Environment variables:
       Public REANA URL used to trigger policy reconciliation.
       [default: https://localhost:30443]
   REANA_ACCESS_TOKEN
-      Access token used for validation. When unset, read it from the
-      <instance-name>-admin-access-token Kubernetes Secret.
+      OIDC access token used for validation. Required.
   REANA_WORKFLOW_VALIDATOR_IMAGE
       Image used by the probe pod.
       [default: docker.io/reanahub/reana-workflow-validator]
@@ -79,7 +78,13 @@ case "${timeout_seconds}" in
     ;;
 esac
 
-for required_command in kubectl curl base64 grep zip; do
+access_token=${REANA_ACCESS_TOKEN:-}
+if [ -z "${access_token}" ]; then
+    echo "Error: REANA_ACCESS_TOKEN is required." >&2
+    exit 2
+fi
+
+for required_command in kubectl curl grep zip; do
     if ! command -v "${required_command}" >/dev/null 2>&1; then
         echo "Error: required command '${required_command}' was not found." >&2
         exit 2
@@ -88,7 +93,6 @@ done
 
 policy_name="${instance_name}-run-validation-egress"
 service_name="${instance_name}-server"
-admin_secret_name="${instance_name}-admin-access-token"
 probe_pod_name="${instance_name}-run-validation-network-test"
 temporary_directory=$(mktemp -d)
 
@@ -102,13 +106,6 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Preparing validator NetworkPolicy in namespace '${kubernetes_namespace}'..."
-
-access_token=${REANA_ACCESS_TOKEN:-}
-if [ -z "${access_token}" ]; then
-    encoded_access_token=$(kubectl -n "${kubernetes_namespace}" get secret \
-        "${admin_secret_name}" -o jsonpath='{.data.ADMIN_ACCESS_TOKEN}')
-    access_token=$(printf '%s' "${encoded_access_token}" | base64 --decode)
-fi
 
 cat >"${temporary_directory}/reana.yaml" <<'EOF'
 version: 0.9.0
@@ -129,10 +126,11 @@ EOF
 )
 
 validation_status=$(curl --silent --show-error --insecure \
+    --header "Authorization: Bearer ${access_token}" \
     --output "${temporary_directory}/validation-response.json" \
     --write-out '%{http_code}' \
     --form "bundle=@${temporary_directory}/validation-bundle.zip;filename=validation-bundle.zip" \
-    "${server_url%/}/api/workflows/validate?access_token=${access_token}")
+    "${server_url%/}/api/workflows/validate")
 
 if [ "${validation_status}" != "200" ] ||
     ! grep -Eq '"valid"[[:space:]]*:[[:space:]]*true' \

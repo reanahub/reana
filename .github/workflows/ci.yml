@@ -238,8 +238,21 @@ jobs:
           pip install twine wheel
           pip install -e .[all]
 
+      - name: Set up Helm 4
+        # The installation-notes test (tests/test_auth_helm.py) renders NOTES
+        # without a cluster via `helm install --dry-run=client`, which only Helm
+        # 4 supports; the runner image ships Helm 3, whose dry-run behaviour is
+        # version-dependent, so pin Helm 4 here to keep the test outcome tied to
+        # the chart rather than the floating runner image. The `lint-helm` job
+        # deliberately keeps exercising Helm 3 through chart-testing.
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.2.3
+
       - name: Run pytest
-        run: ./run-tests.sh --python-tests
+        run: |
+          helm dependency build helm/reana
+          ./run-tests.sh --python-tests
 
       - name: Codecov Coverage
         uses: codecov/codecov-action@v4

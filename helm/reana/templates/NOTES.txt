@@ -1,33 +1,119 @@
 The REANA system has been installed!
 
+{{- if and .Values.keycloak.enabled (eq .Values.keycloak.database.mode "ephemeral") }}
+
+WARNING: bundled Keycloak is using ephemeral development storage. Realm,
+user, client, session, and signing-key data will be lost when its pod is
+replaced. Use keycloak.database.mode=bundled or external for persistent data.
+{{- end }}
+
 If you are upgrading from a previous REANA release series, you may need to
 upgrade database schema now:
 
-   $ kubectl -n {{ .Release.Namespace }} exec -i -t deployment/{{ .Release.Name }}-server -c rest-api -- reana-db alembic upgrade
+   $ kubectl -n {{ .Release.Namespace }} exec -i -t deployment/{{ include "reana.prefix" . }}-server -c rest-api -- reana-db alembic upgrade
 
 Please see the dedicated upgrade documentation at
 <https://docs.reana.io/administration/deployment/upgrading-db/>
+
+On an installation with a large number of user accounts, note that some of
+this release's migrations briefly hold an exclusive lock on the `user_`
+table while building new constraints, blocking authenticated requests for
+the build's duration -- see the per-migration notes in reana-db's
+`alembic/versions/` for which ones and why. Consider a maintenance window.
+If maintenance mode is already enabled, the server and (when bundled) its
+database are at zero replicas, so the normal `kubectl exec` command has no
+pod or database to reach.
+{{- if .Values.components.reana_db.enabled }} With the bundled database,
+`maintenance.enabled` also scales `{{ include "reana.prefix" . }}-db` to
+zero replicas too, so the migration has no database to reach either.
+{{- end }}{{- if .Values.pgbouncer.enabled }} The configured PgBouncer
+connection pool (`{{ include "reana.prefix" . }}-pgbouncer`) is also scaled
+down and must be restored before the server can reach the database.
+{{- end }} Keep the public API offline while temporarily restoring those
+dependencies by first changing the server Service to a selector that matches
+no pod. Restore the dependencies in readiness order, run the migration, and
+then shut down the temporary server before restoring the chart-managed
+Service selector:
+
+   $ kubectl -n {{ .Release.Namespace }} patch service/{{ include "reana.prefix" . }}-server --type=merge -p '{"spec":{"selector":{"app":"{{ include "reana.prefix" . }}-server-maintenance-migration"}}}'
+
+{{- if .Values.components.reana_db.enabled }}
+   $ kubectl -n {{ .Release.Namespace }} scale deployment/{{ include "reana.prefix" . }}-db --replicas=1
+   $ kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "reana.prefix" . }}-db --timeout=5m
+{{- end }}
+{{- if .Values.pgbouncer.enabled }}
+   $ kubectl -n {{ .Release.Namespace }} scale deployment/{{ include "reana.prefix" . }}-pgbouncer --replicas=1
+   $ kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "reana.prefix" . }}-pgbouncer --timeout=5m
+{{- end }}
+   $ kubectl -n {{ .Release.Namespace }} scale deployment/{{ include "reana.prefix" . }}-server --replicas=1
+   $ kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "reana.prefix" . }}-server --timeout=5m
+   $ kubectl -n {{ .Release.Namespace }} exec -i -t deployment/{{ include "reana.prefix" . }}-server -c rest-api -- reana-db alembic upgrade
+   $ kubectl -n {{ .Release.Namespace }} scale deployment/{{ include "reana.prefix" . }}-server --replicas=0
+   $ kubectl -n {{ .Release.Namespace }} wait --for=delete pod -l app={{ include "reana.prefix" . }}-server --timeout=5m
+{{- if .Values.pgbouncer.enabled }}
+   $ kubectl -n {{ .Release.Namespace }} scale deployment/{{ include "reana.prefix" . }}-pgbouncer --replicas=0
+{{- end }}
+{{- if .Values.components.reana_db.enabled }}
+   $ kubectl -n {{ .Release.Namespace }} scale deployment/{{ include "reana.prefix" . }}-db --replicas=0
+{{- end }}
+   $ kubectl -n {{ .Release.Namespace }} patch service/{{ include "reana.prefix" . }}-server --type=merge -p '{"spec":{"selector":{"app":"{{ include "reana.prefix" . }}-server"}}}'
+
+Run the cleanup commands after the migration even if it fails. This returns
+the chart-managed workloads to zero replicas and restores the Service's normal
+selector without fetching or upgrading a chart. The API remains offline until
+you diagnose any failure and leave maintenance mode through your normal Helm
+upgrade workflow.
+
+WARNING: if you are upgrading a REANA cluster with existing users from a
+release series that predates OIDC/JWT authentication, every existing account
+has no linked identity provider subject (`idp_issuer`/`idp_subject` are
+unset) and cannot sign in through the new authentication flow until it is
+linked to an identity from your configured issuer. By default nothing links
+these automatically: users will hit a clear "an account already exists"
+error on their first login rather than being silently locked out, but they
+will still be unable to sign in until an administrator resolves it. Options:
+
+  - Link each account by hand:
+      $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ include "reana.prefix" . }}-server -c rest-api -- \
+            flask reana-admin create-admin-user --email jane.doe@example.org \
+                                                --idp-issuer https://issuer.example.org \
+                                                --idp-subject oidc-subject
+    (works for any user, not just admins -- see `flask reana-admin --help`.)
+  - Enable automatic email-based linking for your issuer, so a user whose
+    verified IdP email matches their existing REANA account is linked on
+    first login without administrator action. This trusts your issuer's
+    email verification, so only enable it for issuers you control or trust
+    to verify email ownership. Set on reana-server:
+      REANA_AUTH_EMAIL_LINKING_ENABLED=true
+      REANA_AUTH_EMAIL_LINKING_ISSUER_ALLOWLIST=https://issuer.example.org
+      REANA_AUTH_EMAIL_LINKING_DOMAIN_ALLOWLIST=example.org
+    (the two allow-lists are optional but recommended; an empty allow-list
+    skips that particular check rather than rejecting everyone.)
+    Some institutional issuers (e.g. CERN Keycloak) never emit
+    `email_verified` at all, even though their email is verified
+    out-of-band. If yours is one of them, additionally set:
+      REANA_AUTH_EMAIL_LINKING_ASSUME_VERIFIED_ISSUERS=https://issuer.example.org
+    (a comma-separated administrator attestation, per issuer -- it does not
+    weaken the check for any other issuer.)
+
+Fresh installs are unaffected by this.
 
 If you are deploying REANA for the first time, there are a few steps left to
 finalise its configuration.
 
 1. Initialise the database:
 
-    $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
+    $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ include "reana.prefix" . }}-server -c rest-api -- \
         ./scripts/create-database.sh
 
-2. Create administrator user and corresponding access token:
+2. Create an administrator linked to their OIDC identity:
 
-    $ mytoken=$(kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-server -c rest-api -- \
+    $ kubectl -n {{ .Release.Namespace }} exec deployment/{{ include "reana.prefix" . }}-server -c rest-api -- \
           flask reana-admin create-admin-user --email john.doe@example.org \
-                                              --password mysecretpassword)
+                                              --idp-issuer https://issuer.example.org \
+                                              --idp-subject oidc-subject
 
-3. Store administrator access token as Kubernetes secret:
-
-    $ kubectl -n {{ .Release.Namespace }} create secret generic {{ .Release.Name }}-admin-access-token \
-        --from-literal=ADMIN_ACCESS_TOKEN="$mytoken"
-
-4. Try to run your first REANA example:
+3. Try to run your first REANA example:
 
     $ firefox https://{{ .Values.reana_hostname }}:{{.Values.reana_hostport}}
 
@@ -37,8 +123,8 @@ finalise its configuration.
     $ pip install --user reana-client
     $ # set environment variables for REANA client
     $ export REANA_SERVER_URL=https://{{ .Values.reana_hostname }}:{{.Values.reana_hostport}}
-    $ export REANA_ACCESS_TOKEN="$mytoken"
-    $ # test connection to the REANA cluster
+    $ # authenticate and test connection to the REANA cluster
+    $ reana-client login
     $ reana-client ping
     $ # clone and run a simple analysis example
     $ git clone https://github.com/reanahub/reana-demo-root6-roofit

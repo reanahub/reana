@@ -23,8 +23,7 @@ Environment variables:
   REANA_SERVER_URL
       Public REANA URL. [default: https://localhost:30443]
   REANA_ACCESS_TOKEN
-      Access token. When unset, read it from the
-      <instance-name>-admin-access-token Kubernetes Secret.
+      OIDC access token. Required.
 EOF
 }
 
@@ -37,39 +36,33 @@ if [ "$#" -gt 2 ]; then
     exit 2
 fi
 
-kubernetes_namespace=${1:-default}
-instance_name=${2:-reana}
 server_url=${REANA_SERVER_URL:-https://localhost:30443}
-admin_secret_name="${instance_name}-admin-access-token"
-temporary_directory=$(mktemp -d)
-workflow_id=
 
-for required_command in base64 cmp curl jq python3; do
+access_token=${REANA_ACCESS_TOKEN:-}
+if [ -z "${access_token}" ]; then
+    echo "Error: REANA_ACCESS_TOKEN is required." >&2
+    exit 2
+fi
+
+for required_command in cmp curl jq python3; do
     if ! command -v "${required_command}" >/dev/null 2>&1; then
         echo "Error: required command '${required_command}' was not found." >&2
         exit 2
     fi
 done
 
-access_token=${REANA_ACCESS_TOKEN:-}
-if [ -z "${access_token}" ]; then
-    if ! command -v kubectl >/dev/null 2>&1; then
-        echo "Error: kubectl is required when REANA_ACCESS_TOKEN is unset." >&2
-        exit 2
-    fi
-    encoded_access_token=$(kubectl -n "${kubernetes_namespace}" get secret \
-        "${admin_secret_name}" -o jsonpath='{.data.ADMIN_ACCESS_TOKEN}')
-    access_token=$(printf '%s' "${encoded_access_token}" | base64 --decode)
-fi
+temporary_directory=$(mktemp -d)
+workflow_id=
 
 # Invoked indirectly by the EXIT trap below.
 # shellcheck disable=SC2329
 cleanup() {
     if [ -n "${workflow_id}" ]; then
         curl --silent --insecure --request PUT \
+            --header "Authorization: Bearer ${access_token}" \
             --header "Content-Type: application/json" \
             --data '{"all_runs":false,"workspace":true}' \
-            "${server_url%/}/api/workflows/${workflow_id}/status?status=deleted&access_token=${access_token}" \
+            "${server_url%/}/api/workflows/${workflow_id}/status?status=deleted" \
             >/dev/null 2>&1 || true
     fi
     rm -rf "${temporary_directory}"
@@ -122,10 +115,11 @@ PY
 
 echo "Validating the declared workflow-definition snapshot..."
 validation_status=$(curl --silent --show-error --insecure \
+    --header "Authorization: Bearer ${access_token}" \
     --output "${temporary_directory}/validation.json" \
     --write-out '%{http_code}' \
     --form "bundle=@${temporary_directory}/source/validation-bundle.zip;filename=validation-bundle.zip" \
-    "${server_url%/}/api/workflows/validate?access_token=${access_token}")
+    "${server_url%/}/api/workflows/validate")
 if [ "${validation_status}" != "200" ] ||
     [ "$(jq -r '.valid' "${temporary_directory}/validation.json")" != "true" ]; then
     echo "Error: valid snapshot was rejected (HTTP ${validation_status})." >&2
@@ -136,10 +130,11 @@ fi
 echo "Creating a workflow from the same snapshot..."
 workflow_name="storage-contract-$(date +%s)"
 create_status=$(curl --silent --show-error --insecure \
+    --header "Authorization: Bearer ${access_token}" \
     --output "${temporary_directory}/create.json" \
     --write-out '%{http_code}' \
     --form "bundle=@${temporary_directory}/source/validation-bundle.zip;filename=validation-bundle.zip" \
-    "${server_url%/}/api/workflows?workflow_name=${workflow_name}&access_token=${access_token}")
+    "${server_url%/}/api/workflows?workflow_name=${workflow_name}")
 if [ "${create_status}" != "201" ] && [ "${create_status}" != "200" ]; then
     echo "Error: workflow create failed (HTTP ${create_status})." >&2
     cat "${temporary_directory}/create.json" >&2
@@ -152,8 +147,9 @@ if [ -z "${workflow_id}" ]; then
 fi
 
 curl --silent --show-error --insecure \
+    --header "Authorization: Bearer ${access_token}" \
     --output "${temporary_directory}/workspace-before.json" \
-    "${server_url%/}/api/workflows/${workflow_id}/workspace?access_token=${access_token}"
+    "${server_url%/}/api/workflows/${workflow_id}/workspace"
 if jq -e '.items[]? | select(.name == "data/input.txt")' \
     "${temporary_directory}/workspace-before.json" >/dev/null; then
     echo "Error: input dataset was present before the explicit upload." >&2
@@ -170,11 +166,13 @@ done
 
 echo "Uploading the declared input dataset after validation..."
 upload_status=$(curl --silent --show-error --insecure \
+    --header "Authorization: Bearer ${access_token}" \
+    --header "Content-Type: application/octet-stream" \
     --output "${temporary_directory}/upload.json" \
     --write-out '%{http_code}' \
     --request POST \
-    --form "file=@${temporary_directory}/source/data/input.txt;filename=input.txt" \
-    "${server_url%/}/api/workflows/${workflow_id}/workspace?file_name=data/input.txt&access_token=${access_token}")
+    --data-binary "@${temporary_directory}/source/data/input.txt" \
+    "${server_url%/}/api/workflows/${workflow_id}/workspace?file_name=data/input.txt")
 if [ "${upload_status}" != "200" ]; then
     echo "Error: input upload failed (HTTP ${upload_status})." >&2
     cat "${temporary_directory}/upload.json" >&2
@@ -183,9 +181,10 @@ fi
 
 echo "Verifying that the workspace upload preserved every byte..."
 download_status=$(curl --silent --show-error --insecure \
+    --header "Authorization: Bearer ${access_token}" \
     --output "${temporary_directory}/downloaded-input.txt" \
     --write-out '%{http_code}' \
-    "${server_url%/}/api/workflows/${workflow_id}/workspace/data/input.txt?access_token=${access_token}")
+    "${server_url%/}/api/workflows/${workflow_id}/workspace/data/input.txt")
 if [ "${download_status}" != "200" ]; then
     echo "Error: input download failed (HTTP ${download_status})." >&2
     exit 1
@@ -216,10 +215,11 @@ PY
 
 for archive in traversal compressed; do
     status=$(curl --silent --show-error --insecure \
+        --header "Authorization: Bearer ${access_token}" \
         --output "${temporary_directory}/${archive}.json" \
         --write-out '%{http_code}' \
         --form "bundle=@${temporary_directory}/source/${archive}.zip;filename=${archive}.zip" \
-        "${server_url%/}/api/workflows/validate?access_token=${access_token}")
+        "${server_url%/}/api/workflows/validate")
     if [ "${status}" != "400" ]; then
         echo "Error: ${archive} snapshot returned HTTP ${status}, expected 400." >&2
         cat "${temporary_directory}/${archive}.json" >&2

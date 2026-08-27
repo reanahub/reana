@@ -95,11 +95,6 @@ spec:
             {{- end }}
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
-            - name: REANA_ADMIN_ACCESS_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-admin-access-token
-                  key: ADMIN_ACCESS_TOKEN
             - name: REANA_SECRET_KEY
               valueFrom:
                 secretKeyRef:
@@ -291,11 +286,6 @@ spec:
                   key: password
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
-            - name: REANA_ADMIN_ACCESS_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-admin-access-token
-                  key: ADMIN_ACCESS_TOKEN
             - name: REANA_SECRET_KEY
               valueFrom:
                 secretKeyRef:
@@ -393,11 +383,6 @@ spec:
                   key: password
             - name: REANA_COMPONENT_PREFIX
               value: {{ include "reana.prefix" . }}
-            - name: REANA_ADMIN_ACCESS_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "reana.prefix" . }}-admin-access-token
-                  key: ADMIN_ACCESS_TOKEN
             - name: REANA_SECRET_KEY
               valueFrom:
                 secretKeyRef:

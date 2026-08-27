@@ -10,6 +10,7 @@
 
 import json
 import os
+import shlex
 import sys
 
 import click
@@ -338,10 +339,24 @@ def cluster_build(
     help="In which mode to run REANA cluster? (releasehelm,releasepypi,latest,debug) [default=latest]",
 )
 @click.option(
+    "-f",
     "-v",
     "--values",
-    default="helm/configurations/values-dev.yaml",
-    help="Which Helm configuration values file to use? [default=helm/configurations/values-dev.yaml]",
+    multiple=True,
+    default=("helm/configurations/values-dev.yaml",),
+    help=(
+        "Which Helm configuration values file to use? Can be passed multiple "
+        "times; later files override earlier files. [default=helm/configurations/values-dev.yaml]"
+    ),
+)
+@click.option(
+    "--set",
+    "helm_set_values",
+    multiple=True,
+    help=(
+        "Set a Helm value after applying the values files. Can be passed "
+        "multiple times, using NAME=VALUE syntax."
+    ),
 )
 @click.option(
     "--exclude-components",
@@ -368,6 +383,7 @@ def cluster_deploy(
     job_mounts,
     mode,
     values,
+    helm_set_values,
     exclude_components,
     admin_email,
     admin_password,
@@ -402,13 +418,21 @@ def cluster_deploy(
 
         return job_mount_config
 
-    if mode in ("releasehelm") and values == "helm/configurations/values-dev.yaml":
-        values = ""
+    def merge_values(base, override):
+        for key, value in override.items():
+            if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                merge_values(base[key], value)
+            else:
+                base[key] = value
+        return base
+
+    if mode == "releasehelm" and values == ("helm/configurations/values-dev.yaml",):
+        values = ()
 
     values_dict = {}
-    if values:
-        with open(os.path.join(get_srcdir("reana"), values)) as f:
-            values_dict = yaml.safe_load(f.read()) or {}
+    for values_file in values:
+        with open(os.path.join(get_srcdir("reana"), values_file)) as f:
+            values_dict = merge_values(values_dict, yaml.safe_load(f.read()) or {})
 
     job_mount_config = job_mounts_to_config(job_mounts)
     if job_mount_config:
@@ -430,7 +454,13 @@ def cluster_deploy(
 
     # set arbitrary big value for `width` to prevent PyYAML from wrapping long lines
     values_yaml = yaml.dump(values_dict, width=100000) if values_dict else ""
-    helm_install = f"cat <<EOF | helm install {instance_name} helm/reana -n {namespace} --create-namespace --wait -f -\n{values_yaml}\nEOF"
+    helm_set_args = " ".join(f"--set {shlex.quote(value)}" for value in helm_set_values)
+    if helm_set_args:
+        helm_set_args = f" {helm_set_args}"
+    helm_install = (
+        f"cat <<EOF | helm install {instance_name} helm/reana -n {namespace} "
+        f"--create-namespace --wait -f -{helm_set_args}\n{values_yaml}\nEOF"
+    )
 
     cmds = []
     if mode in ("debug"):

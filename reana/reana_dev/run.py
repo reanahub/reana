@@ -418,7 +418,7 @@ def run_ci(
         cmd += " -j {}".format(job_mount)
     run_command(cmd, "reana")
     # run demo examples
-    cmd = f"eval $(reana-dev client-setup-environment --server-hostname https://localhost:{hostport} -n {namespace}) && reana-dev run-example"
+    cmd = f"eval $(reana-dev client-setup-environment --server-hostname https://localhost:{hostport}) && reana-dev run-example"
     for component in components:
         cmd += " -c {}".format(component)
     for a_workflow_engine in workflow_engine:
