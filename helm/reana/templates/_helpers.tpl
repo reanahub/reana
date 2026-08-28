@@ -15,6 +15,15 @@ naming spec: `my-reana-batch-yadage-3c640169-d3b7-41ad-9c09-392c903fc1d8`
 {{- end -}}
 {{- end -}}
 
+{{/* Normalise an explicitly null workflow log retention period safely. */}}
+{{- define "reana.logs_retention_period" -}}
+{{- if kindIs "invalid" .Values.logs.retention_rules.maximum_period -}}
+forever
+{{- else -}}
+{{- tpl (.Values.logs.retention_rules.maximum_period | toString) . -}}
+{{- end -}}
+{{- end -}}
+
 # Centralise prefixing of service account names
 {{- define "reana.prefixed_infrastructure_svaccount_name" -}}
 {{- include "reana.prefix" . -}}-infrastructure
