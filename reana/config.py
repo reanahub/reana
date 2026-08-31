@@ -257,9 +257,9 @@ COMPONENTS_USING_SHARED_MODULE_DB = [
 DOCKER_PREFETCH_IMAGES = {
     "reana": [
         "docker.io/library/postgres:14.23",
-        "docker.io/kozea/wdb:3.2.5",
-        "docker.io/maildev/maildev:1.1.0",
-        "docker.io/library/redis:5.0.5",
+        "docker.io/kozea/wdb:3.3.0",
+        "docker.io/maildev/maildev:2.2.1",
+        "docker.io/library/redis:8.6.7",
     ],
     "reana-demo-helloworld": [
         "docker.io/library/python:2.7-slim",

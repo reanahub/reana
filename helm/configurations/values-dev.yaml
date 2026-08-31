@@ -232,8 +232,8 @@ interactive_sessions:
     jupyter:
       allow_custom: false
       recommended:
-        - image: "quay.io/jupyter/scipy-notebook:notebook-7.2.2"
-          name: "Jupyter SciPy Notebook 7.2.2"
+        - image: "quay.io/jupyter/scipy-notebook:notebook-7.6.3"
+          name: "Jupyter SciPy Notebook 7.6.3"
 
 # Workspace retention: shorten `maximum_period` to test the retention cronjob.
 workspaces:

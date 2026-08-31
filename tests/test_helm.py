@@ -638,3 +638,39 @@ def test_workflow_validator_reserved_environment_is_rejected():
 
     assert rendered.returncode != 0
     assert "PYTHONPATH is reserved by the validation sandbox" in rendered.stderr
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_mail_service_targets_the_ports_maildev_listens_on(tmp_path):
+    """The mail service must target the ports MailDev is configured to listen on."""
+    documents = _rendered_documents(
+        _render_helm_chart(tmp_path, {"debug": {"enabled": True}})
+    )
+
+    service = next(
+        document
+        for document in documents
+        if document["kind"] == "Service"
+        and document["metadata"]["name"].endswith("-mail")
+    )
+    deployment = next(
+        document
+        for document in documents
+        if document["kind"] == "Deployment"
+        and document["metadata"]["name"].endswith("-mail")
+    )
+
+    container = deployment["spec"]["template"]["spec"]["containers"][0]
+    listening_on = {
+        variable["name"]: int(variable["value"]) for variable in container["env"]
+    }
+    targeted = {port["name"]: port["targetPort"] for port in service["spec"]["ports"]}
+
+    assert targeted["smtp"] == listening_on["MAILDEV_SMTP_PORT"]
+    assert targeted["ui"] == listening_on["MAILDEV_WEB_PORT"]
+
+    # Node ports are part of the cluster contract and must not change.
+    assert {port["port"] for port in service["spec"]["ports"]} == {30025, 32580}
