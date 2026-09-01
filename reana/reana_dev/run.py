@@ -478,7 +478,7 @@ def run_ci(
     "options",
     multiple=True,
     help="Additional operational options for the workflow execution. "
-    "E.g. CACHE=off.",
+    "E.g. TARGET=gendata (workflow engine - serial).",
 )
 @click.option(
     "--submit-only", is_flag=True, help="Do not wait for workflows to finish."
@@ -526,7 +526,7 @@ def run_example(  # noqa: C901
                        from reana.yaml.
                        E.g. -p myparam1=myval1 -p myparam2=myval2.
     :param options: Additional operational options for the workflow execution.
-                    E.g. CACHE=off.
+                    E.g. TARGET=gendata (workflow engine - serial).
     :param submit_only: Do not wait for workflows to finish.
     :param check_only: Wait for previously submitted workflows.
 
