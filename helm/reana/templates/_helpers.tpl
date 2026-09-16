@@ -53,3 +53,39 @@ hostPath:
 {{ template "reana.shared_volume" . }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Resolve the Kubernetes concurrency limit, honouring the deprecated
+REANA_MAX_CONCURRENT_BATCH_WORKFLOWS environment variable.
+
+Precedence: explicit `concurrency_limits.kubernetes` > legacy
+`environment.REANA_MAX_CONCURRENT_BATCH_WORKFLOWS` > built-in default of 30.
+Without this the chart would always emit the new variable and the fallback
+built into reana-commons could never fire, silently raising the cap of a
+deployment that only sets the legacy value.
+
+`default` cannot express this: it treats a numeric 0 as empty, which would
+discard an intentional "backend closed" cap. A value counts as configured only
+when its key is present *and* non-nil, which covers both ways a Helm release
+can represent the shipped `kubernetes: ~`: Helm 3 keeps the key with a nil
+value, Helm 4 drops the key entirely. An explicit `0` is present and non-nil
+in both, so it still reads as "configured to zero".
+*/}}
+{{- define "reana.k8sConcurrencyLimit" -}}
+{{- $env := .Values.components.reana_server.environment | default dict -}}
+{{- $limits := .Values.components.reana_server.concurrency_limits | default dict -}}
+{{- $cap := 30 -}}
+{{- if hasKey $env "REANA_MAX_CONCURRENT_BATCH_WORKFLOWS" -}}
+{{- $legacy := index $env "REANA_MAX_CONCURRENT_BATCH_WORKFLOWS" -}}
+{{- if not (kindIs "invalid" $legacy) -}}
+{{- $cap = $legacy -}}
+{{- end -}}
+{{- end -}}
+{{- if hasKey $limits "kubernetes" -}}
+{{- $kubernetes := index $limits "kubernetes" -}}
+{{- if not (kindIs "invalid" $kubernetes) -}}
+{{- $cap = $kubernetes -}}
+{{- end -}}
+{{- end -}}
+{{- $cap -}}
+{{- end -}}
