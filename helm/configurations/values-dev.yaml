@@ -114,7 +114,7 @@ opensearch:
           name: reana-opensearch-secrets
           key: OPENSEARCH_INITIAL_ADMIN_PASSWORD
   secretMounts: []
-  customSecurityConfig:
+  customSecurityConfig: {}
   podSecurityContext:
     fsGroup: 0
 
