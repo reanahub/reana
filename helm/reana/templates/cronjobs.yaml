@@ -318,6 +318,75 @@ spec:
             hostPath:
               path: /code/reana-server
 ---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "reana.prefix" . }}-workflow-sharing-expired-cleanup
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: {{ .Values.workflow_sharing.cronjob_schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  {{- if .Values.maintenance.enabled }}
+  suspend: true
+  {{- end }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: {{ include "reana.prefix" . }}-workflow-sharing-expired-cleanup
+        spec:
+          containers:
+          - name: {{ include "reana.prefix" . }}-workflow-sharing-expired-cleanup
+            image: {{ .Values.components.reana_server.image }}
+            command:
+            - '/bin/sh'
+            - '-c'
+            args:
+            - 'flask reana-admin workflow-sharing-expired-cleanup'
+            {{- if .Values.debug.enabled }}
+            tty: true
+            stdin: true
+            {{- end }}
+            envFrom:
+              - configMapRef:
+                  name: {{ include "reana.prefix" . }}-database-config
+            env:
+            {{- if .Values.debug.enabled }}
+            - name: FLASK_DEBUG
+              value: "1"
+            {{- end }}
+            - name: REANA_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-db-secrets
+                  key: user
+            - name: REANA_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-db-secrets
+                  key: password
+            - name: REANA_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reana.prefix" . }}-secrets
+                  key: REANA_SECRET_KEY
+            {{- if .Values.debug.enabled }}
+            volumeMounts:
+              - mountPath: /code/
+                name: reana-code
+            {{- end }}
+            imagePullPolicy: IfNotPresent
+          restartPolicy: Never
+          {{- if .Values.debug.enabled }}
+          volumes:
+          - name: reana-code
+            hostPath:
+              path: /code/reana-server
+          {{- end }}
+---
 {{- if not (contains "forever" (.Values.interactive_sessions.maximum_inactivity_period | quote)) }}
 apiVersion: batch/v1
 kind: CronJob

@@ -162,6 +162,9 @@ interactive_sessions:
       allow_custom: false
   maximum_inactivity_period: forever
 
+workflow_sharing:
+  cronjob_schedule: "0 0 * * *" # everyday at midnight
+
 compute_backends:
   - kubernetes
 
