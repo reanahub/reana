@@ -617,6 +617,47 @@ def test_infrastructure_cephfs_binds_static_volume(tmp_path):
     )
 
 
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_infrastructure_hostpath_is_created_on_selected_node(tmp_path):
+    """Local infrastructure hostPath should be self-provisioning and pinned."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        {
+            "infrastructure_storage": {
+                "backend": "hostpath",
+                "hostpath": {"root_path": "/var/reana-infrastructure"},
+            },
+            "node_label_infrastructuredb": "reana.io/infrastructure-storage=cephfs",
+            "node_label_infrastructuremq": "reana.io/infrastructure-storage=cephfs",
+        },
+    )
+    documents = _rendered_documents(rendered)
+
+    for component, kind in (
+        ("reana-db", "Deployment"),
+        ("reana-message-broker", "StatefulSet"),
+    ):
+        workload = next(
+            document
+            for document in documents
+            if document["kind"] == kind and document["metadata"]["name"] == component
+        )
+        pod_spec = workload["spec"]["template"]["spec"]
+        infrastructure_volume = next(
+            volume
+            for volume in pod_spec["volumes"]
+            if volume["name"] == "reana-infrastructure-volume"
+        )
+        assert infrastructure_volume["hostPath"] == {
+            "path": "/var/reana-infrastructure",
+            "type": "DirectoryOrCreate",
+        }
+        assert pod_spec["nodeSelector"] == {"reana.io/infrastructure-storage": "cephfs"}
+
+
 def test_workflow_validator_reserved_environment_is_rejected():
     """The chart rejects attempts to replace the sandbox filesystem contract."""
     rendered = subprocess.run(

@@ -1,0 +1,28 @@
+# REANA dev overlay for the local Kind + Rook CephFS profile prepared by:
+#
+#   reana-dev cluster-create --shared-storage-backend cephfs
+#   reana-dev cluster-deploy --shared-storage-backend cephfs ...
+#
+# The storage class name and node labels below are those of that local Rook
+# stack, so this file is not a generic "existing CephFS" profile: selecting
+# `--shared-storage-backend cephfs` also runs the Kind-specific Rook and
+# loop-device preflight. Validating against a different, pre-existing CephFS
+# storage class is not supported by this lifecycle.
+#
+# This minimal overlay layers on the selected development values or, in
+# `releasehelm` mode, on the chart defaults.
+
+shared_storage:
+  backend: cephfs
+  fs_group: 0
+  storage_class_name: rook-cephfs
+
+infrastructure_storage:
+  backend: hostpath
+  hostpath:
+    root_path: /var/reana-infrastructure
+
+# Keep the hostPath-backed database and message broker on the node that owns
+# the local Rook data. The hostPath itself is created by the chart.
+node_label_infrastructuredb: reana.io/infrastructure-storage=cephfs
+node_label_infrastructuremq: reana.io/infrastructure-storage=cephfs
