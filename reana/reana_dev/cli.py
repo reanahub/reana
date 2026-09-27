@@ -175,6 +175,14 @@ def reana_dev():  # noqa: D301
         $ reana-dev git-tag -c .
         $ reana-dev release-docker --platform linux/amd64 --platform linux/arm64 -c .
 
+    How to amend GitHub release titles set by Release Please:
+
+    .. code-block:: console
+
+        \b
+        $ reana-dev release-github-title -c CLUSTER --dry-run
+        $ reana-dev release-github-title -c CLUSTER
+
     """
     pass
 

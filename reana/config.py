@@ -332,6 +332,30 @@ GIT_SUPPORTED_MAINT_BRANCHES = ["maint-0.7"]
 GITHUB_REANAHUB_URL = "https://github.com/reanahub"
 """REANA Hub organisation GitHub URL."""
 
+GITHUB_RELEASE_TITLE_COMPONENT_NAMES = {
+    "reana": "",
+    "reana-auth-krb5": "REANA-Auth-Krb5",
+    "reana-auth-rucio": "REANA-Auth-Rucio",
+    "reana-auth-vomsproxy": "REANA-Auth-VOMSproxy",
+    "reana-client": "REANA-Client",
+    "reana-client-go": "REANA-Client-Go",
+    "reana-commons": "REANA-Commons",
+    "reana-dask-kubernetes-operator": "REANA-Dask-Kubernetes-Operator",
+    "reana-datastore-s3fs": "REANA-Datastore-S3FS",
+    "reana-db": "REANA-DB",
+    "reana-job-controller": "REANA-Job-Controller",
+    "reana-message-broker": "REANA-Message-Broker",
+    "reana-server": "REANA-Server",
+    "reana-ui": "REANA-UI",
+    "reana-workflow-controller": "REANA-Workflow-Controller",
+    "reana-workflow-engine-cwl": "REANA-Workflow-Engine-CWL",
+    "reana-workflow-engine-serial": "REANA-Workflow-Engine-Serial",
+    "reana-workflow-engine-snakemake": "REANA-Workflow-Engine-Snakemake",
+    "reana-workflow-engine-yadage": "REANA-Workflow-Engine-Yadage",
+    "reana-workflow-validator": "REANA-Workflow-Validator",
+}
+"""Component names used in GitHub release titles; ``reana`` uses the bare version."""
+
 CODECOV_REANAHUB_URL = "https://codecov.io/gh/reanahub"
 """REANA Hub organisation Codecov URL."""
 
