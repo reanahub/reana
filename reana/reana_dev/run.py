@@ -317,12 +317,10 @@ def validate_ci_client(client_flavour):
 )
 @click.option(
     "--admin-email",
-    required=True,
     help="Admin user email address",
 )
 @click.option(
     "--admin-password",
-    required=True,
     help="Admin user password",
 )
 @click.option(
@@ -354,9 +352,17 @@ def validate_ci_client(client_flavour):
     default="kind",
     help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
 )
+@click.option(
+    "--submit-only", is_flag=True, help="Do not wait for workflows to finish."
+)
+@click.option(
+    "--check-only",
+    is_flag=True,
+    help="Do not build and deploy the cluster, only wait for previously submitted workflows.",
+)
 @client_option
 @run_commands.command(name="run-ci")
-def run_ci(
+def run_ci(  # noqa: C901
     build_arg,
     mode,
     exclude_components,
@@ -372,6 +378,8 @@ def run_ci(
     parallel,
     namespace,
     kubernetes,
+    submit_only,
+    check_only,
     client_flavour,
 ):  # noqa: D301
     """Run CI build.
@@ -392,6 +400,13 @@ def run_ci(
     arguments.
 
     \b
+    Run the demo examples in two steps to deploy the cluster faster:
+       $ reana-dev run-ci --admin-email john.doe@example.org
+                          --admin-password mysecretpassword --submit-only
+       $ # ... wait some minutes
+       $ reana-dev run-ci --check-only
+
+    \b
     Example:
        $ reana-dev run-ci -m /var/reana:/var/reana
                           -m /usr/share/local/mydata:/mydata
@@ -404,9 +419,28 @@ def run_ci(
                           --admin-email john.doe@example.org
                           --admin-password mysecretpassword
     """
-    validate_ci_client(client_flavour)
     # parse arguments
     components = select_components(component)
+    run_example_cmd = (
+        f"reana-dev run-example --client {client_flavour} "
+        f"--server https://localhost:{hostport} --no-tls-verify"
+    )
+    for component in components:
+        run_example_cmd += " -c {}".format(component)
+    for a_workflow_engine in workflow_engine:
+        run_example_cmd += " -w {}".format(a_workflow_engine)
+    if submit_only:
+        run_example_cmd += " --submit-only"
+    # run-example rejects --check-only together with --submit-only
+    if check_only:
+        run_command(f"{run_example_cmd} --check-only", "reana")
+        return
+    if not (admin_email and admin_password):
+        click.secho(
+            "[ERROR] Options --admin-email and --admin-password are required, unless --check-only is used."
+        )
+        sys.exit(1)
+    validate_ci_client(client_flavour)
     # create cluster if needed
     if not is_cluster_created(kubernetes):
         cmd = f"reana-dev cluster-create --kubernetes {kubernetes} --mode {mode} --extra-ports {hostport}"
@@ -460,15 +494,7 @@ def run_ci(
         f"authenticate, please log in as {admin_email}.",
         component="reana",
     )
-    cmd = (
-        f"reana-dev run-example --client {client_flavour} "
-        f"--server https://localhost:{hostport} --no-tls-verify"
-    )
-    for component in components:
-        cmd += " -c {}".format(component)
-    for a_workflow_engine in workflow_engine:
-        cmd += " -w {}".format(a_workflow_engine)
-    run_command(cmd, "reana")
+    run_command(run_example_cmd, "reana")
 
 
 def _normalise_client_server_url(url):
