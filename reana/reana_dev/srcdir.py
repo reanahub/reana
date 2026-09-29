@@ -42,6 +42,8 @@ Canonical repositories may have linked Git worktrees.  Srcdirs contain only
 independent primary checkouts: inherited worktree registrations and registered
 linked-worktree directories inside the collection are removed from the copy
 before preparing any repository.  Canonical worktrees are left untouched.
+Creation requires Git 2.36 or newer to read worktree paths unambiguously,
+including paths containing newlines.  Omitted linked checkouts are reported.
 Inside Kitty or Tmux, ``srcdir-workon`` uses a dedicated session named after
 the srcdir.  Tmux takes precedence when both environments are present.  In
 other terminals, it opens a shell in the current terminal.  Pass ``--kitty``,
@@ -406,8 +408,20 @@ def _validate_name(name: str, param_hint: str = "NAME") -> None:
         )
 
 
+def _require_worktree_git() -> None:
+    """Require Git's NUL-delimited worktree listing before copying sources."""
+    version = _run(["git", "--version"]).stdout.strip()
+    match = re.match(r"git version (\d+)\.(\d+)", version)
+    if not match or tuple(map(int, match.groups())) < (2, 36):
+        raise SrcdirError(
+            "srcdir-create requires Git 2.36 or newer for worktree discovery "
+            f"(found {version})."
+        )
+
+
 def _discover_repositories(source_root: Path) -> Tuple[List[str], List[Path]]:
     """Find primary repositories and internal auxiliary worktrees to omit."""
+    _require_worktree_git()
     repositories = []
     git_files = []
     errors = []
@@ -441,13 +455,19 @@ def _discover_repositories(source_root: Path) -> Tuple[List[str], List[Path]]:
                 continue
             # A stale registration can point at a directory since reused for
             # other work. Only omit a checkout still linked to this repository.
-            if (worktree / ".git").is_file() and _git(
+            if not (worktree / ".git").is_file():
+                continue
+            common_dir = _git(
                 worktree,
                 "rev-parse",
                 "--path-format=absolute",
                 "--git-common-dir",
                 check=False,
-            ) == str(repository / ".git"):
+            )
+            if (
+                common_dir
+                and Path(common_dir).resolve() == (repository / ".git").resolve()
+            ):
                 linked_worktrees.add(worktree)
 
     for candidate in git_files:
@@ -972,6 +992,8 @@ def srcdir_create(
     Copied local branches are removed; explicitly requested branches can still
     be restored using reana-dev git-checkout or git-checkout-pr.
     Prefer master, falling back to a cached upstream/HEAD or origin/HEAD.
+    Requires Git 2.36 or newer. Canonical worktrees remain untouched; copied
+    worktree registrations and linked checkouts are removed.
 
     Tmux resolves session targets by prefix, so srcdir names that differ early
     are quicker to switch between.
@@ -1009,6 +1031,11 @@ def srcdir_create(
         managed_root.mkdir(parents=True, exist_ok=True)
         _copy_source_directory(canonical_source, destination)
         _strip_copied_worktrees(destination, repositories, linked_worktrees)
+        for worktree in linked_worktrees:
+            _echo_field(
+                "Omitted",
+                f"linked worktree {json.dumps(str(worktree), ensure_ascii=False)}",
+            )
         _write_json(destination / SRCDIR_MARKER, marker)
         _echo_heading(f"Preparing {len(repositories)} repositories")
         for repository in repositories:

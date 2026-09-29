@@ -331,6 +331,40 @@ def test_srcdir_create_rejects_linked_worktree(tmp_path, monkeypatch):
     assert "linked Git worktree" in result.output
 
 
+@pytest.mark.parametrize(
+    "version,supported",
+    [
+        ("git version 2.35.6", False),
+        ("git version 2.36.0", True),
+        ("git version 2.39.5 (Apple Git-154)", True),
+        ("git version 3.0.0", True),
+    ],
+)
+def test_srcdir_create_checks_git_before_copying(
+    tmp_path, monkeypatch, version, supported
+):
+    """Reject older Git before writing state, accepting vendor version suffixes."""
+    source_root = _create_source_collection(tmp_path)
+    original_run = srcdir._run
+
+    def run(arguments, **kwargs):
+        if arguments == ["git", "--version"]:
+            return subprocess.CompletedProcess(arguments, 0, stdout=version, stderr="")
+        return original_run(arguments, **kwargs)
+
+    monkeypatch.setattr(srcdir, "_run", run)
+    result = _create_srcdir(CliRunner(), monkeypatch, source_root, "git-check")
+
+    if supported:
+        assert result.exit_code == 0, result.output
+    else:
+        assert result.exit_code != 0
+        assert "requires Git 2.36 or newer" in result.output
+        assert version in result.output
+        assert not (source_root / srcdir.SRCDIR_POINTER).exists()
+        assert not _srcdir_root(source_root).exists()
+
+
 @pytest.mark.parametrize("state", ["live", "locked", "prunable"])
 @pytest.mark.parametrize("location", ["external", "sibling", "nested", "inside-repo"])
 def test_srcdir_create_detaches_copied_worktrees(
@@ -383,6 +417,11 @@ def test_srcdir_create_detaches_copied_worktrees(
     assert srcdir._git_ref_exists(copied, "refs/remotes/local/feature")
     if location != "external":
         assert not (destination / linked.relative_to(source_root)).exists()
+    if location != "external" and state != "prunable":
+        omitted = json.dumps(str(linked.relative_to(source_root)), ensure_ascii=False)
+        assert f"Omitted      linked worktree {omitted}" in result.output.splitlines()
+    else:
+        assert "Omitted" not in result.output
     assert _git(server, "worktree", "list", "--porcelain") == source_worktrees
     assert {
         p.relative_to(registration): p.read_bytes()
@@ -393,6 +432,32 @@ def test_srcdir_create_detaches_copied_worktrees(
         assert (linked / "tracked.txt").read_text() == "unfinished change\n"
         assert (linked / "scratch.txt").read_text() == "keep this\n"
         assert _git(linked, "branch", "--show-current") == "feature"
+
+
+def test_srcdir_create_recognises_aliased_worktree_common_directory(
+    tmp_path, monkeypatch
+):
+    """Normalise Git's common-directory path before matching a linked checkout."""
+    source_root = _create_source_collection(tmp_path)
+    server = source_root / "reana-server"
+    linked = source_root / "feature-checkout"
+    _git(server, "worktree", "add", "-b", "feature", str(linked))
+    alias = tmp_path / "git-directory-alias"
+    alias.symlink_to(server / ".git", target_is_directory=True)
+    original_git = srcdir._git
+
+    def git(repository, *arguments, **kwargs):
+        if repository == linked and "--git-common-dir" in arguments:
+            return str(alias)
+        return original_git(repository, *arguments, **kwargs)
+
+    monkeypatch.setattr(srcdir, "_git", git)
+    result = _create_srcdir(CliRunner(), monkeypatch, source_root, "independent")
+
+    assert result.exit_code == 0, result.output
+    assert 'Omitted      linked worktree "feature-checkout"' in result.output
+    assert not (_srcdir_root(source_root) / "independent" / "feature-checkout").exists()
+    assert _git(linked, "branch", "--show-current") == "feature"
 
 
 def test_srcdir_preserves_reused_stale_worktree_directory(tmp_path, monkeypatch):
@@ -449,19 +514,30 @@ def test_srcdir_create_reports_all_unsupported_primary_checkouts(tmp_path, monke
     assert not _srcdir_root(source_root).exists()
 
 
-def test_srcdir_create_refuses_symlinked_primary_repository(tmp_path, monkeypatch):
+@pytest.mark.parametrize("symlink", ["repository", "git-directory"])
+def test_srcdir_create_refuses_symlinked_primary_repository(
+    tmp_path, monkeypatch, symlink
+):
     """Never prepare a copied repository through a link into the canonical tree."""
     source_root = _create_source_collection(tmp_path)
-    (source_root / "server-link").symlink_to(
-        source_root / "reana-server", target_is_directory=True
-    )
+    server = source_root / "reana-server"
+    (server / "tracked.txt").write_text("unfinished change\n")
+    if symlink == "repository":
+        name = "server-link"
+        (source_root / name).symlink_to(server, target_is_directory=True)
+    else:
+        name = "reana-server"
+        external_git = tmp_path / "server.git"
+        (server / ".git").rename(external_git)
+        (server / ".git").symlink_to(external_git, target_is_directory=True)
     monkeypatch.chdir(source_root)
     result = CliRunner().invoke(
         reana_dev, ["srcdir-create", "failed", "--no-mise-venv"]
     )
     assert result.exit_code != 0
-    assert "server-link: primary checkout or .git is a symlink" in result.output
+    assert f"{name}: primary checkout or .git is a symlink" in result.output
     assert not _srcdir_root(source_root).exists()
+    assert (server / "tracked.txt").read_text() == "unfinished change\n"
 
 
 def test_srcdir_create_rolls_back_incomplete_destination(tmp_path, monkeypatch):
