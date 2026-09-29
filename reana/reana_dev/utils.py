@@ -32,12 +32,14 @@ from reana.config import (
     COMPONENTS_USING_SHARED_MODULE_DB,
     DOCKER_VERSION_FILE,
     GIT_DEFAULT_BASE_BRANCH,
+    GO_VERSION_FILE,
     HELM_VERSION_FILE,
     JAVASCRIPT_VERSION_FILE,
     OPENAPI_VERSION_FILE,
     PYTHON_DOCKER_IMAGE,
     PYTHON_REQUIREMENTS_FILE,
     PYTHON_VERSION_FILE,
+    RELEASE_PLEASE_CONFIG_FILE,
     REPO_LIST_ALL,
     REPO_LIST_CLIENT,
     REPO_LIST_CLUSTER,
@@ -681,6 +683,7 @@ def get_component_version_files(component, abs_path=False) -> Dict[str, str]:
         OPENAPI_VERSION_FILE,
         JAVASCRIPT_VERSION_FILE,
         PYTHON_VERSION_FILE,
+        GO_VERSION_FILE,
     ]:
         file_path = run_command(
             f"git ls-files | grep -w {file_} || true",
@@ -745,12 +748,67 @@ def get_current_component_version_from_source_files(
             package_json = json.loads(f.read())
             version = package_json["version"]
 
+    elif all_version_files.get(GO_VERSION_FILE):
+        with open(all_version_files.get(GO_VERSION_FILE)) as f:
+            inside_annotated_block = False
+            for line in f.readlines():
+                if "x-release-please-start-version" in line:
+                    inside_annotated_block = True
+                    continue
+                if "x-release-please-end" in line:
+                    inside_annotated_block = False
+                    continue
+                if not inside_annotated_block and (
+                    "x-release-please-version" not in line
+                ):
+                    continue
+                match = re.search(r'"v?(\d+\.\d+\.\d+[^"]*)"', line)
+                if match:
+                    version = match.group(1)
+                    break
+
     elif all_version_files.get(OPENAPI_VERSION_FILE):
         with open(all_version_files.get(OPENAPI_VERSION_FILE)) as f:
             openapi_json = json.loads(f.read())
             version = openapi_json.get("info", {}).get("version")
 
     return version
+
+
+def get_component_git_tag_name(component: str, version: str) -> str:
+    """Return the git tag name to use for a given component version.
+
+    Most REANA components tag bare versions such as ``0.95.0-alpha.1``. Go
+    components must tag ``v``-prefixed ones, because the Go module proxy
+    resolves ``module@vX.Y.Z`` only for tags carrying the prefix. Each
+    component declares which form it uses via Release Please's
+    ``include-v-in-tag`` setting, so read it from there rather than hardcoding
+    a list of components.
+
+    :param component: standard component name
+    :param version: version as stored in the component's source files
+    :type component: str
+    :type version: str
+
+    :return: git tag name, empty if the version could not be determined
+    :rtype: str
+    """
+    if not version:
+        return ""
+
+    if version.startswith("v"):
+        return version
+
+    config_file = os.path.join(
+        get_srcdir(component=component), RELEASE_PLEASE_CONFIG_FILE
+    )
+    try:
+        with open(config_file) as f:
+            include_v_in_tag = json.load(f).get("include-v-in-tag", False)
+    except (OSError, ValueError):
+        include_v_in_tag = False
+
+    return f"v{version}" if include_v_in_tag else version
 
 
 def bump_semver2_version(current_version: str, part=None) -> str:
@@ -779,6 +837,9 @@ def bump_semver2_version(current_version: str, part=None) -> str:
         next_version = parsed_current_version.next_version("minor")
     elif parsed_current_version.major or part == "major":
         next_version = parsed_current_version.next_version("major")
+    else:
+        # The initial version 0.0.0 has no non-zero part to bump.
+        next_version = parsed_current_version.next_version("patch")
 
     return str(next_version)
 
@@ -928,10 +989,10 @@ def bump_component_version(
     """
     version_files = get_component_version_files(component)
 
-    updated_files = []
-    next_version_per_file_type = {}
-
-    # bump all version files
+    # Resolve all current versions upfront. A discovered but unparsable version
+    # file would otherwise reach `sed` as an empty regular expression and abort
+    # the bump with the other version files already rewritten.
+    current_version_per_file_type = {}
     for file_type, file_path in version_files.items():
         if not file_path:
             continue
@@ -939,11 +1000,25 @@ def bump_component_version(
         current_version = get_current_component_version_from_source_files(
             component, version_file=file_type
         )
+        if not current_version:
+            raise Exception(
+                f"Cannot detect the current version in {component}'s {file_path}"
+            )
+
+        current_version_per_file_type[file_type] = current_version
+
+    updated_files = []
+    next_version_per_file_type = {}
+
+    # bump all version files
+    for file_type, current_version in current_version_per_file_type.items():
+        file_path = version_files[file_type]
 
         if file_type in [
             DOCKER_VERSION_FILE,
             HELM_VERSION_FILE,
             JAVASCRIPT_VERSION_FILE,
+            GO_VERSION_FILE,
         ]:
             new_version = (
                 translate_pep440_to_semver2(next_version)
@@ -987,6 +1062,8 @@ def bump_component_version(
         return next_version_per_file_type[HELM_VERSION_FILE], updated_files
     elif JAVASCRIPT_VERSION_FILE in next_version_per_file_type:
         return next_version_per_file_type[JAVASCRIPT_VERSION_FILE], updated_files
+    elif GO_VERSION_FILE in next_version_per_file_type:
+        return next_version_per_file_type[GO_VERSION_FILE], updated_files
     else:
         return next_version_per_file_type[PYTHON_VERSION_FILE], updated_files
 

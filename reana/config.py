@@ -320,6 +320,12 @@ JAVASCRIPT_VERSION_FILE = "package.json"
 PYTHON_VERSION_FILE = "version.py"
 """Python package version file."""
 
+GO_VERSION_FILE = "version.go"
+"""Go package version file."""
+
+RELEASE_PLEASE_CONFIG_FILE = ".release-please-config.json"
+"""Release Please configuration file."""
+
 PYTHON_REQUIREMENTS_FILE = "requirements.txt"
 """Python requirements file."""
 

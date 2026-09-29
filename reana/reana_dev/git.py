@@ -47,6 +47,7 @@ from reana.reana_dev.utils import (
     display_message,
     exclude_components_from_selection,
     fetch_latest_pypi_version,
+    get_component_git_tag_name,
     get_component_version_files,
     get_current_component_version_from_source_files,
     get_srcdir,
@@ -165,9 +166,13 @@ def get_current_commit(srcdir):
 def git_is_current_version_tagged(component):
     """Determine whether the current version in source code is present as a git tag."""
     current_version = get_current_component_version_from_source_files(component)
+    tag_name = get_component_git_tag_name(component, current_version)
+    if not tag_name:
+        return False
+
     is_version_tagged = int(
         run_command(
-            f"git tag --list {current_version} | wc -l",
+            f"git tag --list {tag_name} | wc -l",
             component,
             display=False,
             return_output=True,
@@ -1956,7 +1961,14 @@ def git_tag(component, exclude_components):  # noqa: D301
             sys.exit(1)
 
         current_version = get_current_component_version_from_source_files(component)
-        run_command(f"git tag {current_version}", component=component)
+        if not current_version:
+            display_message(
+                "Version cannot be autodiscovered from source files.", component
+            )
+            sys.exit(1)
+
+        tag_name = get_component_git_tag_name(component, current_version)
+        run_command(f"git tag {tag_name}", component=component)
 
 
 def get_previous_versions_from_release_tag(release_tag, components, override=None):
