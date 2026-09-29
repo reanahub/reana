@@ -660,16 +660,30 @@ def upgrade_requirements(component: str) -> bool:
         )
         return False
 
-    executable, *options = pip_compile_cmd.split()
-    if "annotation-style" not in pip_compile_cmd:
+    executable, *options = shlex.split(pip_compile_cmd)
+    # pip-tools 7.6.1 with Click 8.5 can record --no-index even when false.
+    # This helper upgrades from the index, so repair affected headers and
+    # record the intended command explicitly to keep subsequent runs working.
+    options = [opt for opt in options if opt not in {"--no-index", "-U", "--upgrade"}]
+    if not any(opt.split("=", 1)[0] == "--annotation-style" for opt in options):
         options = ["--annotation-style=line"] + options
-    options.append("-U")
-    pip_compile_cmd = " ".join([executable] + options)
+    pip_compile_cmd = shlex.join([executable] + options)
 
-    docker_cmd = (
-        f"docker run --rm -it -v {get_srcdir(component)}:/code:z {PYTHON_DOCKER_IMAGE} "
-        f"bash -c 'cd /code && pip install --upgrade pip-tools pip && pip install \"setuptools<81\" && {pip_compile_cmd}'"
-    )
+    docker_cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "-it",
+        "-v",
+        f"{get_srcdir(component)}:/code:z",
+        "--env",
+        f"CUSTOM_COMPILE_COMMAND={pip_compile_cmd}",
+        PYTHON_DOCKER_IMAGE,
+        "bash",
+        "-c",
+        "cd /code && pip install --upgrade pip-tools pip && "
+        f"pip install 'setuptools<81' && {pip_compile_cmd} -U",
+    ]
     run_command(docker_cmd, component)
     return True
 
