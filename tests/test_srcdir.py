@@ -363,6 +363,170 @@ def test_srcdir_create_rolls_back_incomplete_destination(tmp_path, monkeypatch):
     assert result.exit_code != 0
     assert "preparation failed" in result.output
     assert not destination.exists()
+    assert not (source_root / srcdir.SRCDIR_POINTER).exists()
+    assert not _srcdir_root(source_root).exists()
+
+
+@pytest.mark.parametrize(
+    "remote,branch", [("origin", "gh-pages"), ("upstream", "main")]
+)
+def test_srcdir_create_uses_cached_remote_default(
+    tmp_path, monkeypatch, remote, branch
+):
+    """Prepare non-master repositories without retaining their dirty state."""
+    source_root = _create_source_collection(tmp_path)
+    site = _create_repository(source_root, "training")
+    _git(site, "branch", "-m", branch)
+    _git(site, "remote", "add", remote, str(site))
+    _git(site, "update-ref", f"refs/remotes/{remote}/{branch}", "HEAD")
+    _git(
+        site,
+        "symbolic-ref",
+        f"refs/remotes/{remote}/HEAD",
+        f"refs/remotes/{remote}/{branch}",
+    )
+    _git(site, "switch", "-c", "feature")
+    (site / "tracked.txt").write_text("dirty\n")
+    (site / "scratch.txt").write_text("untracked\n")
+
+    result = _create_srcdir(CliRunner(), monkeypatch, source_root, "training-review")
+
+    assert result.exit_code == 0, result.output
+    copied = _srcdir_root(source_root) / "training-review" / "training"
+    assert _git(copied, "branch", "--show-current") == branch
+    assert (
+        _git(copied, "for-each-ref", "--format=%(refname:short)", "refs/heads")
+        == branch
+    )
+    assert _git(copied, "status", "--porcelain") == ""
+    assert _git(copied, "remote", "get-url", "local") == str(site)
+    assert _git(site, "branch", "--show-current") == "feature"
+    assert (site / "scratch.txt").read_text() == "untracked\n"
+    assert f"training: {branch}" in result.output
+
+
+def test_srcdir_baseline_prefers_master_to_remote_default(tmp_path):
+    """Retain the master policy even if a remote advertises another default."""
+    repo = _create_repository(tmp_path, "reana")
+    _git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+    _git(repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+    assert srcdir._repository_baseline(repo) == ("master", "refs/heads/master")
+
+
+def test_srcdir_create_reports_all_unresolved_baselines_before_copy(
+    tmp_path, monkeypatch
+):
+    """Reject unborn and dangling-default repositories without writing state."""
+    source_root = _create_source_collection(tmp_path)
+    unborn = source_root / "unborn"
+    unborn.mkdir()
+    _git(unborn, "init", "--initial-branch=main")
+    dangling = _create_repository(source_root, "dangling")
+    _git(dangling, "branch", "-m", "main")
+    _git(
+        dangling,
+        "symbolic-ref",
+        "refs/remotes/origin/HEAD",
+        "refs/remotes/origin/missing",
+    )
+    monkeypatch.chdir(source_root)
+    monkeypatch.setattr(
+        srcdir, "_copy_source_directory", lambda *args: pytest.fail("Must not copy")
+    )
+
+    result = CliRunner().invoke(
+        reana_dev, ["srcdir-create", "failed", "--no-mise-venv"]
+    )
+
+    assert result.exit_code != 0
+    assert "dangling: no master reference" in result.output
+    assert "unborn: no master reference" in result.output
+    assert not (source_root / srcdir.SRCDIR_POINTER).exists()
+    assert not _srcdir_root(source_root).exists()
+
+
+@pytest.mark.parametrize("failure", ["copy", "mise", "pointer"])
+def test_srcdir_create_late_failure_allows_another_root(tmp_path, monkeypatch, failure):
+    """Roll back new markers after copy, bootstrap or registration failures."""
+    source_root = _create_source_collection(tmp_path)
+    monkeypatch.chdir(source_root)
+    monkeypatch.setattr(srcdir, "_sync_shared_modules", lambda *args: None)
+    monkeypatch.setattr(srcdir, "_should_use_mise", lambda *args: failure == "mise")
+    original_write = srcdir._write_json
+
+    def copy(source, destination):
+        shutil.copytree(source, destination)
+        if failure == "copy":
+            raise srcdir.SrcdirError("copy failed")
+
+    def write(path, contents):
+        if failure == "pointer" and path == source_root / srcdir.SRCDIR_POINTER:
+            raise srcdir.SrcdirError("pointer failed")
+        original_write(path, contents)
+
+    monkeypatch.setattr(srcdir, "_copy_source_directory", copy)
+    monkeypatch.setattr(srcdir, "_write_json", write)
+    monkeypatch.setattr(
+        srcdir,
+        "_bootstrap_mise",
+        lambda *args: (_ for _ in ()).throw(srcdir.SrcdirError("mise failed")),
+    )
+    result = CliRunner().invoke(reana_dev, ["srcdir-create", "failed"])
+    assert result.exit_code != 0
+    assert f"{failure} failed" in result.output
+    assert not (source_root / srcdir.SRCDIR_POINTER).exists()
+    assert not _srcdir_root(source_root).exists()
+
+    monkeypatch.setattr(srcdir, "_write_json", original_write)
+    monkeypatch.setattr(srcdir, "_should_use_mise", lambda *args: False)
+    monkeypatch.setattr(srcdir, "_copy_source_directory", shutil.copytree)
+    other_root = tmp_path / "other-srcdirs"
+    retry = CliRunner().invoke(
+        reana_dev, ["srcdir-create", "retry", "--srcdir-root", str(other_root)]
+    )
+    assert retry.exit_code == 0, retry.output
+    assert (other_root / "retry" / srcdir.SRCDIR_MARKER).is_file()
+
+
+def test_srcdir_create_failure_preserves_existing_registry(tmp_path, monkeypatch):
+    """A failed additional srcdir must preserve existing discovery markers."""
+    source_root = _create_source_collection(tmp_path)
+    runner = CliRunner()
+    assert _create_srcdir(runner, monkeypatch, source_root, "existing").exit_code == 0
+    root = _srcdir_root(source_root)
+    paths = [
+        source_root / srcdir.SRCDIR_POINTER,
+        root / srcdir.SRCDIR_ROOT_MARKER,
+        root / "existing" / srcdir.SRCDIR_MARKER,
+    ]
+    before = {path: path.read_bytes() for path in paths}
+
+    def fail(*args):
+        raise srcdir.SrcdirError("preparation failed")
+
+    monkeypatch.setattr(srcdir, "_prepare_repository", fail)
+    result = _create_srcdir(runner, monkeypatch, source_root, "failed")
+    assert result.exit_code != 0
+    assert not (root / "failed").exists()
+    assert {path: path.read_bytes() for path in paths} == before
+
+
+@pytest.mark.parametrize("failure", ["destination", "mise"])
+def test_srcdir_create_validates_before_registry_writes(tmp_path, monkeypatch, failure):
+    """Predictable input failures must not establish persistent root choices."""
+    source_root = _create_source_collection(tmp_path)
+    root = _srcdir_root(source_root)
+    monkeypatch.chdir(source_root)
+    if failure == "destination":
+        (root / "existing").mkdir(parents=True)
+        args = ["srcdir-create", "existing", "--no-mise-venv"]
+    else:
+        monkeypatch.setattr(srcdir.shutil, "which", lambda *args: None)
+        args = ["srcdir-create", "new", "--mise-venv"]
+    result = CliRunner().invoke(reana_dev, args)
+    assert result.exit_code != 0
+    assert not (source_root / srcdir.SRCDIR_POINTER).exists()
+    assert not (root / srcdir.SRCDIR_ROOT_MARKER).exists()
 
 
 def test_srcdir_copy_uses_reflinks_after_successful_linux_probe(

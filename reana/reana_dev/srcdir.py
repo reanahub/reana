@@ -31,7 +31,9 @@ subsequent commands discover it from marker files::
 
 Creation always copies the canonical source collection, removes copied local
 branches, and resets each repository to its already-fetched ``master``
-reference.  Remote-tracking references remain available, so branches and PRs
+reference, falling back to a cached remote default branch when necessary.
+All baselines are checked before copying.  Remote-tracking references remain
+available, so branches and PRs
 can then be composed with the existing ``git-checkout`` and
 ``git-checkout-pr`` commands.  Run ``reana-dev git-submodule --update`` after
 composing branches so that ignored shared-module copies match them.
@@ -338,13 +340,8 @@ def _resolve_context(
     return source_root, srcdir_root
 
 
-def _initialise_registry(source_root: Path, srcdir_root: Path) -> None:
-    """Create and cross-link the canonical source and srcdir roots."""
-    try:
-        srcdir_root.mkdir(parents=True, exist_ok=True)
-    except OSError as error:
-        raise SrcdirError(f"Cannot create {srcdir_root}: {error}") from error
-
+def _validate_registry(source_root: Path, srcdir_root: Path) -> None:
+    """Check existing root associations without creating any files."""
     root_marker_path = srcdir_root / SRCDIR_ROOT_MARKER
     if root_marker_path.exists():
         marker_source, marker_root = _read_root_context(root_marker_path)
@@ -352,19 +349,43 @@ def _initialise_registry(source_root: Path, srcdir_root: Path) -> None:
             raise SrcdirError(
                 f"{srcdir_root} is already associated with another source directory."
             )
+    pointer = _load_source_pointer(source_root)
+    if pointer is not None and pointer != srcdir_root:
+        raise SrcdirError(f"{source_root} is already associated with {pointer}.")
 
-    _write_json(
-        root_marker_path,
-        {
-            "source_root": str(source_root),
-            "srcdir_root": str(srcdir_root),
-            "version": SRCDIR_MARKER_VERSION,
-        },
-    )
-    _write_json(
-        source_root / SRCDIR_POINTER,
-        {"srcdir_root": str(srcdir_root), "version": SRCDIR_MARKER_VERSION},
-    )
+
+def _initialise_registry(
+    source_root: Path, srcdir_root: Path, created: Dict[Path, Dict]
+) -> None:
+    """Register a prepared srcdir, recording only newly written markers."""
+    _validate_registry(source_root, srcdir_root)
+    markers = [
+        (
+            srcdir_root / SRCDIR_ROOT_MARKER,
+            {
+                "source_root": str(source_root),
+                "srcdir_root": str(srcdir_root),
+                "version": SRCDIR_MARKER_VERSION,
+            },
+        ),
+        (
+            source_root / SRCDIR_POINTER,
+            {"srcdir_root": str(srcdir_root), "version": SRCDIR_MARKER_VERSION},
+        ),
+    ]
+    for path, contents in markers:
+        if not path.exists():
+            _write_json(path, contents)
+            created[path] = contents
+
+
+def _rollback_registry(srcdir_root: Path, created: Dict[Path, Dict]) -> None:
+    """Remove this creation's unchanged markers only when no srcdirs use them."""
+    if any((entry / SRCDIR_MARKER).exists() for entry in srcdir_root.iterdir()):
+        return
+    for path, contents in created.items():
+        if path.is_file() and _read_json(path) == contents:
+            path.unlink()
 
 
 def _validate_name(name: str, param_hint: str = "NAME") -> None:
@@ -545,7 +566,7 @@ def _git_ref_exists(repository: Path, reference: str) -> bool:
     return result.returncode == 0
 
 
-def _remove_non_default_local_branches(repository: Path) -> None:
+def _remove_non_default_local_branches(repository: Path, branch: str) -> None:
     """Remove copied local branches other than the default branch."""
     local_ref_prefix = "refs/heads/"
     branch_refs = _git(
@@ -557,7 +578,7 @@ def _remove_non_default_local_branches(repository: Path) -> None:
     branches_to_remove = [
         branch_ref[len(local_ref_prefix) :]
         for branch_ref in branch_refs
-        if branch_ref != f"{local_ref_prefix}{GIT_DEFAULT_BASE_BRANCH}"
+        if branch_ref != f"{local_ref_prefix}{branch}"
     ]
     if branches_to_remove:
         _git(
@@ -570,11 +591,8 @@ def _remove_non_default_local_branches(repository: Path) -> None:
         )
 
 
-def _prepare_repository(
-    destination_root: Path, source_root: Path, repository_name: str
-) -> None:
-    """Reset a copied repository to clean, single-branch master."""
-    repository = destination_root / repository_name
+def _repository_baseline(repository: Path) -> Tuple[str, str]:
+    """Select an existing master or cached remote-default branch reference."""
     references = (
         f"refs/remotes/upstream/{GIT_DEFAULT_BASE_BRANCH}",
         f"refs/remotes/origin/{GIT_DEFAULT_BASE_BRANCH}",
@@ -588,21 +606,58 @@ def _prepare_repository(
         ),
         None,
     )
+    branch = GIT_DEFAULT_BASE_BRANCH
+    if reference is None:
+        for remote in ("upstream", "origin"):
+            prefix = f"refs/remotes/{remote}/"
+            candidate = _git(
+                repository, "symbolic-ref", "--quiet", prefix + "HEAD", check=False
+            )
+            if candidate.startswith(prefix) and _git_ref_exists(repository, candidate):
+                reference = candidate
+                branch = candidate[len(prefix) :]
+                break
     if reference is None:
         raise SrcdirError(
-            f"Cannot initialise {repository_name}: no {GIT_DEFAULT_BASE_BRANCH} "
-            "reference exists."
+            f"{repository.name}: no {GIT_DEFAULT_BASE_BRANCH} reference or "
+            "usable cached upstream/HEAD or origin/HEAD exists."
         )
+    return branch, reference
+
+
+def _repository_baselines(source_root: Path, repositories: List[str]) -> Dict:
+    """Resolve every baseline before copying and report all unresolved repos."""
+    baselines = {}
+    errors = []
+    for name in repositories:
+        try:
+            baselines[name] = _repository_baseline(source_root / name)
+        except SrcdirError as error:
+            errors.append(error.format_message())
+    if errors:
+        raise SrcdirError("Cannot initialise repositories:\n" + "\n".join(errors))
+    return baselines
+
+
+def _prepare_repository(
+    destination_root: Path,
+    source_root: Path,
+    repository_name: str,
+    baseline: Tuple[str, str],
+) -> None:
+    """Reset a copied repository to its clean, single-branch baseline."""
+    repository = destination_root / repository_name
+    branch, reference = baseline
     _git(
         repository,
         "checkout",
         "--force",
         "-B",
-        GIT_DEFAULT_BASE_BRANCH,
+        branch,
         reference,
     )
     _git(repository, "clean", "-ffd")
-    _remove_non_default_local_branches(repository)
+    _remove_non_default_local_branches(repository, branch)
     _git(repository, "remote", "remove", "local", check=False)
     _git(repository, "remote", "add", "local", str(source_root / repository_name))
     _git(repository, "fetch", "--quiet", "--prune", "local")
@@ -854,24 +909,26 @@ def srcdir_create(
     srcdir_root: Optional[str],
     mise_venv: Optional[bool],
 ) -> None:
-    """Create a clean, master-based source directory called NAME.
+    """Create a clean source directory called NAME from cached baseline branches.
 
     Prefer copy-on-write and use a full archival copy when it is unavailable.
     Copied local branches are removed; explicitly requested branches can still
     be restored using reana-dev git-checkout or git-checkout-pr.
+    Prefer master, falling back to a cached upstream/HEAD or origin/HEAD.
 
     Tmux resolves session targets by prefix, so srcdir names that differ early
     are quicker to switch between.
     """
     _validate_name(name)
     canonical_source, managed_root = _resolve_context(source_root, srcdir_root)
-    repositories = _discover_repositories(canonical_source)
-    _initialise_registry(canonical_source, managed_root)
+    _validate_registry(canonical_source, managed_root)
     destination = managed_root / name
-    if destination.exists():
+    if destination.exists() or destination.is_symlink():
         raise SrcdirError(f"Destination already exists: {destination}")
 
     use_mise = _should_use_mise(canonical_source, mise_venv)
+    repositories = _discover_repositories(canonical_source)
+    baselines = _repository_baselines(canonical_source, repositories)
     marker = {
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "initial_heads": {},
@@ -888,13 +945,20 @@ def srcdir_create(
         "version": SRCDIR_MARKER_VERSION,
     }
 
+    root_existed = managed_root.exists()
+    created_registry = {}
     _echo_heading(f"Creating srcdir {name}")
     try:
+        managed_root.mkdir(parents=True, exist_ok=True)
         _copy_source_directory(canonical_source, destination)
         _write_json(destination / SRCDIR_MARKER, marker)
         _echo_heading(f"Preparing {len(repositories)} repositories")
         for repository in repositories:
-            _prepare_repository(destination, canonical_source, repository)
+            if baselines[repository][0] != GIT_DEFAULT_BASE_BRANCH:
+                _echo_field("Baseline", f"{repository}: {baselines[repository][0]}")
+            _prepare_repository(
+                destination, canonical_source, repository, baselines[repository]
+            )
         _sync_shared_modules(destination)
         marker["initial_heads"] = {
             repository: _git(destination / repository, "rev-parse", "HEAD")
@@ -905,6 +969,7 @@ def srcdir_create(
             _bootstrap_mise(destination)
         marker["state"] = "ready"
         _write_json(destination / SRCDIR_MARKER, marker)
+        _initialise_registry(canonical_source, managed_root, created_registry)
     except BaseException:
         if destination.is_dir():
             try:
@@ -914,15 +979,25 @@ def srcdir_create(
                     f"Creation failed and the incomplete source directory "
                     f"could not be removed: {destination}: {error}"
                 ) from error
+        if managed_root.is_dir():
+            _rollback_registry(managed_root, created_registry)
+            if not root_existed:
+                try:
+                    managed_root.rmdir()
+                except OSError:
+                    pass  # Preserve a root now containing other work.
         raise
 
     click.echo()
     _echo_success(f"Created srcdir {name}")
     click.echo()
     _echo_field("Location", str(destination))
-    _echo_field(
-        "Repositories", f"{len(repositories)} (clean {GIT_DEFAULT_BASE_BRANCH})"
+    baseline_label = (
+        GIT_DEFAULT_BASE_BRANCH
+        if all(branch == GIT_DEFAULT_BASE_BRANCH for branch, _ in baselines.values())
+        else "baseline branches"
     )
+    _echo_field("Repositories", f"{len(repositories)} (clean {baseline_label})")
     if use_mise:
         _echo_field("Environment", f"{name} ({destination / '.venv'})")
     click.echo()
