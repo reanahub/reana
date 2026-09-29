@@ -8,7 +8,9 @@
 
 """`reana-dev`'s release commands."""
 
+import importlib.util
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -74,6 +76,34 @@ def is_component_releasable(component, exit_code=False, display=False):
 @click.group()
 def release_commands():
     """Release commands group."""
+
+
+def _ensure_pypi_release_tools() -> None:
+    """Require PyPI release tools in the active Python environment."""
+    missing_modules = [
+        module
+        for module in ("build", "twine")
+        if importlib.util.find_spec(module) is None
+    ]
+    if missing_modules:
+        missing = ", ".join(missing_modules)
+        python = shlex.quote(sys.executable)
+        raise click.ClickException(
+            f"Missing PyPI release tooling in the active Python environment: "
+            f"{missing}. Install it with "
+            f"`{python} -m pip install --editable "
+            "'<reana-source-directory>[release]'`."
+        )
+
+
+def _pypi_release_commands():
+    """Return commands used to build and upload a PyPI release."""
+    python = shlex.quote(sys.executable)
+    return [
+        "rm -rf dist",
+        f"{python} -m build --sdist",
+        f"{python} -m twine upload ./dist/*",
+    ]
 
 
 @click.option(
@@ -227,12 +257,13 @@ def release_pypi(ctx, component, timeout):  # noqa: D301
                                all REANA repositories.
     :type component: str
     """
+    _ensure_pypi_release_tools()
     components = select_components(component)
     for component in components:
         is_component_releasable(component, exit_code=True, display=True)
         ctx.invoke(git_clean, component=[component])
 
-        for cmd in ["rm -rf dist", "python -m build --sdist", "twine upload ./dist/*"]:
+        for cmd in _pypi_release_commands():
             run_command(cmd, component)
 
         retry_interval = 15

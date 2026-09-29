@@ -20,6 +20,7 @@ from reana.reana_dev.kubectl import kubectl_commands_list
 from reana.reana_dev.python import python_commands_list
 from reana.reana_dev.release import release_commands_list
 from reana.reana_dev.run import run_commands_list
+from reana.reana_dev.srcdir import srcdir_commands_list
 from reana.reana_dev.wiki import wiki_commands_list
 
 
@@ -175,6 +176,16 @@ def reana_dev():  # noqa: D301
         $ reana-dev git-tag -c .
         $ reana-dev release-docker --platform linux/amd64 --platform linux/arm64 -c .
 
+    How to review a PR set in an independent source directory:
+
+    .. code-block:: console
+
+        \b
+        $ reana-dev srcdir-create auth-audit
+        $ reana-dev srcdir-workon auth-audit
+        $ reana-dev git-checkout-pr -i reana 977 --pull --reset
+        $ reana-dev git-submodule --update
+
     """
     pass
 
@@ -204,6 +215,7 @@ for cmd in (
     + run_commands_list
     + release_commands_list
     + helm_commands_list
+    + srcdir_commands_list
     + wiki_commands_list
 ):
     reana_dev.add_command(cmd)
