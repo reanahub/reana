@@ -2174,9 +2174,12 @@ def srcdir_list(srcdir_root: Optional[str]) -> None:
         _echo_warning(f"cannot inspect {name}: {error}")
 
 
-def _refresh_audit_remotes(repository: Path, source_repository: Path) -> List[str]:
-    """Refresh safe remotes and return those usable for retention checks."""
+def _refresh_audit_remotes(
+    repository: Path, source_repository: Path
+) -> Tuple[List[str], List[str]]:
+    """Return freshly verified remotes and warnings for ordered reporting."""
     usable_remotes = []
+    warnings = []
     remote_names = set(_git(repository, "remote").splitlines())
     if (source_repository / ".git").is_dir():
         if "local" in remote_names:
@@ -2202,11 +2205,11 @@ def _refresh_audit_remotes(repository: Path, source_repository: Path) -> List[st
         if result.returncode == 0:
             usable_remotes.append(remote)
         else:
-            _echo_warning(
+            warnings.append(
                 f"could not refresh {remote} in {repository.name}; "
                 "its refs will not be treated as a backup.",
             )
-    return usable_remotes
+    return usable_remotes, warnings
 
 
 def _unique_commits(repository: Path, remotes: List[str]) -> Optional[List[str]]:
@@ -2219,8 +2222,54 @@ def _unique_commits(repository: Path, remotes: List[str]) -> Optional[List[str]]
     return [line for line in output.splitlines() if line]
 
 
+def _audit_repository(
+    destination: Path, source_root: Path, repository_name: str
+) -> Tuple[List[str], List[str]]:
+    """Audit one independent repository, collecting findings and warnings."""
+    findings = []
+    repository = destination / repository_name
+    if not (repository / ".git").is_dir():
+        return [f"{repository_name}: repository is missing or invalid"], []
+    dirty = _git(repository, "status", "--porcelain")
+    if dirty:
+        findings.append(f"{repository_name}: uncommitted files\n{dirty}")
+
+    remotes, warnings = _refresh_audit_remotes(
+        repository, source_root / repository_name
+    )
+    commits = _unique_commits(repository, remotes)
+    if commits is None:
+        findings.append(
+            f"{repository_name}: no remote could be verified; treating all "
+            "local commits as unretained"
+        )
+    elif commits:
+        retention_sources = [
+            "canonical" if remote == "local" else remote for remote in remotes
+        ]
+        findings.append(
+            f"{repository_name}: commits not found in refreshed refs "
+            f"({', '.join(retention_sources)})\n" + "\n".join(commits)
+        )
+
+    task_stashes = set(_stash_ids(repository))
+    baseline_repository = source_root / repository_name
+    baseline_stashes = (
+        set(_stash_ids(baseline_repository))
+        if (baseline_repository / ".git").is_dir()
+        else set()
+    )
+    unique_stashes = task_stashes.difference(baseline_stashes)
+    if unique_stashes:
+        findings.append(
+            f"{repository_name}: {len(unique_stashes)} stash(es) not retained "
+            "in the canonical source directory"
+        )
+    return findings, warnings
+
+
 def _audit_before_delete(destination: Path, marker: Dict) -> List[str]:
-    """Return findings that make deletion potentially unsafe."""
+    """Audit repositories concurrently, reporting results in repository order."""
     findings = []
     source_root = _required_marker_path(
         marker, "source_root", destination / SRCDIR_MARKER
@@ -2231,44 +2280,20 @@ def _audit_before_delete(destination: Path, marker: Dict) -> List[str]:
             "will be treated as unique."
         )
 
-    for repository_name in marker.get("repositories", []):
-        repository = destination / repository_name
-        if not (repository / ".git").is_dir():
-            findings.append(f"{repository_name}: repository is missing or invalid")
-            continue
-        dirty = _git(repository, "status", "--porcelain")
-        if dirty:
-            findings.append(f"{repository_name}: uncommitted files\n{dirty}")
-
-        remotes = _refresh_audit_remotes(repository, source_root / repository_name)
-        commits = _unique_commits(repository, remotes)
-        if commits is None:
-            findings.append(
-                f"{repository_name}: no remote could be verified; treating all "
-                "local commits as unretained"
-            )
-        elif commits:
-            retention_sources = [
-                "canonical" if remote == "local" else remote for remote in remotes
+    repositories = marker.get("repositories", [])
+    if repositories:
+        with futures.ThreadPoolExecutor(
+            max_workers=min(8, len(repositories))
+        ) as executor:
+            tasks = [
+                executor.submit(_audit_repository, destination, source_root, name)
+                for name in repositories
             ]
-            findings.append(
-                f"{repository_name}: commits not found in refreshed refs "
-                f"({', '.join(retention_sources)})\n" + "\n".join(commits)
-            )
-
-        task_stashes = set(_stash_ids(repository))
-        baseline_repository = source_root / repository_name
-        baseline_stashes = (
-            set(_stash_ids(baseline_repository))
-            if (baseline_repository / ".git").is_dir()
-            else set()
-        )
-        unique_stashes = task_stashes.difference(baseline_stashes)
-        if unique_stashes:
-            findings.append(
-                f"{repository_name}: {len(unique_stashes)} stash(es) not retained "
-                "in the canonical source directory"
-            )
+            for task in tasks:
+                repository_findings, warnings = task.result()
+                findings.extend(repository_findings)
+                for warning in warnings:
+                    _echo_warning(warning)
     return findings
 
 

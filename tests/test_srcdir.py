@@ -13,6 +13,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import threading
 import tomllib
 from pathlib import Path
 
@@ -899,6 +900,96 @@ def test_srcdir_delete_refuses_dirty_source_directory(tmp_path, monkeypatch):
     assert "uncommitted files" in result.output
     assert "Refusing teardown" in result.output
     assert "repeat with --no-audit" in result.output
+    assert destination.is_dir()
+
+
+def test_srcdir_audit_is_bounded_and_reports_in_repository_order(
+    tmp_path, monkeypatch, capsys
+):
+    """Overlap audits while keeping warnings and findings deterministic."""
+    repositories = [f"repo-{index:02d}" for index in range(12)]
+    barrier = threading.Barrier(8)
+    lock = threading.Lock()
+    active = 0
+    peak = 0
+    reporting_threads = []
+
+    def audit(destination, source_root, name):
+        nonlocal active, peak
+        with lock:
+            active += 1
+            peak = max(peak, active)
+        if name in repositories[:8]:
+            barrier.wait(timeout=10)
+        with lock:
+            active -= 1
+        return [f"finding {name}"], [f"warning {name}"]
+
+    original_warning = srcdir._echo_warning
+
+    def warning(message):
+        reporting_threads.append(threading.get_ident())
+        original_warning(message)
+
+    monkeypatch.setattr(srcdir, "_audit_repository", audit)
+    monkeypatch.setattr(srcdir, "_echo_warning", warning)
+    findings = srcdir._audit_before_delete(
+        tmp_path / "copy",
+        {"source_root": str(tmp_path), "repositories": repositories},
+    )
+
+    assert peak == 8
+    assert findings == [f"finding {name}" for name in repositories]
+    assert capsys.readouterr().out.splitlines() == [
+        f"Warning: warning {name}" for name in repositories
+    ]
+    assert reporting_threads == [threading.get_ident()] * len(repositories)
+
+
+def test_srcdir_delete_does_not_trust_failed_remote_refresh(tmp_path, monkeypatch):
+    """Stale remote refs must not hide unique commits during a parallel audit."""
+    source_root = _create_source_collection(tmp_path)
+    runner = CliRunner()
+    assert _create_srcdir(runner, monkeypatch, source_root, "audit").exit_code == 0
+    destination = _srcdir_root(source_root) / "audit"
+    server = destination / "reana-server"
+    _git(server, "switch", "-c", "feature")
+    (server / "tracked.txt").write_text("unique work\n")
+    _git(server, "commit", "-am", "unique work")
+    _git(server, "remote", "add", "origin", str(tmp_path / "missing-origin"))
+    _git(server, "update-ref", "refs/remotes/origin/feature", "HEAD")
+    monkeypatch.setattr(srcdir, "_list_tmux_sessions", lambda: {})
+    monkeypatch.setattr(srcdir, "_list_kitty_sessions", lambda: set())
+
+    result = runner.invoke(reana_dev, ["srcdir-delete", "audit", "--yes"])
+
+    assert result.exit_code != 0
+    assert "could not refresh origin in reana-server" in result.output
+    assert "commits not found in refreshed refs (canonical)" in result.output
+    assert "unique work" in result.output
+    assert "Refusing teardown" in result.output
+    assert destination.is_dir()
+
+
+def test_srcdir_delete_does_not_ignore_worker_errors(tmp_path, monkeypatch):
+    """An unexpected worker failure must prevent moving the source directory."""
+    source_root = _create_source_collection(tmp_path)
+    runner = CliRunner()
+    assert _create_srcdir(runner, monkeypatch, source_root, "audit").exit_code == 0
+    destination = _srcdir_root(source_root) / "audit"
+    monkeypatch.setattr(srcdir, "_list_tmux_sessions", lambda: {})
+    monkeypatch.setattr(srcdir, "_list_kitty_sessions", lambda: set())
+
+    def fail(destination, source_root, name):
+        if name == "reana-server":
+            raise srcdir.SrcdirError("audit failed")
+        return [], []
+
+    monkeypatch.setattr(srcdir, "_audit_repository", fail)
+    result = runner.invoke(reana_dev, ["srcdir-delete", "audit", "--yes"])
+
+    assert result.exit_code != 0
+    assert "audit failed" in result.output
     assert destination.is_dir()
 
 
