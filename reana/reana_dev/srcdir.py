@@ -38,6 +38,10 @@ can then be composed with the existing ``git-checkout`` and
 ``git-checkout-pr`` commands.  Run ``reana-dev git-submodule --update`` after
 composing branches so that ignored shared-module copies match them.
 Creation uses copy-on-write when supported and a full archival copy otherwise.
+Canonical repositories may have linked Git worktrees.  Srcdirs contain only
+independent primary checkouts: inherited worktree registrations and registered
+linked-worktree directories inside the collection are removed from the copy
+before preparing any repository.  Canonical worktrees are left untouched.
 Inside Kitty or Tmux, ``srcdir-workon`` uses a dedicated session named after
 the srcdir.  Tmux takes precedence when both environments are present.  In
 other terminals, it opens a shell in the current terminal.  Pass ``--kitty``,
@@ -402,29 +406,82 @@ def _validate_name(name: str, param_hint: str = "NAME") -> None:
         )
 
 
-def _discover_repositories(source_root: Path) -> List[str]:
-    """Return top-level Git repositories and reject linked worktrees."""
+def _discover_repositories(source_root: Path) -> Tuple[List[str], List[Path]]:
+    """Find primary repositories and internal auxiliary worktrees to omit."""
     repositories = []
+    git_files = []
+    errors = []
     for candidate in sorted(source_root.iterdir()):
         git_path = candidate / ".git"
         if git_path.is_file():
-            raise SrcdirError(
-                f"Cannot copy {source_root}: {candidate.name}/.git is a file, "
-                "which indicates a linked Git worktree."
+            if candidate.is_symlink() or git_path.is_symlink():
+                errors.append(
+                    f"{candidate.name}: primary checkout or .git is a symlink"
+                )
+            else:
+                git_files.append(candidate)
+        elif git_path.is_dir():
+            if candidate.is_symlink() or git_path.is_symlink():
+                errors.append(
+                    f"{candidate.name}: primary checkout or .git is a symlink"
+                )
+            else:
+                repositories.append(candidate.name)
+
+    linked_worktrees = set()
+    for name in repositories:
+        repository = source_root / name
+        for field in _git(repository, "worktree", "list", "--porcelain", "-z").split(
+            "\0"
+        ):
+            if not field.startswith("worktree "):
+                continue
+            worktree = Path(field[len("worktree ") :]).resolve()
+            if worktree == repository or not _is_within(worktree, source_root):
+                continue
+            # A stale registration can point at a directory since reused for
+            # other work. Only omit a checkout still linked to this repository.
+            if (worktree / ".git").is_file() and _git(
+                worktree,
+                "rev-parse",
+                "--path-format=absolute",
+                "--git-common-dir",
+                check=False,
+            ) == str(repository / ".git"):
+                linked_worktrees.add(worktree)
+
+    for candidate in git_files:
+        if candidate.resolve() not in linked_worktrees:
+            errors.append(
+                f"{candidate.name}/.git is a file: a linked Git worktree cannot "
+                "serve as a primary source repository"
             )
-        registered_worktrees = git_path / "worktrees"
-        if registered_worktrees.is_dir() and any(registered_worktrees.iterdir()):
-            raise SrcdirError(
-                f"Cannot copy {source_root}: {candidate.name} has registered "
-                "linked Git worktrees. Remove active worktrees, or run "
-                f"git -C {shlex.quote(str(candidate))} worktree prune if the "
-                "registrations are stale."
-            )
-        if candidate.is_dir() and git_path.is_dir():
-            repositories.append(candidate.name)
+    if errors:
+        raise SrcdirError("Cannot copy source collection:\n" + "\n".join(errors))
     if "reana" not in repositories:
         raise SrcdirError(f"No reana Git repository found in {source_root}.")
-    return repositories
+    return repositories, sorted(
+        path.relative_to(source_root) for path in linked_worktrees
+    )
+
+
+def _strip_copied_worktrees(
+    destination: Path, repositories: List[str], linked_worktrees: List[Path]
+) -> None:
+    """Detach the new copy without running worktree removal on canonical paths."""
+    paths = list(linked_worktrees) + [
+        Path(name) / ".git" / "worktrees" for name in repositories
+    ]
+    for relative_path in sorted(paths, key=lambda path: len(path.parts)):
+        path = destination / relative_path
+        if not _is_within(path.parent.resolve(), destination):
+            raise SrcdirError(
+                f"Refusing worktree cleanup outside {destination}: {path}"
+            )
+        if path.is_symlink():
+            path.unlink()
+        elif path.is_dir():
+            shutil.rmtree(path)
 
 
 def _run(
@@ -927,7 +984,7 @@ def srcdir_create(
         raise SrcdirError(f"Destination already exists: {destination}")
 
     use_mise = _should_use_mise(canonical_source, mise_venv)
-    repositories = _discover_repositories(canonical_source)
+    repositories, linked_worktrees = _discover_repositories(canonical_source)
     baselines = _repository_baselines(canonical_source, repositories)
     marker = {
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -951,6 +1008,7 @@ def srcdir_create(
     try:
         managed_root.mkdir(parents=True, exist_ok=True)
         _copy_source_directory(canonical_source, destination)
+        _strip_copied_worktrees(destination, repositories, linked_worktrees)
         _write_json(destination / SRCDIR_MARKER, marker)
         _echo_heading(f"Preparing {len(repositories)} repositories")
         for repository in repositories:

@@ -330,23 +330,137 @@ def test_srcdir_create_rejects_linked_worktree(tmp_path, monkeypatch):
     assert "linked Git worktree" in result.output
 
 
-def test_srcdir_create_rejects_repository_with_registered_worktrees(
-    tmp_path, monkeypatch
+@pytest.mark.parametrize("state", ["live", "locked", "prunable"])
+@pytest.mark.parametrize("location", ["external", "sibling", "nested", "inside-repo"])
+def test_srcdir_create_detaches_copied_worktrees(
+    tmp_path, monkeypatch, state, location
 ):
-    """Reject a main checkout that still owns linked worktrees."""
+    """Keep canonical worktrees intact while preparing independent copies."""
     source_root = _create_source_collection(tmp_path)
-    registered = source_root / "reana-server" / ".git" / "worktrees" / "task"
-    registered.mkdir(parents=True)
-    monkeypatch.chdir(source_root)
+    server = source_root / "reana-server"
+    locations = {
+        "external": tmp_path / "external-worktree",
+        "sibling": source_root / "feature-checkout",
+        "nested": source_root / ".worktrees" / "odd path\nwith spaces" / "server",
+        "inside-repo": server / "auxiliary" / "feature",
+    }
+    linked = locations[location]
+    linked.parent.mkdir(parents=True, exist_ok=True)
+    _git(server, "worktree", "add", "-b", "feature", str(linked))
+    (linked / "tracked.txt").write_text("feature commit\n")
+    _git(linked, "commit", "-am", "feature")
+    (linked / "tracked.txt").write_text("unfinished change\n")
+    (linked / "scratch.txt").write_text("keep this\n")
+    if state == "locked":
+        _git(server, "worktree", "lock", "--reason", "keep available", str(linked))
+    elif state == "prunable":
+        shutil.rmtree(linked)
+    registration = server / ".git" / "worktrees"
+    before = {
+        p.relative_to(registration): p.read_bytes()
+        for p in registration.rglob("*")
+        if p.is_file()
+    }
+    source_worktrees = _git(server, "worktree", "list", "--porcelain")
 
-    result = CliRunner().invoke(
-        reana_dev, ["srcdir-create", "auth-alignment", "--no-mise-venv"]
+    result = _create_srcdir(CliRunner(), monkeypatch, source_root, "independent")
+
+    assert result.exit_code == 0, result.output
+    destination = _srcdir_root(source_root) / "independent"
+    copied = destination / "reana-server"
+    assert not (copied / ".git" / "worktrees").exists()
+    assert (
+        _git(copied, "worktree", "list", "--porcelain").splitlines()[0]
+        == f"worktree {copied}"
     )
+    assert _git(copied, "worktree", "list", "--porcelain").count("worktree ") == 1
+    assert (
+        _git(copied, "for-each-ref", "--format=%(refname:short)", "refs/heads")
+        == "master"
+    )
+    assert _git(copied, "status", "--porcelain") == ""
+    assert srcdir._git_ref_exists(copied, "refs/remotes/local/feature")
+    if location != "external":
+        assert not (destination / linked.relative_to(source_root)).exists()
+    assert _git(server, "worktree", "list", "--porcelain") == source_worktrees
+    assert {
+        p.relative_to(registration): p.read_bytes()
+        for p in registration.rglob("*")
+        if p.is_file()
+    } == before
+    if state != "prunable":
+        assert (linked / "tracked.txt").read_text() == "unfinished change\n"
+        assert (linked / "scratch.txt").read_text() == "keep this\n"
+        assert _git(linked, "branch", "--show-current") == "feature"
 
+
+def test_srcdir_preserves_reused_stale_worktree_directory(tmp_path, monkeypatch):
+    """A registration alone must not cause unrelated copied files to disappear."""
+    source_root = _create_source_collection(tmp_path)
+    server = source_root / "reana-server"
+    linked = source_root / "former-worktree"
+    _git(server, "worktree", "add", "-b", "feature", str(linked))
+    shutil.rmtree(linked)
+    linked.mkdir()
+    (linked / "notes.txt").write_text("unrelated notes\n")
+
+    result = _create_srcdir(CliRunner(), monkeypatch, source_root, "independent")
+
+    assert result.exit_code == 0, result.output
+    destination = _srcdir_root(source_root) / "independent"
+    assert (
+        destination / "former-worktree" / "notes.txt"
+    ).read_text() == "unrelated notes\n"
+    assert not (destination / "reana-server" / ".git" / "worktrees").exists()
+
+
+def test_srcdir_can_prepare_master_held_by_canonical_worktree(tmp_path, monkeypatch):
+    """Detach registrations before checkout, not merely before branch cleanup."""
+    source_root = _create_source_collection(tmp_path)
+    server = source_root / "reana-server"
+    _git(server, "switch", "-c", "primary-feature")
+    linked = source_root / "master-checkout"
+    _git(server, "worktree", "add", str(linked), "master")
+    before = _git(server, "worktree", "list", "--porcelain")
+
+    result = _create_srcdir(CliRunner(), monkeypatch, source_root, "independent")
+
+    assert result.exit_code == 0, result.output
+    destination = _srcdir_root(source_root) / "independent"
+    assert _git(destination / "reana-server", "branch", "--show-current") == "master"
+    assert not (destination / "master-checkout").exists()
+    assert _git(server, "worktree", "list", "--porcelain") == before
+
+
+def test_srcdir_create_reports_all_unsupported_primary_checkouts(tmp_path, monkeypatch):
+    """Report all unrecognised gitfiles before copying or registration."""
+    source_root = _create_source_collection(tmp_path)
+    for name in ("external-one", "external-two"):
+        (source_root / name).mkdir()
+        (source_root / name / ".git").write_text("gitdir: elsewhere\n")
+    monkeypatch.chdir(source_root)
+    result = CliRunner().invoke(
+        reana_dev, ["srcdir-create", "failed", "--no-mise-venv"]
+    )
     assert result.exit_code != 0
-    assert "registered linked Git worktrees" in result.output
-    assert "git -C" in result.output
-    assert "worktree prune" in result.output
+    assert "external-one/.git" in result.output
+    assert "external-two/.git" in result.output
+    assert not _srcdir_root(source_root).exists()
+
+
+def test_srcdir_create_refuses_symlinked_primary_repository(tmp_path, monkeypatch):
+    """Never prepare a copied repository through a link into the canonical tree."""
+    source_root = _create_source_collection(tmp_path)
+    (source_root / "server-link").symlink_to(
+        source_root / "reana-server", target_is_directory=True
+    )
+    monkeypatch.chdir(source_root)
+    result = CliRunner().invoke(
+        reana_dev, ["srcdir-create", "failed", "--no-mise-venv"]
+    )
+    assert result.exit_code != 0
+    assert "server-link: primary checkout or .git is a symlink" in result.output
+    assert not _srcdir_root(source_root).exists()
 
 
 def test_srcdir_create_rolls_back_incomplete_destination(tmp_path, monkeypatch):
