@@ -271,6 +271,20 @@ components:
           'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:
           https:; font-src 'self' data: https://fonts.gstatic.com; connect-src
           'self'; frame-ancestors 'none'; object-src 'self'; base-uri 'self';"
+        # Policy of the ROOT file viewer (`/root-viewer/`), which REANA-UI
+        # embeds to preview ROOT files. jsroot evaluates formulas stored in
+        # ROOT files, so the viewer needs 'unsafe-eval'. The sandbox directive
+        # (without allow-same-origin) keeps it isolated from REANA's origin,
+        # and must not be removed. The other security headers are shared with
+        # the UI, except X-Frame-Options (SAMEORIGIN) and
+        # Cross-Origin-Resource-Policy (cross-origin), which the sandboxed
+        # viewer needs to be embedded and to load its own scripts.
+        root_viewer_csp:
+          "sandbox allow-scripts allow-downloads; default-src 'none'; script-src
+          'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self'
+          data: blob:; font-src 'self' data:; connect-src 'none';
+          frame-ancestors 'self'; form-action 'none'; object-src 'none';
+          base-uri 'none';"
   reana_db:
     enabled: true
     # Major PostgreSQL upgrades require an explicit data migration.
