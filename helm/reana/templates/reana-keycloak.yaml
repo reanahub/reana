@@ -149,7 +149,8 @@ spec:
                 --set=keycloak_database="${KEYCLOAK_DB_NAME}" \
                 --set=keycloak_user="${KEYCLOAK_DB_USERNAME}" <<'SQL'
               -- \getenv (reads an env var straight into a psql variable) only
-              -- exists from PostgreSQL 16; this image's psql is 14. \set with
+              -- exists from PostgreSQL 16, and operators may still override
+              -- components.reana_db.image with an older version. \set with
               -- a backtick-executed shell command reads KEYCLOAK_DB_PASSWORD
               -- the same way without ever putting the value in a process's
               -- own argv: the spawned "sh -c" only ever contains the literal

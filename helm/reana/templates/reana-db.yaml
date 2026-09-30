@@ -64,6 +64,12 @@ spec:
         env:
         - name: TZ
           value: "Europe/Zurich"
+        # PostgreSQL 18+ images default to a version-specific data directory
+        # below /var/lib/postgresql. Keep the data where it is mounted, so
+        # that an old data directory makes the server refuse to start instead
+        # of being silently replaced by a new, empty database.
+        - name: PGDATA
+          value: /var/lib/postgresql/data
         - name: POSTGRES_DB
           value: reana
         - name: POSTGRES_USER

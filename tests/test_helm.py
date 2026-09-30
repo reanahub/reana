@@ -674,3 +674,27 @@ def test_mail_service_targets_the_ports_maildev_listens_on(tmp_path):
 
     # Node ports are part of the cluster contract and must not change.
     assert {port["port"] for port in service["spec"]["ports"]} == {30025, 32580}
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_database_keeps_its_data_in_the_mounted_directory(tmp_path):
+    """PostgreSQL must store its data in the directory the chart mounts."""
+    documents = _rendered_documents(_render_helm_chart(tmp_path))
+
+    deployment = next(
+        document
+        for document in documents
+        if document["kind"] == "Deployment"
+        and document["metadata"]["name"].endswith("-db")
+    )
+
+    container = deployment["spec"]["template"]["spec"]["containers"][0]
+    environment = {
+        variable["name"]: variable.get("value") for variable in container["env"]
+    }
+    mount_paths = {mount["mountPath"] for mount in container["volumeMounts"]}
+
+    assert environment["PGDATA"] in mount_paths
