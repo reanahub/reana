@@ -289,3 +289,65 @@ def test_cluster_deploy_passes_helm_set_values_after_values_files(
     assert (
         "--set 'secrets.auth.REANA_AUTH_WEB_CLIENT_SECRET=secret;value'" in helm_install
     )
+
+
+@patch("reana.reana_dev.cluster.get_srcdir")
+@patch("reana.reana_dev.cluster.run_command")
+@patch("builtins.open", new_callable=mock_open)
+def test_cluster_deploy_colima_prepares_var_reana(
+    open_mock,
+    run_command_mock,
+    get_srcdir_mock,
+):
+    """Test cluster-deploy makes /var/reana group-writable on Colima."""
+    from reana.reana_dev.cluster import cluster_deploy
+
+    open_mock.return_value.read.return_value = ""
+    get_srcdir_mock.return_value = "/code/src/reana"
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cluster_deploy,
+        [
+            "--admin-email",
+            "john.doe@reana.io",
+            "--admin-password",
+            "admin",
+            "--kubernetes",
+            "colima/k3s",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert run_command_mock.call_args_list[:2] == [
+        call(
+            "colima exec -- sh -c 'sudo mkdir -p /var/reana && sudo chmod g+rwx /var/reana'",
+            "reana",
+        ),
+        call("helm dep update helm/reana", "reana"),
+    ]
+
+
+@patch("reana.reana_dev.cluster.run_command")
+def test_cluster_deploy_rejects_unsupported_kubernetes(run_command_mock):
+    """Test cluster-deploy exits on an unsupported Kubernetes flavour."""
+    from reana.reana_dev.cluster import cluster_deploy
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cluster_deploy,
+        [
+            "--admin-email",
+            "john.doe@reana.io",
+            "--admin-password",
+            "admin",
+            "--mode",
+            "releasehelm",
+            "--kubernetes",
+            "minikube",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Unsupported --kubernetes option value 'minikube'" in result.output
+    run_command_mock.assert_not_called()

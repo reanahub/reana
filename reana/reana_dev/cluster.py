@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -378,6 +378,12 @@ def cluster_build(
     default="reana",
     help="REANA instance name",
 )
+@click.option(
+    "--kubernetes",
+    "-k",
+    default="kind",
+    help="What Kubernetes cluster to use? (kind, colima/k3s). [default=kind]",
+)
 def cluster_deploy(
     namespace,
     job_mounts,
@@ -388,6 +394,7 @@ def cluster_deploy(
     admin_email,
     admin_password,
     instance_name,
+    kubernetes,
 ):  # noqa: D301
     """Deploy REANA cluster.
 
@@ -463,6 +470,19 @@ def cluster_deploy(
     )
 
     cmds = []
+    if kubernetes == "colima/k3s":
+        # Let infrastructure pods that run as non-root with GID 0, such as
+        # OpenSearch, write to the hostPath subdirectories created under
+        # /var/reana, similarly to what `cluster-create` does for Kind.
+        cmds.append(
+            "colima exec -- sh -c 'sudo mkdir -p /var/reana && sudo chmod g+rwx /var/reana'"
+        )
+    elif kubernetes != "kind":
+        display_message(
+            f"[ERROR] Unsupported --kubernetes option value '{kubernetes}'. Must be 'kind' [default] or 'colima/k3s'. Exiting.",
+            "reana",
+        )
+        sys.exit(1)
     if mode in ("debug"):
         cmds.append("reana-dev python-install-eggs")
         cmds.append("reana-dev git-submodule --update")
