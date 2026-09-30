@@ -1,4 +1,17 @@
 {{- if .Values.components.reana_ui.enabled }}
+{{- $headers := .Values.components.reana_ui.nginx.security_headers }}
+{{- /*
+The ROOT file viewer is embedded by REANA-UI and runs in a sandbox with an
+opaque origin, from which it loads its own scripts.
+*/}}
+{{- $rootViewerHeaders := deepCopy $headers }}
+{{- $_ := set $rootViewerHeaders "csp" $headers.root_viewer_csp }}
+{{- if $headers.x_frame_options }}
+{{- $_ := set $rootViewerHeaders "x_frame_options" "SAMEORIGIN" }}
+{{- end }}
+{{- if $headers.cross_origin_resource_policy }}
+{{- $_ := set $rootViewerHeaders "cross_origin_resource_policy" "cross-origin" }}
+{{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -12,30 +25,7 @@ data:
         root   /usr/share/nginx/html;
         server_name  localhost;
         index  index.html index.htm;
-{{- with .Values.components.reana_ui.nginx.security_headers.hsts }}
-        add_header Strict-Transport-Security {{ . | quote }} always;
-{{- end }}
-{{- with .Values.components.reana_ui.nginx.security_headers.x_frame_options }}
-        add_header X-Frame-Options {{ . | quote }} always;
-{{- end }}
-{{- with .Values.components.reana_ui.nginx.security_headers.x_content_type_options }}
-        add_header X-Content-Type-Options {{ . | quote }} always;
-{{- end }}
-{{- with .Values.components.reana_ui.nginx.security_headers.cross_origin_opener_policy }}
-        add_header Cross-Origin-Opener-Policy {{ . | quote }} always;
-{{- end }}
-{{- with .Values.components.reana_ui.nginx.security_headers.cross_origin_resource_policy }}
-        add_header Cross-Origin-Resource-Policy {{ . | quote }} always;
-{{- end }}
-{{- with .Values.components.reana_ui.nginx.security_headers.referrer_policy }}
-        add_header Referrer-Policy {{ . | quote }} always;
-{{- end }}
-{{- with .Values.components.reana_ui.nginx.security_headers.permissions_policy }}
-        add_header Permissions-Policy {{ . | quote }} always;
-{{- end }}
-{{- with .Values.components.reana_ui.nginx.security_headers.csp }}
-        add_header Content-Security-Policy {{ . | quote }} always;
-{{- end }}
+        {{- include "reana.ui_nginx_security_headers" $headers | trim | nindent 8 }}
 
         #Enable serving of pre-compressed files
         gzip_static on;
@@ -49,6 +39,16 @@ data:
             # the browser (e.g. in case of an URL to an interactive session).
             # This setting makes sure that `index.html` is revalidated on each request.
             expires -1;
+        }
+        location /root-viewer/ {
+            # Sandboxed ROOT file viewer. jsroot evaluates formulas stored in ROOT
+            # files as JavaScript, so REANA-UI runs it in a sandboxed iframe rather
+            # than in its own origin. `add_header` here replaces the server-level
+            # headers, hence they are all repeated. The file names are not
+            # content-hashed, so make sure they are revalidated after upgrades.
+            try_files $uri =404;
+            expires -1;
+            {{- include "reana.ui_nginx_security_headers" $rootViewerHeaders | trim | nindent 12 }}
         }
     }
 {{- end }}
