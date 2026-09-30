@@ -172,6 +172,15 @@ vetted_container_images:
   enabled: false # Toggle container image vetting
   allowlist: [] # List of authorized container images
 
+# Pull user images from `upstream_registries` through `registry` to avoid rate limits.
+container_image_pull_through_cache:
+  enabled: false
+  registry: registry.cern.ch
+  upstream_registries:
+    - docker.io
+    - quay.io
+    - ghcr.io
+
 shared_storage:
   backend: hostpath # hostpath | cephfs | nfs
   volume_size: 200
