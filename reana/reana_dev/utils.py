@@ -533,6 +533,7 @@ def replace_string(
     if line_selector_regex:
         line = run_command(
             f'cat {file_} | grep -n -e "{line_selector_regex}" | cut -f1 -d: ',
+            component,
             return_output=True,
         )
         if not line:
