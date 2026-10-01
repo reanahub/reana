@@ -351,3 +351,35 @@ def test_cluster_deploy_rejects_unsupported_kubernetes(run_command_mock):
     assert result.exit_code == 1
     assert "Unsupported --kubernetes option value 'minikube'" in result.output
     run_command_mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "kubernetes, cleanup_command",
+    [
+        (
+            "kind",
+            "docker exec -i -t kind-control-plane sh -c '/bin/rm -rf /var/reana/*'",
+        ),
+        ("colima/k3s", "colima exec -- sh -c 'sudo /bin/rm -rf /var/reana/*'"),
+    ],
+)
+@patch("reana.reana_dev.cluster.run_command")
+def test_cluster_undeploy_waits_for_release_deletion_before_cleanup(
+    run_command_mock, kubernetes, cleanup_command
+):
+    """Test cluster-undeploy waits for release resources before wiping data."""
+    from reana.reana_dev.cluster import cluster_undeploy
+
+    run_command_mock.side_effect = lambda cmd, component, return_output=False: (
+        "reana\n" if cmd.startswith("helm ls") else None
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(cluster_undeploy, ["--kubernetes", kubernetes])
+
+    assert result.exit_code == 0
+    commands = [c.args[0] for c in run_command_mock.call_args_list]
+    assert commands[1] == (
+        "helm uninstall reana -n default --cascade foreground --wait"
+    )
+    assert commands[-1] == cleanup_command

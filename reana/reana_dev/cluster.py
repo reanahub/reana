@@ -523,7 +523,8 @@ def cluster_undeploy(namespace, instance_name, kubernetes):  # noqa: D301
     ).splitlines()
     if instance_name in helm_releases:
         for cmd in [
-            f"helm uninstall {instance_name} -n {namespace}",
+            # Wait for the pods to terminate before their data is removed.
+            f"helm uninstall {instance_name} -n {namespace} --cascade foreground --wait",
             f"kubectl get secrets -n {namespace} -o custom-columns=':metadata.name' | grep {instance_name} | xargs kubectl delete secret -n {namespace}",
         ]:
             run_command(cmd, "reana")
