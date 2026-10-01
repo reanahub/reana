@@ -85,6 +85,39 @@ def _rendered_documents(rendered):
             ["docker.io/reanahub/reana-server:0.8.1"],
             "image: docker.io/reanahub/reana-server:0.8.1\nenvironment:",
         ),
+        (
+            "dask-kubernetes-operator:\n"
+            "  image:\n"
+            "    name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "    tag: 0.95.0-alpha.2\n"
+            "  serviceAccount:\n",
+            ["reanahub/reana-dask-kubernetes-operator:0.95.0-alpha.4"],
+            "dask-kubernetes-operator:\n"
+            "  image:\n"
+            "    name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "    tag: 0.95.0-alpha.4\n"
+            "  serviceAccount:\n",
+        ),
+        (
+            "image:\n"
+            "  name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "  pullPolicy: IfNotPresent\n"
+            "tag: 0.95.0-alpha.2\n",
+            ["reanahub/reana-dask-kubernetes-operator:0.95.0-alpha.4"],
+            "image:\n"
+            "  name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "  pullPolicy: IfNotPresent\n"
+            "tag: 0.95.0-alpha.2\n",
+        ),
+        (
+            "image:\n"
+            "  name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "tag: 0.95.0-alpha.2\n",
+            ["reanahub/reana-dask-kubernetes-operator:0.95.0-alpha.4"],
+            "image:\n"
+            "  name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "tag: 0.95.0-alpha.2\n",
+        ),
     ],
 )
 def test_replace_docker_images(original, docker_images, expected):
@@ -95,6 +128,68 @@ def test_replace_docker_images(original, docker_images, expected):
     from reana.reana_dev.helm import _replace_docker_images
 
     assert _replace_docker_images(original, docker_images) == expected
+
+
+@pytest.mark.parametrize(
+    "name_line,tag_line,expected_tag_line",
+    [
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator ",
+            "tag: 0.95.0-alpha.2",
+            "tag: 0.95.0-alpha.4",
+        ),
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator  # ours",
+            "tag: 0.95.0-alpha.2",
+            "tag: 0.95.0-alpha.4",
+        ),
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator",
+            "tag: 0.95.0-alpha.2 ",
+            "tag: 0.95.0-alpha.4 ",
+        ),
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator",
+            "tag: 0.95.0-alpha.2  # pinned",
+            "tag: 0.95.0-alpha.4  # pinned",
+        ),
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator",
+            'tag: "0.95.0-alpha.2"  # pinned',
+            'tag: "0.95.0-alpha.4"  # pinned',
+        ),
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator",
+            "tag: '0.95.0-alpha.2'",
+            "tag: '0.95.0-alpha.4'",
+        ),
+        (
+            'name: "docker.io/reanahub/reana-dask-kubernetes-operator"',
+            "tag: 0.95.0-alpha.2",
+            "tag: 0.95.0-alpha.4",
+        ),
+        (
+            "name:  docker.io/reanahub/reana-dask-kubernetes-operator",
+            "tag:  0.95.0-alpha.2",
+            "tag:  0.95.0-alpha.4",
+        ),
+    ],
+)
+def test_replace_docker_images_split_tag_formatting(
+    name_line, tag_line, expected_tag_line
+):
+    """Test that split image tags are bumped regardless of YAML formatting."""
+    from reana.reana_dev.helm import _replace_docker_images
+
+    original = f"image:\n  {name_line}\n  {tag_line}\n"
+    expected = f"image:\n  {name_line}\n  {expected_tag_line}\n"
+
+    assert (
+        _replace_docker_images(
+            original, ["reanahub/reana-dask-kubernetes-operator:0.95.0-alpha.4"]
+        )
+        == expected
+    )
 
 
 @pytest.mark.skipif(

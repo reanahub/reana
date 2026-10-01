@@ -151,9 +151,22 @@ def _replace_docker_images(content: str, images: List[str]) -> str:
     by docker image name and replace it with the given images (name + tag).
     """
     for image in images:
-        image_name, _ = image.split(":")
+        image_name, tag = image.split(":")
         if image_name in content:
             content = re.sub(f"{image_name}:\\S*", image, content, count=1)
+            # Subcharts such as dask-kubernetes-operator take the image name
+            # and tag as separate `name` and `tag` values on adjacent lines.
+            # Preserve quoting, spacing and trailing comments.
+            content = re.sub(
+                rf"^([ \t]*)(name:[ \t]+(?P<nq>[\"']?)(?:\S*/)?"
+                rf"{re.escape(image_name)}(?P=nq)[ \t]*(?:#.*)?\n"
+                rf"\1tag:[ \t]+)(?P<tq>[\"']?)[^\s\"'#]+(?P=tq)"
+                rf"(?=[ \t]*(?:#.*)?$)",
+                rf"\g<1>\g<2>\g<tq>{tag}\g<tq>",
+                content,
+                count=1,
+                flags=re.MULTILINE,
+            )
     return content
 
 
