@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -23,6 +23,7 @@ from reana.reana_dev.git import (
 )
 from reana.reana_dev.utils import (
     display_message,
+    exclude_components_from_selection,
     get_docker_tag,
     get_srcdir,
     is_component_dockerised,
@@ -41,17 +42,33 @@ def helm_commands():
     default=False,
     help="Should the feature branch with the upgrade be pushed to origin?",
 )
+@click.option(
+    "--exclude-components",
+    default="",
+    help="Which components to exclude from the upgrade? [c1,c2,c3]",
+)
 @helm_commands.command(name="helm-upgrade-components")
 @click.pass_context
-def helm_upgrade_components(ctx, user, push):  # noqa: D301
+def helm_upgrade_components(ctx, user, push, exclude_components):  # noqa: D301
     """Upgrade REANA Helm dependencies.
 
     Checks if any docker releases are missed.
     If yes, exists with the error and lists missing components.
     If not, updates values.yaml and prefetch-images.sh with new docker images version
+
+    \b
+    Example:
+       $ reana-dev helm-upgrade-components
+                   --exclude-components=r-a-krb5,r-a-rucio,r-a-vomsproxy,r-d-s3fs
     """
-    _check_if_missing_docker_releases()
-    new_docker_images = _get_docker_releases(user)
+    components = REPO_LIST_CLUSTER
+    if exclude_components:
+        selected = exclude_components_from_selection(
+            set(REPO_LIST_CLUSTER), exclude_components.split(",")
+        )
+        components = [c for c in REPO_LIST_CLUSTER if c in selected]
+    _check_if_missing_docker_releases(components)
+    new_docker_images = _get_docker_releases(user, components)
 
     values_yaml_abs_path = os.path.join(get_srcdir("reana"), "helm/reana/values.yaml")
     _upgrade_docker_images(values_yaml_abs_path, new_docker_images)
@@ -66,7 +83,7 @@ def helm_upgrade_components(ctx, user, push):  # noqa: D301
         git_push_to_origin(["reana"])
 
 
-def _get_docker_releases(dockerhub_user: str) -> List[str]:
+def _get_docker_releases(dockerhub_user: str, components: List[str]) -> List[str]:
     """Return released docker images (name + tag) of all components.
 
     Iterate over the components that provide Docker image and
@@ -74,7 +91,7 @@ def _get_docker_releases(dockerhub_user: str) -> List[str]:
     and return as a list
     """
     docker_images = []
-    for component in REPO_LIST_CLUSTER:
+    for component in components:
         if is_component_dockerised(component) and git_is_current_version_tagged(
             component
         ):
@@ -85,13 +102,13 @@ def _get_docker_releases(dockerhub_user: str) -> List[str]:
     return docker_images
 
 
-def _check_if_missing_docker_releases() -> None:
+def _check_if_missing_docker_releases(components: List[str]) -> None:
     """Check if all dockerised components are released.
 
     If not, print those components and exit with status 1.
     """
     remaining_docker_releases = []
-    for component in REPO_LIST_CLUSTER:
+    for component in components:
         if not is_component_dockerised(component):
             continue
         if not git_is_current_version_tagged(component):

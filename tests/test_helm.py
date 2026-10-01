@@ -698,3 +698,48 @@ def test_database_keeps_its_data_in_the_mounted_directory(tmp_path):
     mount_paths = {mount["mountPath"] for mount in container["volumeMounts"]}
 
     assert environment["PGDATA"] in mount_paths
+
+
+@pytest.mark.parametrize(
+    "exclude_components, exit_code",
+    [
+        ("", 1),
+        ("r-a-krb5,reana-datastore-s3fs", 0),
+    ],
+)
+def test_helm_upgrade_components_exclude_components(exclude_components, exit_code):
+    """Test helm-upgrade-components skips excluded untagged components."""
+    from click.testing import CliRunner
+    from unittest.mock import MagicMock, patch
+
+    from reana.reana_dev.helm import helm_upgrade_components
+
+    untagged = {"reana-auth-krb5", "reana-datastore-s3fs"}
+    upgrade_mock = MagicMock()
+    with patch(
+        "reana.reana_dev.helm.is_component_dockerised", return_value=True
+    ), patch(
+        "reana.reana_dev.helm.git_is_current_version_tagged",
+        side_effect=lambda component: component not in untagged,
+    ), patch(
+        "reana.reana_dev.helm.get_docker_tag", return_value="1.0.0"
+    ), patch(
+        "reana.reana_dev.helm.get_srcdir", return_value="/code/reana"
+    ), patch(
+        "reana.reana_dev.helm._upgrade_docker_images", upgrade_mock
+    ), patch(
+        "reana.reana_dev.helm.git_diff", MagicMock()
+    ):
+        result = CliRunner().invoke(
+            helm_upgrade_components,
+            ["--exclude-components", exclude_components],
+        )
+
+    assert result.exit_code == exit_code
+    if exit_code:
+        assert "reana-auth-krb5\nreana-datastore-s3fs" in result.output
+        upgrade_mock.assert_not_called()
+    else:
+        images = upgrade_mock.call_args_list[0].args[1]
+        assert "reanahub/reana-server:1.0.0" in images
+        assert not any("krb5" in i or "s3fs" in i for i in images)
