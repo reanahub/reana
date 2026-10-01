@@ -242,7 +242,7 @@ components:
     forum_url: https://forum.reana.io
     file_preview_size_limit: "5242880" # 5 * 1024**2 = 5 MiB
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-ui:0.95.0-alpha.4
+    image: docker.io/reanahub/reana-ui:0.95.0-alpha.5
     resources: {} # UI pod resources.
     #  limits:
     #    cpu: 1.8
@@ -284,7 +284,7 @@ components:
     #    memory: 6G
   reana_server:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-server:0.95.0-alpha.6
+    image: docker.io/reanahub/reana-server:0.95.0-alpha.7
     hostAliases: []
     environment:
       REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
@@ -346,7 +346,7 @@ components:
       #    memory: 6G
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.7
+    image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.8
     pod_security_context: {}
     environment:
       SHARED_VOLUME_PATH: /var/reana
@@ -392,16 +392,16 @@ components:
       #    cpu: 1.8
       #    memory: 6G
   reana_workflow_engine_cwl:
-    image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.6
     environment: {}
   reana_workflow_engine_yadage:
-    image: docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.6
     environment: {}
   reana_workflow_engine_serial:
-    image: docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.6
     environment: {}
   reana_workflow_engine_snakemake:
-    image: docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.6
     environment: {}
   reana_workflow_validator:
     image: docker.io/reanahub/reana-workflow-validator:0.95.0-alpha.1
@@ -411,7 +411,7 @@ components:
     # are reserved by the sandbox and rejected by the chart.
     environment: {}
   reana_job_controller:
-    image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.6
     environment: {}
     uwsgi:
       threads: 2
@@ -520,7 +520,7 @@ dask:
 dask-kubernetes-operator:
   image:
     name: docker.io/reanahub/reana-dask-kubernetes-operator
-    tag: 0.95.0-alpha.2
+    tag: 0.95.0-alpha.4
   serviceAccount:
     create: false
     # Change the reana prefix if you opted another prefix in your cluster

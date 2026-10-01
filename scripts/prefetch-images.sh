@@ -17,17 +17,17 @@ for image in \
     docker.io/maildev/maildev:2.2.1 \
     docker.io/library/postgres:18.6 \
     docker.io/library/redis:8.6.7 \
-    docker.io/reanahub/reana-job-controller:0.95.0-alpha.5 \
+    docker.io/reanahub/reana-job-controller:0.95.0-alpha.6 \
     docker.io/reanahub/reana-message-broker:0.95.0-alpha.3 \
-    docker.io/reanahub/reana-server:0.95.0-alpha.6 \
-    docker.io/reanahub/reana-ui:0.95.0-alpha.4 \
-    docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.7 \
-    docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.5 \
-    docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.5 \
-    docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.5 \
-    docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.5 \
+    docker.io/reanahub/reana-server:0.95.0-alpha.7 \
+    docker.io/reanahub/reana-ui:0.95.0-alpha.5 \
+    docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.8 \
+    docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.6 \
+    docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.6 \
+    docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.6 \
+    docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.6 \
     docker.io/reanahub/reana-workflow-validator:0.95.0-alpha.1 \
-    docker.io/reanahub/reana-dask-kubernetes-operator:0.95.0-alpha.3 \
+    docker.io/reanahub/reana-dask-kubernetes-operator:0.95.0-alpha.4 \
     quay.io/jupyter/scipy-notebook:notebook-7.6.3; do
     docker pull $image
     if [ "$kubernetes" == "kind" ]; then
