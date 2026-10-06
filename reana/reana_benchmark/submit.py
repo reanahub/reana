@@ -9,56 +9,58 @@
 import os
 import concurrent.futures
 from functools import lru_cache
-from typing import Optional, Dict
-
-from click import format_filename
+from typing import Optional, Tuple
 
 from reana_client.api.client import (
-    create_workflow,
+    create_workflow_from_bundle,
     upload_to_server,
 )
-from reana_client.utils import load_validate_reana_spec
+from reana_commons.specification_paths import gather_validation_members
 
 from reana.reana_benchmark.utils import (
     logger,
     build_extended_workflow_name,
+    get_access_token,
 )
-from reana.reana_benchmark.config import REANA_ACCESS_TOKEN, WORKERS_DEFAULT_COUNT
+from reana.reana_benchmark.config import WORKERS_DEFAULT_COUNT
 
 CURRENT_WORKING_DIRECTORY = os.getcwd()
 
 
 @lru_cache(maxsize=None)
-def _load_reana_specification(reana_file_path: str) -> Dict:
-    return load_validate_reana_spec(
-        format_filename(reana_file_path),
-        access_token=REANA_ACCESS_TOKEN,
-        skip_validation=True,
+def _get_runtime_input_paths(reana_file_path: str) -> Tuple[str, ...]:
+    """Return the declared inputs that the creation bundle does not carry.
+
+    The server seeds the workspace with the files of the specification bundle
+    (the specification and the declared workflow sources), so only the
+    remaining runtime inputs have to be uploaded afterwards.
+    """
+    members, reana_specification, _ = gather_validation_members(reana_file_path)
+    base_directory = os.path.dirname(reana_file_path)
+    inputs = reana_specification.get("inputs") or {}
+
+    paths = {os.path.normpath(f) for f in inputs.get("files") or []}
+    for directory in inputs.get("directories") or []:
+        for root, _, filenames in os.walk(os.path.join(base_directory, directory)):
+            paths.update(
+                os.path.relpath(os.path.join(root, filename), base_directory)
+                for filename in filenames
+            )
+
+    return tuple(
+        os.path.join(base_directory, path)
+        for path in sorted(paths)
+        if path.replace(os.sep, "/") not in members
     )
 
 
 def _create_workflow(workflow: str, file: str) -> None:
-    reana_specification = _load_reana_specification(file)
-    create_workflow(reana_specification, workflow, REANA_ACCESS_TOKEN)
+    create_workflow_from_bundle(file, workflow, get_access_token())
 
 
 def _upload_workflow(workflow: str, file: str) -> None:
-    reana_specification = _load_reana_specification(file)
-
-    filenames = []
-
-    if "inputs" in reana_specification:
-        filenames += [
-            os.path.join(CURRENT_WORKING_DIRECTORY, f)
-            for f in reana_specification["inputs"].get("files") or []
-        ]
-        filenames += [
-            os.path.join(CURRENT_WORKING_DIRECTORY, d)
-            for d in reana_specification["inputs"].get("directories") or []
-        ]
-
-    for filename in filenames:
-        upload_to_server(workflow, filename, REANA_ACCESS_TOKEN)
+    for filename in _get_runtime_input_paths(file):
+        upload_to_server(workflow, filename, get_access_token())
 
 
 def _create_and_upload_single_workflow(workflow_name: str, reana_file: str) -> None:
