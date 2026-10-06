@@ -61,13 +61,40 @@ credentials with Keycloak's partial-import overwrite policy. This keeps a
 persistent realm aligned with chart values; Keycloak's startup import alone only
 creates realms that do not already exist.
 
-Keep the bootstrap administrator Secret stable so that subsequent chart upgrades
-can authenticate this job. Changing `keycloak.admin_password` updates the
-Secret; it does not rotate the password in an existing Keycloak database or
-trigger a Pod restart. This restriction applies to all database modes. To reset
-an ephemeral development instance with a new bootstrap password, explicitly
-recreate its Pod after updating the Secret; this discards its existing
-identities and signing state.
+The job authenticates with the bootstrap administrator Secret, which the chart
+renders from `keycloak.admin_user` and `keycloak.admin_password`. Keycloak reads
+these values only when it creates the administrator on its first start, so
+changing `keycloak.admin_password` alone updates the Secret without changing the
+password of the existing administrator, and does not restart the Keycloak Pod.
+The job of the next upgrade then stops with a
+`Keycloak rejected the administrator credentials` error, which is shown by
+`kubectl logs job/<release>-keycloak-realm-reconciler`.
+
+To change the administrator password in any database mode, first change it in
+the running Keycloak and then pass the same value to Helm:
+
+```console
+$ kubectl exec -it deployment/<release>-keycloak -- /opt/keycloak/bin/kcadm.sh \
+    config credentials --config /tmp/kcadm.config --realm master \
+    --server http://localhost:8080/keycloak --user <admin_user>
+$ kubectl exec -it deployment/<release>-keycloak -- /opt/keycloak/bin/kcadm.sh \
+    set-password --config /tmp/kcadm.config -r master --username <admin_user>
+$ kubectl exec deployment/<release>-keycloak -- rm /tmp/kcadm.config
+$ helm upgrade <release> ... --set keycloak.admin_password=<new-password>
+```
+
+The first command prompts for the current password and the second one for the
+new password, so that neither appears on a command line. Adjust the server URL
+if you changed `keycloak.relative_path`. This keeps all realm data, and the same
+steps repair a deployment whose upgrade has already failed with the error above,
+because Keycloak still accepts the previous password.
+
+An ephemeral development instance can alternatively be reset: once the Secret
+holds the new password, `kubectl rollout restart deployment/<release>-keycloak`
+recreates the Pod, which bootstraps a new administrator from the Secret. This
+discards all existing identities and signing state, and the Helm upgrade must be
+run again afterwards to reconcile the new realm. Restarting the Pod never
+changes the administrator password in the bundled or external database modes.
 
 The same reconciliation makes `offline_access` a default realm role: the Python
 and Go CLI clients request that optional scope so persisted logins can refresh
