@@ -8,6 +8,7 @@
 
 """`reana-dev`'s release commands."""
 
+import json
 import os
 import subprocess
 import sys
@@ -17,6 +18,7 @@ from time import sleep
 
 import click
 
+from reana.config import GITHUB_RELEASE_TITLE_COMPONENT_NAMES
 from reana.reana_dev.git import (
     get_current_commit,
     git_clean,
@@ -69,6 +71,12 @@ def is_component_releasable(component, exit_code=False, display=False):
         sys.exit(1)
 
     return is_releasable
+
+
+def get_expected_github_release_title(component, tag):
+    """Return the GitHub release title of the given component tag."""
+    name = GITHUB_RELEASE_TITLE_COMPONENT_NAMES[component]
+    return f"{name} {tag.lstrip('v')}".strip()
 
 
 @click.group()
@@ -469,6 +477,55 @@ def release_docker_copy(
                 f"{component_}: copied {src_image} to {dst_image}",
                 fg="green",
             )
+
+
+@click.option(
+    "--component",
+    "-c",
+    required=True,
+    multiple=True,
+    help="Which components? [name|CLUSTER]",
+)
+@click.option(
+    "--all-releases",
+    is_flag=True,
+    default=False,
+    help="Amend all past releases, not only the latest one? [default=False]",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Display the commands without executing them. [default=False]",
+)
+@release_commands.command(name="release-github-title")
+def release_github_title(component, all_releases, dry_run):
+    """Rename GitHub releases from e.g. ``v0.9.6`` to ``REANA-Client 0.9.6``."""
+    if not which("gh"):
+        click.secho("Please install GitHub CLI (gh).", fg="red")
+        sys.exit(1)
+
+    for component_ in select_components(component):
+        if component_ not in GITHUB_RELEASE_TITLE_COMPONENT_NAMES:
+            display_message(
+                "Component is not released on GitHub, skipping.", component_
+            )
+            continue
+        repository = f"reanahub/{component_}"
+        releases = run_command(
+            ["gh", "release", "list", "-R", repository, "--exclude-drafts"]
+            + ["--limit", "1000" if all_releases else "1", "--json", "tagName,name"],
+            display=False,
+            return_output=True,
+        )
+        for release in json.loads(releases):
+            title = get_expected_github_release_title(component_, release["tagName"])
+            if release["name"] != title:
+                run_command(
+                    ["gh", "release", "edit", release["tagName"]]
+                    + ["-R", repository, "--title", title],
+                    dry_run=dry_run,
+                )
 
 
 release_commands_list = list(release_commands.commands.values())
