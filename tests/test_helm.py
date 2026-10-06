@@ -838,3 +838,120 @@ def test_helm_upgrade_components_exclude_components(exclude_components, exit_cod
         images = upgrade_mock.call_args_list[0].args[1]
         assert "reanahub/reana-server:1.0.0" in images
         assert not any("krb5" in i or "s3fs" in i for i in images)
+
+
+def _server_env_values(rendered, name):
+    """Return the value of env var ``name`` in every REANA-Server container."""
+    values = []
+    for document in _rendered_documents(rendered):
+        if document.get("kind") != "Deployment":
+            continue
+        if not document["metadata"]["name"].endswith("reana-server"):
+            continue
+        for container in document["spec"]["template"]["spec"]["containers"]:
+            for env_var in container.get("env", []):
+                if env_var["name"] == name:
+                    values.append(env_var["value"])
+    return values
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    "concurrency_limits,environment,expected",
+    [
+        # Nothing configured: the chart's own default applies.
+        pytest.param(None, None, "30", id="default"),
+        # The deprecated cluster-wide variable is honoured as the Kubernetes cap
+        # rather than being silently overridden by the chart default.
+        pytest.param(
+            None,
+            {"REANA_MAX_CONCURRENT_BATCH_WORKFLOWS": 10},
+            "10",
+            id="legacy-value",
+        ),
+        # An explicit limit wins over the deprecated variable.
+        pytest.param(
+            {"kubernetes": 7},
+            {"REANA_MAX_CONCURRENT_BATCH_WORKFLOWS": 10},
+            "7",
+            id="explicit-wins",
+        ),
+        # Zero means "backend closed" and must survive resolution: `default`
+        # would treat it as empty and fall back to the deprecated value.
+        pytest.param(
+            {"kubernetes": 0},
+            {"REANA_MAX_CONCURRENT_BATCH_WORKFLOWS": 10},
+            "0",
+            id="explicit-zero",
+        ),
+    ],
+)
+def test_server_kubernetes_concurrency_limit(
+    tmp_path, concurrency_limits, environment, expected
+):
+    """The Kubernetes cap resolves explicit value > deprecated value > default."""
+    reana_server = {}
+    if concurrency_limits is not None:
+        reana_server["concurrency_limits"] = concurrency_limits
+    if environment is not None:
+        reana_server["environment"] = environment
+
+    rendered = _render_helm_chart(
+        tmp_path, values={"components": {"reana_server": reana_server}}
+    )
+
+    values = _server_env_values(rendered, "REANA_MAX_CONCURRENT_K8S_BATCH_WORKFLOWS")
+    # Both the REST API and the scheduler container must agree.
+    assert len(values) == 2
+    assert set(values) == {expected}
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_server_legacy_zero_concurrency_limit_reaches_both_containers(tmp_path):
+    """The deprecated cap is still passed on, so that zero pauses scheduling.
+
+    reana-commons closes every backend and Dask when it sees the deprecated
+    variable set to zero, even if explicit limits are configured, so the chart
+    must keep handing it to both the REST API and the scheduler container.
+    """
+    rendered = _render_helm_chart(
+        tmp_path,
+        values={
+            "components": {
+                "reana_server": {
+                    "concurrency_limits": {"kubernetes": 30},
+                    "environment": {"REANA_MAX_CONCURRENT_BATCH_WORKFLOWS": 0},
+                }
+            }
+        },
+    )
+
+    assert _server_env_values(rendered, "REANA_MAX_CONCURRENT_BATCH_WORKFLOWS") == [
+        "0",
+        "0",
+    ]
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_server_concurrency_limit_defaults_match_reana_commons(tmp_path):
+    """The chart defaults must match the defaults documented in reana-commons."""
+    rendered = _render_helm_chart(tmp_path)
+
+    assert set(
+        _server_env_values(rendered, "REANA_MAX_CONCURRENT_EXTERNAL_BATCH_WORKFLOWS")
+    ) == {"200"}
+    assert set(_server_env_values(rendered, "REANA_MAX_CONCURRENT_DASK_WORKFLOWS")) == {
+        "5"
+    }
+    assert set(
+        _server_env_values(rendered, "REANA_MAX_CONCURRENT_BATCH_WORKFLOWS_PER_BACKEND")
+    ) == {"{}"}
