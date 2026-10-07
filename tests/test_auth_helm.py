@@ -14,6 +14,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -32,11 +33,11 @@ AUTHENTICATED_TEST_SCRIPTS = (
 )
 
 
-def _helm_template(*extra_args):
+def _helm_template(*extra_args, chart=CHART):
     if shutil.which("helm") is None:
         pytest.skip("helm is not installed")
     result = subprocess.run(
-        ["helm", "template", "reana", str(CHART), *extra_args],
+        ["helm", "template", "reana", str(chart), *extra_args],
         check=True,
         capture_output=True,
         text=True,
@@ -379,8 +380,42 @@ def test_bundled_keycloak_realm_tracks_chart_values_and_uses_secrets():
     reconcile_script = reconciler["spec"]["template"]["spec"]["containers"][0]["args"][
         0
     ]
+    # Reconciliation must not replace existing roles or clients: that would
+    # drop the users' role mappings, sessions and offline tokens.
     assert "create partialImport" in reconcile_script
-    assert "ifResourceExists=OVERWRITE" in reconcile_script
+    assert "ifResourceExists=SKIP" in reconcile_script
+    assert "OVERWRITE" not in reconcile_script
+    assert 'kcadm update "clients/${client}" -f "${representation}"' in (
+        reconcile_script
+    )
+    assert '"clients/${client}/${kind}-client-scopes/${scope_ids[${scope}]}"' in (
+        reconcile_script
+    )
+    clients_secret = _rendered_resource(
+        rendered, "Secret", "reana-keycloak-realm-clients"
+    )["stringData"]
+    assert clients_secret["client-0.id"] == "custom-web"
+    assert clients_secret["client-1.id"] == "custom-cli"
+    assert json.loads(clients_secret["client-0.json"]) == web_client
+    assert json.loads(clients_secret["client-1.json"]) == cli_client
+    assert "client-0.default-scopes" not in clients_secret
+    assert "client-0.optional-scopes" not in clients_secret
+    assert clients_secret["client-1.default-scopes"].split("\n") == (
+        cli_client["defaultClientScopes"]
+    )
+    assert clients_secret["client-1.optional-scopes"].split("\n") == (
+        cli_client["optionalClientScopes"]
+    )
+    reconciler_pod = reconciler["spec"]["template"]["spec"]
+    assert {
+        "name": "realm-clients",
+        "secret": {"secretName": "reana-keycloak-realm-clients"},
+    } in reconciler_pod["volumes"]
+    assert {
+        "name": "realm-clients",
+        "mountPath": "/opt/keycloak/data/reconcile",
+        "readOnly": True,
+    } in reconciler_pod["containers"][0]["volumeMounts"]
     assert "get roles/offline_access" in reconcile_script
     assert '"roles/default-roles-${KEYCLOAK_REALM}/composites"' in reconcile_script
     assert "printf '[%s]'" in reconcile_script
@@ -400,6 +435,207 @@ def test_bundled_keycloak_realm_tracks_chart_values_and_uses_secrets():
         "key": "password",
     }
     assert "KEYCLOAK_ADMIN_PASSWORD" not in reconciler_environment
+
+
+# A stand-in for kcadm.sh that keeps the clients and their scopes in a JSON
+# state file and records every call that changes Keycloak.
+FAKE_KCADM = r"""
+import json
+import os
+import sys
+
+with open(os.environ["FAKE_KCADM_STATE"]) as state_file:
+    state = json.load(state_file)
+args = sys.argv[1:]
+for option in ("--config", "-r"):
+    if option in args:
+        index = args.index(option)
+        del args[index : index + 2]
+verb, path = args[0], args[1]
+parts = path.split("/")
+clients = {client["id"]: client for client in state["clients"].values()}
+if verb == "get" and path == "client-scopes":
+    print("\n".join(f"{id},{name}" for name, id in state["scopes"].items()))
+elif verb == "get" and path == "clients":
+    client = state["clients"].get(args[args.index("-q") + 1].split("=", 1)[1])
+    print(client["id"] if client else "")
+elif verb == "get" and parts[0] == "clients":
+    print("\n".join(clients[parts[1]][parts[2].split("-")[0]]))
+elif verb == "get" and path == "roles/offline_access":
+    print('{"name":"offline_access"}')
+elif verb != "config":
+    state["calls"].append(f"{verb} {path}")
+    if len(parts) == 4:
+        scope = {id: name for name, id in state["scopes"].items()}[parts[3]]
+        scopes = clients[parts[1]][parts[2].split("-")[0]]
+        if verb == "delete":
+            scopes.remove(scope)
+        else:
+            scopes.append(scope)
+    with open(os.environ["FAKE_KCADM_STATE"], "w") as state_file:
+        json.dump(state, state_file)
+"""
+
+
+def _run_realm_reconciler(tmp_path, rendered, clients, scopes):
+    """Run the rendered realm reconciler against a fake Keycloak."""
+    if subprocess.run(["bash", "-c", "declare -A test"]).returncode != 0:
+        pytest.skip("bash 4 or newer is not installed")
+    reconciler = _rendered_resource(rendered, "Job", "reana-keycloak-realm-reconciler")
+    script = reconciler["spec"]["template"]["spec"]["containers"][0]["args"][0]
+    realm = _rendered_resource(rendered, "Secret", "reana-keycloak-realm")
+    reconcile = _rendered_resource(rendered, "Secret", "reana-keycloak-realm-clients")
+    for directory, secret in (("import", realm), ("reconcile", reconcile)):
+        (tmp_path / directory).mkdir()
+        for name, content in secret["stringData"].items():
+            (tmp_path / directory / name).write_text(content)
+        script = script.replace(
+            f"/opt/keycloak/data/{directory}", str(tmp_path / directory)
+        )
+    kcadm = tmp_path / "kcadm.sh"
+    kcadm.write_text(f"#!{sys.executable}\n{FAKE_KCADM}")
+    kcadm.chmod(0o755)
+    script = script.replace("/opt/keycloak/bin/kcadm.sh", str(kcadm))
+    state_path = tmp_path / "state.json"
+    state_path.write_text(
+        json.dumps({"clients": clients, "scopes": scopes, "calls": []})
+    )
+    result = subprocess.run(
+        ["bash", "-ec", script],
+        env={
+            "PATH": os.environ["PATH"],
+            "FAKE_KCADM_STATE": str(state_path),
+            "KEYCLOAK_ADMIN_USER": "admin",
+            "KEYCLOAK_REALM": "reana",
+        },
+        capture_output=True,
+        text=True,
+    )
+    return result, json.loads(state_path.read_text())
+
+
+def _keycloak_realm_clients(rendered):
+    """Return converged fake Keycloak clients and scopes for a rendered chart."""
+    realm_secret = _rendered_resource(rendered, "Secret", "reana-keycloak-realm")
+    web, cli = json.loads(realm_secret["stringData"]["reana-realm.json"])["clients"]
+    scopes = {"offline_access", *cli["defaultClientScopes"]}
+    clients = {
+        web["clientId"]: {"id": "web-id", "default": ["profile"], "optional": []},
+        cli["clientId"]: {
+            "id": "cli-id",
+            "default": list(cli["defaultClientScopes"]),
+            "optional": list(cli["optionalClientScopes"]),
+        },
+    }
+    return clients, {scope: f"{scope}-id" for scope in scopes}
+
+
+def _scope_calls(state):
+    return [call for call in state["calls"] if "-client-scopes/" in call]
+
+
+def test_keycloak_realm_reconciler_leaves_a_converged_realm_alone(tmp_path):
+    rendered = _helm_template("-f", str(VALUES_DEV))
+    clients, scopes = _keycloak_realm_clients(rendered)
+
+    result, state = _run_realm_reconciler(tmp_path, rendered, clients, scopes)
+
+    assert result.returncode == 0, result.stderr
+    assert state["calls"] == [
+        "create partialImport",
+        "update clients/web-id",
+        "update clients/cli-id",
+        "create roles/default-roles-reana/composites",
+    ]
+    assert state["clients"] == clients
+
+
+def test_keycloak_realm_reconciler_moves_scopes_between_lists(tmp_path):
+    rendered = _helm_template("-f", str(VALUES_DEV))
+    clients, scopes = _keycloak_realm_clients(rendered)
+    wanted = json.loads(json.dumps(clients))
+    cli = clients["reana-cli"]
+    cli["default"] = [scope for scope in cli["default"] if scope != "roles"]
+    cli["default"].append("offline_access")
+    cli["optional"] = ["roles"]
+
+    result, state = _run_realm_reconciler(tmp_path, rendered, clients, scopes)
+
+    assert result.returncode == 0, result.stderr
+    assert _scope_calls(state) == [
+        "delete clients/cli-id/default-client-scopes/offline_access-id",
+        "delete clients/cli-id/optional-client-scopes/roles-id",
+        "update clients/cli-id/default-client-scopes/roles-id",
+        "update clients/cli-id/optional-client-scopes/offline_access-id",
+    ]
+    assert sorted(state["clients"]["reana-cli"]["default"]) == sorted(
+        wanted["reana-cli"]["default"]
+    )
+    assert state["clients"]["reana-cli"]["optional"] == ["offline_access"]
+
+
+def test_keycloak_realm_reconciler_clears_explicitly_empty_scope_lists(tmp_path):
+    chart = tmp_path / "chart"
+    shutil.copytree(CHART, chart, symlinks=True)
+    realm_template = chart / "reana-keycloak-realm.json.tpl"
+    realm_template.write_text(
+        re.sub(
+            r'"optionalClientScopes": \[[^]]*\]',
+            '"optionalClientScopes": []',
+            realm_template.read_text(),
+        )
+    )
+    rendered = _helm_template("-f", str(VALUES_DEV), chart=chart)
+    clients, scopes = _keycloak_realm_clients(rendered)
+    cli = clients["reana-cli"]
+    wanted = list(cli["default"])
+    cli["default"] = []
+    cli["optional"] = ["offline_access"]
+    clients_secret = _rendered_resource(
+        rendered, "Secret", "reana-keycloak-realm-clients"
+    )["stringData"]
+
+    result, state = _run_realm_reconciler(tmp_path, rendered, clients, scopes)
+
+    # An omitted list leaves the scopes alone, an empty one detaches them all.
+    assert "client-0.optional-scopes" not in clients_secret
+    assert clients_secret["client-1.optional-scopes"] == ""
+    assert result.returncode == 0, result.stderr
+    assert state["clients"]["reana-server"] == {
+        "id": "web-id",
+        "default": ["profile"],
+        "optional": [],
+    }
+    assert state["clients"]["reana-cli"]["default"] == wanted
+    assert state["clients"]["reana-cli"]["optional"] == []
+
+
+@pytest.mark.parametrize(
+    "missing, error",
+    [
+        ("client", "Keycloak client reana-cli not found"),
+        ("scope", "Keycloak client scope acr not found"),
+    ],
+)
+def test_keycloak_realm_reconciler_fails_before_changing_the_client(
+    tmp_path, missing, error
+):
+    rendered = _helm_template("-f", str(VALUES_DEV))
+    clients, scopes = _keycloak_realm_clients(rendered)
+    cli = clients["reana-cli"]
+    cli["default"].remove("roles")
+    cli["optional"].append("roles")
+    if missing == "client":
+        del clients["reana-cli"]
+    else:
+        del scopes["acr"]
+
+    result, state = _run_realm_reconciler(tmp_path, rendered, clients, scopes)
+
+    assert result.returncode != 0
+    assert error in result.stderr
+    assert not [call for call in state["calls"] if "cli-id" in call]
+    assert state["clients"] == clients
 
 
 def test_bundled_keycloak_resources_are_configurable():
