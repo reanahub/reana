@@ -73,10 +73,11 @@ keycloak:
     tls_truststore_path: /opt/keycloak/conf/database-ca.pem
   realm: reana
   relative_path: /keycloak
-  # Browser-facing base URL; MUST include the relative path. Override per
-  # deployment, e.g. https://reana.example.org/keycloak. The kind dev cluster
-  # exposes REANA on the 30443 nodeport.
-  frontend_url: https://localhost:30443/keycloak
+  # Browser-facing base URL. Empty derives it from reana_hostname,
+  # reana_hostport and relative_path, e.g. https://reana.example.org/keycloak.
+  # Set it only to serve Keycloak from another host name; the value MUST use
+  # https:// and include the relative path.
+  frontend_url: ""
   # Optional server-side transport base. Empty uses the in-cluster Keycloak
   # Service URL generated from the Helm release name. Because the bundled
   # development Keycloak currently serves HTTP, enabling it requires the

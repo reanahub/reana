@@ -15,6 +15,19 @@ naming spec: `my-reana-batch-yadage-3c640169-d3b7-41ad-9c09-392c903fc1d8`
 {{- end -}}
 {{- end -}}
 
+{{/*
+Browser-facing base URL of the bundled Keycloak. Unless overridden by
+`keycloak.frontend_url`, it is derived from the REANA host name and port, so
+that Keycloak is served from the same host as REANA.
+*/}}
+{{- define "reana.keycloak_frontend_url" -}}
+{{- if .Values.keycloak.frontend_url -}}
+{{- .Values.keycloak.frontend_url -}}
+{{- else -}}
+https://{{ .Values.reana_hostname }}{{ if ne (int .Values.reana_hostport) 443 }}:{{ .Values.reana_hostport }}{{ end }}{{ .Values.keycloak.relative_path }}
+{{- end -}}
+{{- end -}}
+
 # Centralise prefixing of service account names
 {{- define "reana.prefixed_infrastructure_svaccount_name" -}}
 {{- include "reana.prefix" . -}}-infrastructure
