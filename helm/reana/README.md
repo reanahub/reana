@@ -55,11 +55,20 @@ installations can keep their current image by setting
 `components.reana_db.image`. Deployments using an external database are not
 affected.
 
-On every Helm install or upgrade, a bounded post-deployment job reapplies the
-bundled realm roles, protocol mappers, redirect URLs, audience, and client
-credentials with Keycloak's partial-import overwrite policy. This keeps a
-persistent realm aligned with chart values; Keycloak's startup import alone only
-creates realms that do not already exist.
+On every Helm install or upgrade, a bounded post-deployment job reconciles a
+persistent realm with the chart values, because Keycloak's startup import alone
+only creates realms that do not already exist. The reconciliation is additive:
+
+- Missing realm roles and clients are created. Existing roles and clients are
+  never deleted and recreated, so an upgrade preserves the users' role
+  assignments, sessions, and saved `reana-client` logins.
+- Existing clients are updated in place with the settings from the realm
+  template. Settings that the template omits keep their current value, so
+  removing an attribute requires an explicit `""` in the template, and disabling
+  a boolean an explicit `false`.
+- The protocol mappers and the declared default and optional client scope lists,
+  including empty ones, are reconciled fully, removals included.
+- The `offline_access` role is kept in the realm's default roles.
 
 Keep the bootstrap administrator Secret stable so that subsequent chart upgrades
 can authenticate this job. Changing `keycloak.admin_password` updates the
