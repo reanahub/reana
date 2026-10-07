@@ -1,6 +1,6 @@
 {{- $bundledKeycloakBackchannelBase := .Values.keycloak.backchannel_url | default (printf "http://%s-keycloak:8080%s/realms/%s" (include "reana.prefix" .) .Values.keycloak.relative_path .Values.keycloak.realm) -}}
 {{- if .Values.keycloak.enabled -}}
-  {{- if not (hasPrefix "https://" (required "keycloak.frontend_url is required when bundled Keycloak is enabled" .Values.keycloak.frontend_url)) -}}
+  {{- if not (hasPrefix "https://" (include "reana.keycloak_frontend_url" .)) -}}
     {{- fail "keycloak.frontend_url must use https:// because it is the public OIDC issuer." -}}
   {{- end -}}
   {{- if not .Values.keycloak.realm -}}
@@ -252,7 +252,7 @@ spec:
           # browser-facing; discovery is fetched in-cluster via the Keycloak
           # Service (backchannel), see reana-keycloak.yaml.
           - name: REANA_AUTH_ISSUER
-            value: "{{ .Values.keycloak.frontend_url }}/realms/{{ .Values.keycloak.realm }}"
+            value: "{{ include "reana.keycloak_frontend_url" . }}/realms/{{ .Values.keycloak.realm }}"
           - name: REANA_AUTH_BACKCHANNEL_BASE_URL
             value: {{ $bundledKeycloakBackchannelBase | quote }}
           - name: REANA_AUTH_BACKCHANNEL_ALLOW_HTTP
@@ -262,9 +262,9 @@ spec:
           # Browser redirects always use the canonical public HTTPS issuer,
           # independently of Keycloak's dynamic backchannel endpoints.
           - name: REANA_AUTH_AUTHORIZATION_URL
-            value: "{{ .Values.keycloak.frontend_url }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/auth"
+            value: "{{ include "reana.keycloak_frontend_url" . }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/auth"
           - name: REANA_AUTH_END_SESSION_URL
-            value: "{{ .Values.keycloak.frontend_url }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/logout"
+            value: "{{ include "reana.keycloak_frontend_url" . }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/logout"
           - name: REANA_AUTH_AUDIENCE
             value: {{ required "keycloak.audience must be set when bundled development Keycloak is enabled" .Values.keycloak.audience | quote }}
           - name: REANA_AUTH_ROLES_CLAIM
