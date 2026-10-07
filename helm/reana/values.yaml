@@ -98,6 +98,21 @@ keycloak:
     # The first peer permits the bundled same-namespace Traefik. The second
     # supports the Traefik bundled with K3s. Override this list when using an
     # ingress controller with different namespace or pod labels.
+    #
+    # Pod and namespace selectors never match an ingress controller running
+    # with hostNetwork: true, whatever its labels, because its traffic arrives
+    # from the node address. The policy then drops the traffic and the ingress
+    # answers 504 Gateway Timeout under the Keycloak path. Allow the ingress
+    # nodes instead:
+    #
+    #   ingress_controller_peers:
+    #     - ipBlock:
+    #         cidr: 192.0.2.10/32
+    #
+    # Whether an ipBlock matches host traffic depends on the network plugin:
+    # Calico may present the node tunnel address as the source, and Cilium
+    # does not match node traffic with ipBlock rules. If no peer works, set
+    # enabled to false.
     ingress_controller_peers:
       - podSelector:
           matchLabels:
