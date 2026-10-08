@@ -1294,3 +1294,74 @@ def test_external_issuer_admin_setup_is_a_successful_noop(tmp_path):
     assert "skipping automatic administrator creation" in result.stdout
     assert "Before the administrator's first REANA login" in result.stdout
     assert "--idp-subject <subject>" in result.stdout
+
+
+_EXTERNAL_ISSUER_ARGS = (
+    "-f",
+    str(VALUES_DEV),
+    "-f",
+    str(VALUES_CERN),
+    "--set",
+    "auth.audience=test-audience",
+)
+
+
+def _server_environment(*extra_args):
+    """Return the rendered environment of the REANA-Server API container."""
+    rendered = _helm_template(*extra_args)
+    server = _rendered_resource(rendered, "Deployment", "reana-server")
+    return _container_environment(server, "rest-api")
+
+
+@pytest.mark.parametrize(
+    "args",
+    (
+        ("--set", "auth.cliLoopbackPort=8899"),
+        ("--set-string", "auth.cliLoopbackPort=8899"),
+        ("--set-json", "auth.cliLoopbackPort=8899"),
+    ),
+)
+def test_cli_loopback_port_is_passed_to_reana_server(args):
+    """Integer and string values render the same server setting."""
+    environment = _server_environment(*_EXTERNAL_ISSUER_ARGS, *args)
+
+    assert environment["REANA_AUTH_CLI_LOOPBACK_PORT"]["value"] == "8899"
+
+
+def test_cli_loopback_port_is_read_from_values_file(tmp_path):
+    """A YAML number in a values file is not rendered as a float."""
+    values = tmp_path / "values.yaml"
+    values.write_text("auth:\n  cliLoopbackPort: 8899\n")
+
+    environment = _server_environment(*_EXTERNAL_ISSUER_ARGS, "-f", str(values))
+
+    assert environment["REANA_AUTH_CLI_LOOPBACK_PORT"]["value"] == "8899"
+
+
+@pytest.mark.parametrize("args", ((), ("--set", "auth.cliLoopbackPort=null")))
+def test_cli_loopback_port_is_not_rendered_when_unset(args):
+    """An unset port keeps the OS-assigned callback port of the clients."""
+    environment = _server_environment(*_EXTERNAL_ISSUER_ARGS, *args)
+
+    assert "REANA_AUTH_CLI_LOOPBACK_PORT" not in environment
+
+
+@pytest.mark.parametrize("value", ("0", "65536", "-1", "88.5", "abc", "true"))
+def test_cli_loopback_port_rejects_invalid_values(value):
+    """An explicit ``0`` is an error and is never treated as unset."""
+    with pytest.raises(subprocess.CalledProcessError) as exc_info:
+        _helm_template(*_EXTERNAL_ISSUER_ARGS, "--set", f"auth.cliLoopbackPort={value}")
+
+    assert (
+        "auth.cliLoopbackPort must be an integer between 1 and 65535"
+        in exc_info.value.stderr
+    )
+
+
+def test_cli_loopback_port_is_ignored_with_bundled_keycloak():
+    """The bundled Keycloak accepts any loopback port, so none is advertised."""
+    environment = _server_environment(
+        "-f", str(VALUES_DEV), "--set", "auth.cliLoopbackPort=8899"
+    )
+
+    assert "REANA_AUTH_CLI_LOOPBACK_PORT" not in environment

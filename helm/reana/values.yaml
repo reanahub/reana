@@ -130,6 +130,11 @@ auth:
   # Ignored when keycloak.enabled=true -- use keycloak.required_role instead.
   requiredRole: "reana:user"
   clientId: reana-cli
+  # Optional fixed port (1-65535) of the CLI browser-login callback, for
+  # identity providers requiring an exact redirect URI. When set, register
+  # http://127.0.0.1:<port>/callback with the provider. Ignored when
+  # keycloak.enabled=true.
+  cliLoopbackPort: ""
   webClientId: reana-server
   # Ignored when keycloak.enabled=true: the bundled Keycloak deployment
   # always runs with the browser-facing BFF session enabled, with no

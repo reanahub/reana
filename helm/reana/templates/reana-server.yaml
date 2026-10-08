@@ -327,6 +327,15 @@ spec:
             value: {{ required "auth.requiredRole must be set when an external issuer is configured" .Values.auth.requiredRole | quote }}
           - name: REANA_AUTH_CLIENT_ID
             value: {{ required "auth.clientId must be set when an external issuer is configured" .Values.auth.clientId | quote }}
+          {{- /* An explicit 0 is not treated as unset: it is rejected below. */}}
+          {{- if and (not (kindIs "invalid" .Values.auth.cliLoopbackPort)) (ne (toString .Values.auth.cliLoopbackPort) "") }}
+          {{- $cliLoopbackPort := toString .Values.auth.cliLoopbackPort }}
+          {{- if or (not (regexMatch "^[0-9]{1,5}$" $cliLoopbackPort)) (lt (atoi $cliLoopbackPort) 1) (gt (atoi $cliLoopbackPort) 65535) }}
+          {{- fail (printf "auth.cliLoopbackPort must be an integer between 1 and 65535, got %q" $cliLoopbackPort) }}
+          {{- end }}
+          - name: REANA_AUTH_CLI_LOOPBACK_PORT
+            value: {{ $cliLoopbackPort | quote }}
+          {{- end }}
           - name: REANA_AUTH_WEB_CLIENT_ID
             {{- if .Values.auth.bffEnabled }}
             value: {{ required "auth.webClientId must be set when BFF authentication is enabled" .Values.auth.webClientId | quote }}
