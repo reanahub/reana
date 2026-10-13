@@ -261,7 +261,7 @@ spec:
             # backchannel (token/jwks/userinfo) stays dynamic so in-cluster
             # reana-server can reach it at the Service DNS name.
             - name: KC_HOSTNAME
-              value: {{ .Values.keycloak.frontend_url | quote }}
+              value: {{ include "reana.keycloak_frontend_url" . | quote }}
             - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
               value: "true"
             - name: KC_PROXY_HEADERS
