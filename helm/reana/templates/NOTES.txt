@@ -7,6 +7,17 @@ user, client, session, and signing-key data will be lost when its pod is
 replaced. Use keycloak.database.mode=bundled or external for persistent data.
 {{- end }}
 
+{{- if and .Values.keycloak.enabled .Values.keycloak.network_policy.enabled }}
+
+NOTE: a NetworkPolicy restricts access to the bundled Keycloak to REANA Server
+and to the ingress controller peers below. If logging in fails with
+"504 Gateway Timeout" under {{ .Values.keycloak.relative_path }} while the REANA API works, your
+ingress controller is not among them. This is typical when it runs with
+hostNetwork: true. Adjust keycloak.network_policy.ingress_controller_peers,
+or set keycloak.network_policy.enabled=false.
+{{ toYaml .Values.keycloak.network_policy.ingress_controller_peers | indent 3 }}
+{{- end }}
+
 If you are upgrading from a previous REANA release series, you may need to
 upgrade database schema now:
 
