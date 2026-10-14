@@ -274,7 +274,8 @@ spec:
           # Environment variables for job controller
           - name: REANA_JOB_CONTROLLER_ENV_VARS
             value: {{ (merge
-              (dict "REANA_VETTED_CONTAINER_IMAGES" (.Values.vetted_container_images | toJson))
+              (dict "REANA_VETTED_CONTAINER_IMAGES" (.Values.vetted_container_images | toJson)
+                    "REANA_CONTAINER_IMAGE_PULL_THROUGH_CACHE" (.Values.container_image_pull_through_cache | toJson))
               (default (dict) .Values.components.reana_job_controller.environment)
               ) | toJson | quote }}
           - name: REANA_INTERACTIVE_SESSIONS_ENVIRONMENTS
