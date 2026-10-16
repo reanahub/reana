@@ -402,6 +402,75 @@ def test_bundled_keycloak_realm_tracks_chart_values_and_uses_secrets():
     assert "KEYCLOAK_ADMIN_PASSWORD" not in reconciler_environment
 
 
+def test_keycloak_reconciler_reports_rejected_administrator_credentials():
+    """A rejected administrator login is not reported as Keycloak being down.
+
+    Changing ``keycloak.admin_password`` does not change the password of an
+    existing Keycloak administrator, so the next upgrade's reconciler cannot
+    log in. It has to say so instead of waiting for readiness and timing out.
+    """
+    rendered = _helm_template("-f", str(VALUES_DEV))
+
+    reconciler = _rendered_resource(rendered, "Job", "reana-keycloak-realm-reconciler")
+    container = reconciler["spec"]["template"]["spec"]["containers"][0]
+    reconcile_script = container["args"][0]
+
+    assert "*invalid_grant*)" in reconcile_script
+    assert (
+        "Keycloak rejected the administrator credentials of the "
+        "reana-keycloak-bootstrap Secret" in reconcile_script
+    )
+    assert "password change procedure in the Helm chart README" in reconcile_script
+    assert "Keycloak did not become ready for realm reconciliation" in reconcile_script
+    assert container["terminationMessagePolicy"] == "FallbackToLogsOnError"
+    assert "--password" not in reconcile_script
+    assert "KC_CLI_PASSWORD" not in reconcile_script
+
+
+@pytest.mark.parametrize(
+    "database_settings",
+    [
+        ("keycloak.database.mode=bundled",),
+        (
+            "keycloak.database.mode=external",
+            "keycloak.database.host=keycloak-db.example.org",
+            "keycloak.database.tls_mode=verify-server",
+        ),
+        ("keycloak.database.mode=ephemeral",),
+    ],
+)
+def test_keycloak_administrator_password_is_not_in_workload_metadata(
+    database_settings,
+):
+    """Changing only the administrator password must not roll out Keycloak.
+
+    A password-derived annotation would restart the Pod on every password
+    change. That does not change the stored password in the persistent modes
+    and silently discards all realm data in the ephemeral mode.
+    """
+
+    def render(password):
+        arguments = [
+            "-f",
+            str(VALUES_DEV),
+            "--set",
+            f"keycloak.admin_password={password}",
+        ]
+        for setting in database_settings:
+            arguments += ["--set", setting]
+        rendered = _helm_template(*arguments)
+        keycloak = _rendered_resource(rendered, "Deployment", "reana-keycloak")
+        secret = _rendered_resource(rendered, "Secret", "reana-keycloak-bootstrap")
+        return keycloak, secret
+
+    keycloak, secret = render("first-administrator-password")
+    changed_keycloak, changed_secret = render("second-administrator-password")
+
+    assert secret["stringData"]["password"] == "first-administrator-password"
+    assert changed_secret["stringData"]["password"] == "second-administrator-password"
+    assert changed_keycloak == keycloak
+
+
 def test_bundled_keycloak_resources_are_configurable():
     """Keycloak's resources have a non-empty default and accept overrides.
 

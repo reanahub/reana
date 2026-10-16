@@ -322,18 +322,37 @@ spec:
           image: {{ .Values.keycloak.image }}
           imagePullPolicy: {{ .Values.keycloak.imagePullPolicy | default "IfNotPresent" }}
           command: ["/bin/bash", "-ec"]
+          # Show the failure reason in the Pod status, not only in its logs.
+          terminationMessagePolicy: FallbackToLogsOnError
           args:
             - |-
               config=/tmp/reana-kcadm.config
               attempt=0
-              until /opt/keycloak/bin/kcadm.sh config credentials \
-                --config "${config}" \
-                --server "http://{{ include "reana.prefix" . }}-keycloak:8080{{ .Values.keycloak.relative_path }}" \
-                --realm master \
-                --user "${KEYCLOAK_ADMIN_USER}" >/dev/null 2>&1; do
+              rejected=0
+              until login_output=$(
+                /opt/keycloak/bin/kcadm.sh config credentials \
+                  --config "${config}" \
+                  --server "http://{{ include "reana.prefix" . }}-keycloak:8080{{ .Values.keycloak.relative_path }}" \
+                  --realm master \
+                  --user "${KEYCLOAK_ADMIN_USER}" 2>&1
+              ); do
+                login_error=$(printf '%s\n' "${login_output}" | tail -n 1)
+                # A running Keycloak that refuses the administrator login
+                # answers with an OAuth invalid_grant error, which waiting
+                # does not fix. Report it separately from Keycloak not being
+                # reachable yet, after a few consecutive refusals.
+                case "${login_error}" in
+                  *invalid_grant*) rejected=$((rejected + 1)) ;;
+                  *) rejected=0 ;;
+                esac
+                if [ "${rejected}" -ge 5 ]; then
+                  echo "Keycloak rejected the administrator credentials of the {{ include "reana.prefix" . }}-keycloak-bootstrap Secret: ${login_error}" >&2
+                  echo "Changing keycloak.admin_password does not change the password of an existing Keycloak administrator. Follow the administrator password change procedure in the Helm chart README, or restore the previous keycloak.admin_password, and run the Helm upgrade again." >&2
+                  exit 1
+                fi
                 attempt=$((attempt + 1))
                 if [ "${attempt}" -ge 90 ]; then
-                  echo "Keycloak did not become ready for realm reconciliation" >&2
+                  echo "Keycloak did not become ready for realm reconciliation: ${login_error}" >&2
                   exit 1
                 fi
                 sleep 2
