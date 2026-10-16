@@ -924,3 +924,36 @@ def test_helm_upgrade_components_exclude_components(exclude_components, exit_cod
         images = upgrade_mock.call_args_list[0].args[1]
         assert "reanahub/reana-server:1.0.0" in images
         assert not any("krb5" in i or "s3fs" in i for i in images)
+
+
+@pytest.mark.parametrize(
+    "values, expected_limit",
+    [
+        ({}, "5Gi"),
+        # Helm removes a null value, as with old values reused on upgrade
+        ({"kubernetes_jobs_scratch_volume_size_limit": None}, "5Gi"),
+        ({"kubernetes_jobs_scratch_volume_size_limit": ""}, ""),
+        ({"kubernetes_jobs_scratch_volume_size_limit": "10Gi"}, "10Gi"),
+    ],
+)
+def test_scratch_volume_size_limit_rendering(tmp_path, values, expected_limit):
+    """Test that only an explicit empty string disables the scratch limit."""
+    values = {"kubernetes_jobs_read_only_root_filesystem": True, **values}
+    rendered = _render_helm_chart(tmp_path, values)
+
+    controller = next(
+        document
+        for document in _rendered_documents(rendered)
+        if document["kind"] == "Deployment"
+        and document["metadata"]["name"] == "reana-workflow-controller"
+    )
+    container = next(
+        container
+        for container in controller["spec"]["template"]["spec"]["containers"]
+        if container["name"] == "rest-api"
+    )
+    environment = {item["name"]: item.get("value") for item in container["env"]}
+    assert environment["REANA_KUBERNETES_JOBS_READ_ONLY_ROOT_FILESYSTEM"] == "true"
+    assert (
+        environment["REANA_KUBERNETES_JOBS_SCRATCH_VOLUME_SIZE_LIMIT"] == expected_limit
+    )

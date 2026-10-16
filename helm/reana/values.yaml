@@ -530,6 +530,29 @@ traefik:
 kueue:
   enabled: false
 
+# When enabled, enforces a read-only root filesystem in the user containers of
+# workflow pods (reana-run-{batch|job|session}) and Dask scheduler/worker pods.
+# Container root and image directories become read-only while the mounted
+# workspace volume stays writable. Ephemeral emptyDir scratch volumes are
+# mounted at /tmp, at /.cache and at the session home directory, so that
+# software using these paths keeps working; those writes are per-pod, do not
+# count towards the user disk quota and are discarded when the pod stops.
+# Software that writes to other paths of its container image fails and needs
+# this option off. Host-path mounts inherit their per-mount readOnly setting
+# (defaulting to read-only when this option is enabled). The REANA job
+# controller and authentication helper containers keep a writable root
+# filesystem, so admission policies that check every container still need an
+# exception for these pods.
+kubernetes_jobs_read_only_root_filesystem: false
+
+# Size limit of each scratch volume mounted when
+# kubernetes_jobs_read_only_root_filesystem is enabled. Kubernetes measures the
+# usage periodically and evicts a pod that goes over the limit of one volume.
+# This reduces the risk that a pod fills the local disk of its node, but it is
+# not a hard quota: a pod can write more than the limit before the eviction.
+# Set to an empty string to disable the limit.
+kubernetes_jobs_scratch_volume_size_limit: 5Gi
+
 dask:
   enabled: false
   autoscaler_enabled: true
