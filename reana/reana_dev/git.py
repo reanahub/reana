@@ -849,6 +849,18 @@ def git_checkout(branch, component, exclude_components, fetch):  # noqa: D301
             run_command("git fetch upstream", component)
         if branch_exists(component, branch):
             run_command("git checkout {}".format(branch), component)
+        elif remote_ref_exists(get_srcdir(component), f"local/{branch}"):
+            run_command(
+                [
+                    "git",
+                    "checkout",
+                    "--no-track",
+                    "-b",
+                    branch,
+                    f"local/{branch}",
+                ],
+                component,
+            )
         else:
             click.secho(
                 "No branch {} in component {}, staying on current one.".format(
@@ -1971,6 +1983,39 @@ def git_tag(component, exclude_components):  # noqa: D301
         run_command(f"git tag {tag_name}", component=component)
 
 
+CHANGELOG_CLIENT_COMPONENTS = ["reana-client", "reana-client-go"]
+"""Client components whose versions are not recorded in the Helm chart."""
+
+
+def get_changelog_git_ref(component, version):
+    """Return the git reference of a component version for changelog generation.
+
+    Keep the version if it already resolves to a commit, such as an existing
+    tag or a commit hash. Otherwise, translate it to the component's tag name,
+    since some components prefix their tags (e.g. ``v`` for reana-client-go).
+
+    :param component: standard component name
+    :param version: version, tag or commit, or None for a new component
+    :type component: str
+    :type version: str
+    :return: git reference, or None if no version was given
+    :rtype: str
+    """
+    if not version:
+        return None
+    try:
+        run_command(
+            ["git", "rev-parse", "--verify", "--quiet", f"{version}^{{commit}}"],
+            component,
+            display=False,
+            return_output=True,
+            exit_on_error=False,
+        )
+        return version
+    except subprocess.CalledProcessError:
+        return get_component_git_tag_name(component, version)
+
+
 def get_previous_versions_from_release_tag(release_tag, components, override=None):
     """Get the version of each component from a specific REANA release tag.
 
@@ -2025,8 +2070,8 @@ def get_previous_versions_from_release_tag(release_tag, components, override=Non
         elif component == "reana":
             # reana helm chart: use the release tag itself
             prev_version = release_tag
-        elif component == "reana-client":
-            # reana-client: get version from currently checked out source files
+        elif component in CHANGELOG_CLIENT_COMPONENTS:
+            # clients: get version from currently checked out source files
             # (assumes repos are checked out at the correct release commits)
             prev_version = get_current_component_version_from_source_files(component)
         else:
@@ -2312,8 +2357,10 @@ def get_formatted_changelog_lines(component, versions):
     is_version_to_add = False
     current_section = ""
     for line in changelog_lines:
-        # check if release in header is part of releases we are interested in
-        matches = re.match(r"##\s+\[?([\d.]+)", line)
+        # check if release in header is part of releases we are interested in;
+        # match the full version, so that prerelease headers such as
+        # `0.95.0-alpha.0` are not mistaken for the final `0.95.0` release
+        matches = re.match(r"##\s+\[?(\d+\.\d+\.\d+[^\]\s)]*)", line)
         if matches:
             is_version_to_add = matches.group(1) in versions
         if not is_version_to_add:
@@ -2431,6 +2478,13 @@ def append_after_version_changelog(component, version, new_lines):
     required=True,
 )
 @click.option(
+    "--previous-reana-client-go",
+    default="",
+    help="Which is the version (or commit) of reana-client-go that was released "
+    "for the last REANA release? If not given, reana-client-go is treated as a "
+    "new component and its whole history is included.",
+)
+@click.option(
     "--exclude-components",
     default="",
     help="Which components to exclude? [c1,c2,c3]",
@@ -2449,25 +2503,32 @@ def append_after_version_changelog(component, version, new_lines):
     "Only entries matching these types will be included.",
 )
 def get_aggregate_changelog(  # noqa: C901
-    previous_reana_client, exclude_components, commit_range, commit_types
+    previous_reana_client,
+    previous_reana_client_go,
+    exclude_components,
+    commit_range,
+    commit_types,
 ):  # noqa: D301
     """Aggregate the changelog of all REANA components.
 
     Aggregate the changelog of all REANA components and append it to the main changelog of REANA.
     This is useful for creating the changelog of a new REANA release.
 
-    All the repositories of the cluster components, shared components, `reana-client` and
-    `reana` must be checked out at the respective release commits.
+    All the repositories of the cluster components, shared components, `reana-client`,
+    `reana-client-go` and `reana` must be checked out at the respective release commits.
 
     When --commit-range is provided, uses cog to generate changelog entries
     instead of reading from CHANGELOG.md files. This is useful for alpha releases
     where CHANGELOG.md entries are not published.
 
     :param previous_reana_client: The version of reana-client that was part of the previous REANA release.
+    :param previous_reana_client_go: The version or commit of reana-client-go that was part of the
+        previous REANA release, or empty if reana-client-go is new.
     :param exclude_components: List of components to exclude.
     :param commit_range: REANA release range (e.g., 0.9.4..0.95.0-alpha.3).
     :param commit_types: Comma-separated list of commit types to include (e.g., feat,fix).
     :type previous_reana_client: str
+    :type previous_reana_client_go: str
     :type exclude_components: str
     :type commit_range: str
     :type commit_types: str
@@ -2478,7 +2539,8 @@ def get_aggregate_changelog(  # noqa: C901
         commit_types = commit_types.split(",")
     # all the components whose changelogs will be aggregated
     changelog_components = set(
-        ["reana", "reana-client"]
+        ["reana"]
+        + CHANGELOG_CLIENT_COMPONENTS
         + REPO_LIST_SHARED
         + REPO_LIST_CLUSTER_INFRASTRUCTURE
         + REPO_LIST_CLUSTER_RUNTIME_BATCH
@@ -2512,15 +2574,20 @@ def get_aggregate_changelog(  # noqa: C901
             sys.exit(1)
         start_release, end_release = commit_range.split("..", 1)
 
+    # client versions are not recorded in the Helm chart, so take them from the
+    # command line; a missing reana-client-go version marks it as a new component
+    client_versions = {
+        "reana-client": previous_reana_client,
+        "reana-client-go": previous_reana_client_go or None,
+    }
+
     # get all the versions of the components as they were when the previous REANA version was released
     if start_release:
         prev_versions = get_previous_versions_from_release_tag(
-            start_release, changelog_components, {"reana-client": previous_reana_client}
+            start_release, changelog_components, client_versions
         )
     else:
-        prev_versions = get_previous_versions(
-            changelog_components, {"reana-client": previous_reana_client}
-        )
+        prev_versions = get_previous_versions(changelog_components, client_versions)
 
     # get current versions - either from end_release tag or from source files
     if end_release:
@@ -2552,6 +2619,12 @@ def get_aggregate_changelog(  # noqa: C901
         if current_version is None:
             current_version = get_current_component_version_from_source_files(component)
 
+        # versions read from source files are bare, while some components
+        # prefix their tags (e.g. `v` for reana-client-go), so turn them into
+        # git references
+        prev_version = get_changelog_git_ref(component, prev_version)
+        current_version = get_changelog_git_ref(component, current_version)
+
         if prev_version is None:
             # new component not present in the previous release, get all tags
             versions_to_add = set(
@@ -2581,8 +2654,15 @@ def get_aggregate_changelog(  # noqa: C901
                 component, prev_version, current_version, commit_types
             )
         else:
-            # try to get changelog from CHANGELOG.md
-            changelog_lines = get_formatted_changelog_lines(component, versions_to_add)
+            # try to get changelog from CHANGELOG.md, whose headers carry bare
+            # versions even for components with `v`-prefixed tags
+            changelog_versions = {
+                version[1:] if version.startswith("v") else version
+                for version in versions_to_add
+            }
+            changelog_lines = get_formatted_changelog_lines(
+                component, changelog_versions
+            )
             if not changelog_lines:
                 # fallback to cog if CHANGELOG.md doesn't have the versions
                 changelog_lines = generate_changelog_with_cog(

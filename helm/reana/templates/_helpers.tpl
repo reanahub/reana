@@ -53,3 +53,34 @@ hostPath:
 {{ template "reana.shared_volume" . }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Render the nginx `add_header` directives of the given REANA-UI security headers,
+skipping the ones set to an empty string.
+*/}}
+{{- define "reana.ui_nginx_security_headers" -}}
+{{- with .hsts }}
+add_header Strict-Transport-Security {{ . | quote }} always;
+{{- end }}
+{{- with .x_frame_options }}
+add_header X-Frame-Options {{ . | quote }} always;
+{{- end }}
+{{- with .x_content_type_options }}
+add_header X-Content-Type-Options {{ . | quote }} always;
+{{- end }}
+{{- with .cross_origin_opener_policy }}
+add_header Cross-Origin-Opener-Policy {{ . | quote }} always;
+{{- end }}
+{{- with .cross_origin_resource_policy }}
+add_header Cross-Origin-Resource-Policy {{ . | quote }} always;
+{{- end }}
+{{- with .referrer_policy }}
+add_header Referrer-Policy {{ . | quote }} always;
+{{- end }}
+{{- with .permissions_policy }}
+add_header Permissions-Policy {{ . | quote }} always;
+{{- end }}
+{{- with .csp }}
+add_header Content-Security-Policy {{ . | quote }} always;
+{{- end }}
+{{- end -}}

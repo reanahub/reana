@@ -130,6 +130,11 @@ auth:
   # Ignored when keycloak.enabled=true -- use keycloak.required_role instead.
   requiredRole: "reana:user"
   clientId: reana-cli
+  # Optional fixed port (1-65535) of the CLI browser-login callback, for
+  # identity providers requiring an exact redirect URI. When set, register
+  # http://127.0.0.1:<port>/callback with the provider. Ignored when
+  # keycloak.enabled=true.
+  cliLoopbackPort: ""
   webClientId: reana-server
   # Ignored when keycloak.enabled=true: the bundled Keycloak deployment
   # always runs with the browser-facing BFF session enabled, with no
@@ -271,6 +276,25 @@ components:
           'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:
           https:; font-src 'self' data: https://fonts.gstatic.com; connect-src
           'self'; frame-ancestors 'none'; object-src 'self'; base-uri 'self';"
+        # Policy of the ROOT file viewer (`/root-viewer/`), which REANA-UI
+        # embeds to preview ROOT files. jsroot evaluates formulas stored in
+        # ROOT files, so the viewer needs 'unsafe-eval'. The sandbox directive
+        # (without allow-same-origin) keeps it isolated from REANA's origin,
+        # and must not be removed. Its tokens repeat the sandbox attribute of
+        # the viewer's iframe in REANA-UI, which explains them
+        # (allow-downloads keeps jsroot's image export, but also lets the ROOT
+        # file start downloads). An empty string removes this header without
+        # falling back to `csp`, so the viewer is then sandboxed only when
+        # REANA-UI embeds it. This is not recommended. The other security
+        # headers are shared with the UI, except X-Frame-Options (SAMEORIGIN)
+        # and Cross-Origin-Resource-Policy (cross-origin), which the sandboxed
+        # viewer needs to be embedded and to load its own scripts.
+        root_viewer_csp:
+          "sandbox allow-scripts allow-downloads; default-src 'none'; script-src
+          'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self'
+          data: blob:; font-src 'self' data:; connect-src 'none';
+          frame-ancestors 'self'; form-action 'none'; object-src 'none';
+          base-uri 'none';"
   reana_db:
     enabled: true
     # Major PostgreSQL upgrades require an explicit data migration.
@@ -505,6 +529,29 @@ traefik:
 
 kueue:
   enabled: false
+
+# When enabled, enforces a read-only root filesystem in the user containers of
+# workflow pods (reana-run-{batch|job|session}) and Dask scheduler/worker pods.
+# Container root and image directories become read-only while the mounted
+# workspace volume stays writable. Ephemeral emptyDir scratch volumes are
+# mounted at /tmp, at /.cache and at the session home directory, so that
+# software using these paths keeps working; those writes are per-pod, do not
+# count towards the user disk quota and are discarded when the pod stops.
+# Software that writes to other paths of its container image fails and needs
+# this option off. Host-path mounts inherit their per-mount readOnly setting
+# (defaulting to read-only when this option is enabled). The REANA job
+# controller and authentication helper containers keep a writable root
+# filesystem, so admission policies that check every container still need an
+# exception for these pods.
+kubernetes_jobs_read_only_root_filesystem: false
+
+# Size limit of each scratch volume mounted when
+# kubernetes_jobs_read_only_root_filesystem is enabled. Kubernetes measures the
+# usage periodically and evicts a pod that goes over the limit of one volume.
+# This reduces the risk that a pod fills the local disk of its node, but it is
+# not a hard quota: a pod can write more than the limit before the eviction.
+# Set to an empty string to disable the limit.
+kubernetes_jobs_scratch_volume_size_limit: 5Gi
 
 dask:
   enabled: false

@@ -254,6 +254,92 @@ def test_nginx_config_quoted_origins(tmp_path):
     )
 
 
+def _render_ui_nginx_blocks(tmp_path, security_headers=None):
+    """Render the REANA-UI nginx config, split into server and viewer headers."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        {
+            "components": {
+                "reana_ui": {"nginx": {"security_headers": security_headers or {}}}
+            }
+        },
+    )
+    nginx_conf = next(
+        doc["data"]["reana-ui.conf"]
+        for doc in _rendered_documents(rendered)
+        if doc["kind"] == "ConfigMap"
+        and doc["metadata"]["name"].endswith("-ui-nginx-config")
+    )
+    server_block, viewer_block = nginx_conf.split("location /root-viewer/ {")
+    return (
+        [line.strip() for line in server_block.splitlines() if "add_header" in line],
+        [line.strip() for line in viewer_block.splitlines() if "add_header" in line],
+    )
+
+
+def _header(headers, name):
+    """Return the value of the given header, or ``None`` if it is not sent."""
+    prefix = f"add_header {name} "
+    values = [line[len(prefix) :] for line in headers if line.startswith(prefix)]
+    assert len(values) <= 1, f"{name} is sent more than once"
+    return values[0] if values else None
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_nginx_config_root_viewer_headers(tmp_path):
+    """The ROOT file viewer can be embedded and is sandboxed, while the UI cannot be framed."""
+    server, viewer = _render_ui_nginx_blocks(tmp_path)
+
+    assert "frame-ancestors 'none'" in _header(server, "Content-Security-Policy")
+    assert _header(server, "X-Frame-Options") == '"DENY" always;'
+    assert _header(server, "Cross-Origin-Resource-Policy") == '"same-origin" always;'
+
+    viewer_csp = _header(viewer, "Content-Security-Policy")
+    assert viewer_csp.startswith('"sandbox allow-scripts ')
+    assert "allow-same-origin" not in viewer_csp
+    assert "frame-ancestors 'self'" in viewer_csp
+    assert _header(viewer, "X-Frame-Options") == '"SAMEORIGIN" always;'
+    assert _header(viewer, "Cross-Origin-Resource-Policy") == '"cross-origin" always;'
+
+    # `add_header` in the viewer location replaces the server-level headers,
+    # so the viewer must repeat the other ones
+    shared = [
+        "Strict-Transport-Security",
+        "X-Content-Type-Options",
+        "Cross-Origin-Opener-Policy",
+        "Referrer-Policy",
+        "Permissions-Policy",
+    ]
+    for name in shared:
+        assert _header(server, name) is not None, name
+        assert _header(viewer, name) == _header(server, name), name
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    "value, header, removed_from_ui",
+    [
+        ("x_frame_options", "X-Frame-Options", True),
+        ("cross_origin_resource_policy", "Cross-Origin-Resource-Policy", True),
+        ("root_viewer_csp", "Content-Security-Policy", False),
+    ],
+)
+def test_nginx_config_root_viewer_empty_headers(
+    tmp_path, value, header, removed_from_ui
+):
+    """An empty value removes the header from the ROOT file viewer, without fallback."""
+    server, viewer = _render_ui_nginx_blocks(tmp_path, {value: ""})
+
+    assert _header(viewer, header) is None
+    assert (_header(server, header) is None) == removed_from_ui
+
+
 @pytest.mark.skipif(
     not shutil.which("helm"),
     reason="helm must be installed",
@@ -838,3 +924,36 @@ def test_helm_upgrade_components_exclude_components(exclude_components, exit_cod
         images = upgrade_mock.call_args_list[0].args[1]
         assert "reanahub/reana-server:1.0.0" in images
         assert not any("krb5" in i or "s3fs" in i for i in images)
+
+
+@pytest.mark.parametrize(
+    "values, expected_limit",
+    [
+        ({}, "5Gi"),
+        # Helm removes a null value, as with old values reused on upgrade
+        ({"kubernetes_jobs_scratch_volume_size_limit": None}, "5Gi"),
+        ({"kubernetes_jobs_scratch_volume_size_limit": ""}, ""),
+        ({"kubernetes_jobs_scratch_volume_size_limit": "10Gi"}, "10Gi"),
+    ],
+)
+def test_scratch_volume_size_limit_rendering(tmp_path, values, expected_limit):
+    """Test that only an explicit empty string disables the scratch limit."""
+    values = {"kubernetes_jobs_read_only_root_filesystem": True, **values}
+    rendered = _render_helm_chart(tmp_path, values)
+
+    controller = next(
+        document
+        for document in _rendered_documents(rendered)
+        if document["kind"] == "Deployment"
+        and document["metadata"]["name"] == "reana-workflow-controller"
+    )
+    container = next(
+        container
+        for container in controller["spec"]["template"]["spec"]["containers"]
+        if container["name"] == "rest-api"
+    )
+    environment = {item["name"]: item.get("value") for item in container["env"]}
+    assert environment["REANA_KUBERNETES_JOBS_READ_ONLY_ROOT_FILESYSTEM"] == "true"
+    assert (
+        environment["REANA_KUBERNETES_JOBS_SCRATCH_VOLUME_SIZE_LIMIT"] == expected_limit
+    )
