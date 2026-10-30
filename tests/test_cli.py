@@ -588,6 +588,114 @@ def test_run_example_missing_go_client_explains_installation(
     mock_run_command.assert_not_called()
 
 
+@patch("reana.reana_dev.run.run_command")
+def test_run_ci_submit_only_and_check_only_are_left_to_run_example(mock_run_command):
+    """Tests for run-ci command when both submit-only and check-only flags are given."""
+    result = CliRunner().invoke(
+        reana_dev,
+        [
+            "run-ci",
+            "-c",
+            "r-d-r-roofit",
+            "-w",
+            "serial",
+            "--submit-only",
+            "--check-only",
+        ],
+    )
+    commands = [invocation.args[0] for invocation in mock_run_command.call_args_list]
+    assert result.exit_code == 0
+    assert commands == [
+        "reana-dev run-example --client python"
+        " --server https://localhost:30443 --no-tls-verify"
+        " -c reana-demo-root6-roofit -w serial --submit-only --check-only"
+    ]
+
+
+def test_run_ci_without_admin_credentials():
+    """Tests for run-ci command when admin credentials are missing."""
+    result = CliRunner().invoke(reana_dev, ["run-ci", "-c", "r-d-r-roofit"])
+    assert "--admin-email and --admin-password are required" in result.output
+    assert result.exit_code == 1
+
+
+@pytest.mark.parametrize("client_flavour", ("python", "go"))
+@patch("reana.reana_dev.client.shutil.which", return_value=None)
+@patch("reana.reana_dev.run.run_command")
+def test_run_ci_check_only(mock_run_command, mock_which, client_flavour):
+    """Tests for run-ci command with check-only flag, which should not build anything."""
+    result = CliRunner().invoke(
+        reana_dev,
+        [
+            "run-ci",
+            "-c",
+            "r-d-r-roofit",
+            "-w",
+            "serial",
+            "--client",
+            client_flavour,
+            "--check-only",
+        ],
+    )
+    commands = [invocation.args[0] for invocation in mock_run_command.call_args_list]
+    assert result.exit_code == 0
+    assert commands == [
+        f"reana-dev run-example --client {client_flavour}"
+        " --server https://localhost:30443 --no-tls-verify"
+        " -c reana-demo-root6-roofit -w serial --check-only"
+    ]
+
+
+@patch("reana.reana_dev.run.is_cluster_created", return_value=False)
+@patch("reana.reana_dev.run.run_command")
+def test_run_ci_submit_only(mock_run_command, mock_is_cluster_created):
+    """Tests for run-ci command with submit-only flag, which should build the cluster."""
+    result = CliRunner().invoke(
+        reana_dev,
+        [
+            "run-ci",
+            "-c",
+            "r-d-r-roofit",
+            "-w",
+            "serial",
+            "-m",
+            "/var/reana:/var/reana",
+            "-j",
+            "/mydata:/mydata",
+            "-b",
+            "COMPUTE_BACKENDS=kubernetes",
+            "--exclude-components",
+            "r-ui",
+            "--no-cache",
+            "--disable-default-cni",
+            "--admin-email",
+            "john.doe@example.org",
+            "--admin-password",
+            "mysecretpassword",
+            "--submit-only",
+        ],
+    )
+    commands = [invocation.args[0] for invocation in mock_run_command.call_args_list]
+    assert result.exit_code == 0
+    assert commands == [
+        "reana-dev cluster-create --kubernetes kind --mode latest --extra-ports 30443"
+        " -m /var/reana:/var/reana --disable-default-cni",
+        "reana-dev docker-pull -c reana-demo-root6-roofit",
+        "reana-dev kind-load-docker-image -c reana-demo-root6-roofit",
+        "reana-dev cluster-undeploy --kubernetes kind",
+        "reana-dev client-install",
+        "reana-dev cluster-build --kubernetes kind --mode latest"
+        " --exclude-components r-ui -b COMPUTE_BACKENDS=kubernetes"
+        " --no-cache --parallel 1",
+        "reana-dev cluster-deploy --mode latest --namespace default"
+        " --admin-email john.doe@example.org --admin-password mysecretpassword"
+        " --exclude-components r-ui -j /mydata:/mydata",
+        "reana-dev run-example --client python"
+        " --server https://localhost:30443 --no-tls-verify"
+        " -c reana-demo-root6-roofit -w serial --submit-only",
+    ]
+
+
 def test_is_component_python_package():
     """Tests for is_component_python_package()."""
     from reana.reana_dev.python import is_component_python_package
