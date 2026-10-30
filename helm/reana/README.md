@@ -83,6 +83,52 @@ and Go CLI clients request that optional scope so persisted logins can refresh
 after the ordinary SSO session expires. The separate configured `required_role`
 still controls whether a Keycloak identity may access REANA.
 
+A NetworkPolicy restricts access to the bundled Keycloak to REANA Server and to
+the ingress controller peers listed in
+`keycloak.network_policy.ingress_controller_peers`. The default peers select
+Traefik pods by label. Most network plugins do not match pod or namespace
+selectors against an ingress controller running with `hostNetwork: true`,
+whatever its labels, because its traffic arrives from a node or tunnel address.
+The policy can then drop the traffic, and the ingress answers
+`504 Gateway Timeout` for everything under the Keycloak path while the REANA API
+keeps working.
+
+Standard NetworkPolicy permits traffic from the node that runs the Keycloak pod,
+although additional CNI or host controls can restrict it. A host-network ingress
+controller instance on that node may therefore succeed while instances on other
+nodes fail, so the failure can depend on where Keycloak is scheduled and, with
+several ingress nodes, affect only some requests.
+
+On such clusters, allow the ingress controller's source addresses instead:
+
+```yaml
+keycloak:
+  network_policy:
+    ingress_controller_peers:
+      - ipBlock:
+          cidr: 192.0.2.10/32
+```
+
+Whether an `ipBlock` matches this traffic depends on the network plugin and its
+routing configuration. The source may be the node address or a tunnel address,
+and Cilium ignores node addresses in `ipBlock` rules unless it runs with
+`policy-cidr-match-mode=nodes`. When using address-based peers, list the source
+address of every ingress node and update the list when ingress nodes change.
+Verify the configuration through an ingress controller instance on a different
+node from Keycloak.
+
+Allow the exact source address of each ingress node rather than a wider range:
+with some network plugins, such as Calico, an `ipBlock` range that contains pod
+addresses also admits those pods. If no `ipBlock` peer works, consider a
+CNI-specific rule that permits the required ingress-node traffic while
+preserving isolation from other workloads. Setting
+`keycloak.network_policy.enabled=false` removes the chart's ingress isolation
+for Keycloak. Unless other network controls restrict access, pods throughout the
+cluster, including workflow pods and pods in other namespaces, can then connect
+directly to its HTTP port and supply the forwarded headers that Keycloak trusts.
+Only disable the policy in a trusted environment or where other enforced
+policies protect Keycloak.
+
 ## Custom Jupyter images
 
 REANA starts interactive Jupyter sessions with `start-notebook.sh` and injects
@@ -229,7 +275,7 @@ this traffic is blocked.
 | `keycloak.admin_user`                                                                                     | Bootstrap administrator username for bundled development Keycloak.                                                                                                                                                                                                                                                                                                                                                           | `""`                                                                                                                                                                                                                                                                                   |
 | `keycloak.admin_password`                                                                                 | **[Do not save it in `values.yaml`, pass it to Helm with `--set`]** Bootstrap administrator password for bundled development Keycloak.                                                                                                                                                                                                                                                                                       | `""`                                                                                                                                                                                                                                                                                   |
 | `keycloak.network_policy.enabled`                                                                         | Create an ingress NetworkPolicy for bundled Keycloak.                                                                                                                                                                                                                                                                                                                                                                        | `true`                                                                                                                                                                                                                                                                                 |
-| `keycloak.network_policy.ingress_controller_peers`                                                        | Kubernetes NetworkPolicy peers allowed to proxy browser traffic to bundled Keycloak. Defaults cover same-namespace chart Traefik and `kube-system` K3s Traefik; override for other ingress labels or namespaces.                                                                                                                                                                                                             | See `values.yaml`                                                                                                                                                                                                                                                                      |
+| `keycloak.network_policy.ingress_controller_peers`                                                        | Kubernetes NetworkPolicy peers allowed to proxy browser traffic to bundled Keycloak. Defaults cover same-namespace chart Traefik and `kube-system` K3s Traefik; override for other ingress labels or namespaces. Host-network ingress controllers may require an `ipBlock` peer or CNI-specific configuration; see the guidance above.                                                                                       | See `values.yaml`                                                                                                                                                                                                                                                                      |
 | `components.reana_server.hostAliases`                                                                     | Optional host aliases for the reana-server pod, for example to reach a host-local development issuer.                                                                                                                                                                                                                                                                                                                        | `[]`                                                                                                                                                                                                                                                                                   |
 | `components.reana_cache.resources`                                                                        | Kubernetes resource configuration (requests/limits) for the Cache container                                                                                                                                                                                                                                                                                                                                                  | `{}`                                                                                                                                                                                                                                                                                   |
 | `components.reana_db.enabled`                                                                             | Instantiate a PostgreSQL database inside the cluster                                                                                                                                                                                                                                                                                                                                                                         | true                                                                                                                                                                                                                                                                                   |
