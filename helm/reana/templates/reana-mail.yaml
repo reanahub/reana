@@ -9,12 +9,12 @@ spec:
   type: "NodePort"
   ports:
   - port: 30025
-    targetPort: 25
+    targetPort: 1025
     nodePort: 30025
     name: "smtp"
     protocol: TCP
   - port: 32580
-    targetPort: 80
+    targetPort: 1080
     nodePort: 32580
     name: "ui"
     protocol: TCP
@@ -38,11 +38,17 @@ spec:
     spec:
       containers:
       - name: maildev
-        image: docker.io/maildev/maildev:1.1.0
+        image: docker.io/maildev/maildev:2.2.1
         imagePullPolicy: IfNotPresent
+        env:
+        # MailDev 2.x runs as non-root and cannot bind to 25/80.
+        - name: MAILDEV_SMTP_PORT
+          value: "1025"
+        - name: MAILDEV_WEB_PORT
+          value: "1080"
         ports:
-        - containerPort: 80
-        - containerPort: 25
+        - containerPort: 1080
+        - containerPort: 1025
       {{- if .Values.node_label_infrastructure }}
       {{- $full_label := split "=" .Values.node_label_infrastructure }}
       nodeSelector:

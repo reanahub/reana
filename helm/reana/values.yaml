@@ -130,6 +130,11 @@ auth:
   # Ignored when keycloak.enabled=true -- use keycloak.required_role instead.
   requiredRole: "reana:user"
   clientId: reana-cli
+  # Optional fixed port (1-65535) of the CLI browser-login callback, for
+  # identity providers requiring an exact redirect URI. When set, register
+  # http://127.0.0.1:<port>/callback with the provider. Ignored when
+  # keycloak.enabled=true.
+  cliLoopbackPort: ""
   webClientId: reana-server
   # Ignored when keycloak.enabled=true: the bundled Keycloak deployment
   # always runs with the browser-facing BFF session enabled, with no
@@ -157,8 +162,8 @@ interactive_sessions:
   environments:
     jupyter:
       recommended:
-        - image: "quay.io/jupyter/scipy-notebook:notebook-7.2.2"
-          name: "Jupyter SciPy Notebook 7.2.2"
+        - image: "quay.io/jupyter/scipy-notebook:notebook-7.6.3"
+          name: "Jupyter SciPy Notebook 7.6.3"
       allow_custom: false
   maximum_inactivity_period: forever
 
@@ -242,7 +247,7 @@ components:
     forum_url: https://forum.reana.io
     file_preview_size_limit: "5242880" # 5 * 1024**2 = 5 MiB
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-ui:0.95.0-alpha.4
+    image: docker.io/reanahub/reana-ui:0.95.0-alpha.5
     resources: {} # UI pod resources.
     #  limits:
     #    cpu: 1.8
@@ -271,10 +276,29 @@ components:
           'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:
           https:; font-src 'self' data: https://fonts.gstatic.com; connect-src
           'self'; frame-ancestors 'none'; object-src 'self'; base-uri 'self';"
+        # Policy of the ROOT file viewer (`/root-viewer/`), which REANA-UI
+        # embeds to preview ROOT files. jsroot evaluates formulas stored in
+        # ROOT files, so the viewer needs 'unsafe-eval'. The sandbox directive
+        # (without allow-same-origin) keeps it isolated from REANA's origin,
+        # and must not be removed. Its tokens repeat the sandbox attribute of
+        # the viewer's iframe in REANA-UI, which explains them
+        # (allow-downloads keeps jsroot's image export, but also lets the ROOT
+        # file start downloads). An empty string removes this header without
+        # falling back to `csp`, so the viewer is then sandboxed only when
+        # REANA-UI embeds it. This is not recommended. The other security
+        # headers are shared with the UI, except X-Frame-Options (SAMEORIGIN)
+        # and Cross-Origin-Resource-Policy (cross-origin), which the sandboxed
+        # viewer needs to be embedded and to load its own scripts.
+        root_viewer_csp:
+          "sandbox allow-scripts allow-downloads; default-src 'none'; script-src
+          'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self'
+          data: blob:; font-src 'self' data:; connect-src 'none';
+          frame-ancestors 'self'; form-action 'none'; object-src 'none';
+          base-uri 'none';"
   reana_db:
     enabled: true
     # Major PostgreSQL upgrades require an explicit data migration.
-    image: docker.io/library/postgres:12.13
+    image: docker.io/library/postgres:18.6
     resources: {} # Db pod resources.
     #  limits:
     #    cpu: 1.8
@@ -284,10 +308,9 @@ components:
     #    memory: 6G
   reana_server:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-server:0.95.0-alpha.6
+    image: docker.io/reanahub/reana-server:0.95.0-alpha.7
     hostAliases: []
     environment:
-      REANA_MAX_CONCURRENT_BATCH_WORKFLOWS: 30
       REANA_SCHEDULER_REQUEUE_SLEEP: 15
       REANA_SCHEDULER_REQUEUE_COUNT: 200
       REANA_WORKFLOW_SCHEDULING_POLICY: "fifo"
@@ -318,6 +341,21 @@ components:
       REANA_FETCHER_MAXIMUM_EXTRACTED_SIZE: "1073741824"
       REANA_FETCHER_MAXIMUM_FILES: "10000"
       REANA_FETCHER_MAXIMUM_CLONE_SIZE: "2147483648"
+    # Upper limits on concurrently pending/running batch workflows, one per
+    # enabled compute backend, plus one for workflows requesting a Dask
+    # cluster. A workflow consumes one slot in every compute backend its
+    # steps use, plus a Dask slot if it requests a Dask cluster. It is
+    # admitted only while below every applicable limit. A limit of 0 closes
+    # that backend.
+    concurrency_limits:
+      # Leave unset (~) to fall back to a deprecated
+      # environment.REANA_MAX_CONCURRENT_BATCH_WORKFLOWS entry if present,
+      # and to 30 otherwise.
+      kubernetes: ~
+      dask: 5
+      # Every other enabled compute backend needs its own limit, e.g.:
+      # htcondorcern: 200
+      # slurmcern: 100
     uwsgi:
       processes: 6
       threads: 4
@@ -346,7 +384,7 @@ components:
       #    memory: 6G
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.7
+    image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.8
     pod_security_context: {}
     environment:
       SHARED_VOLUME_PATH: /var/reana
@@ -392,16 +430,16 @@ components:
       #    cpu: 1.8
       #    memory: 6G
   reana_workflow_engine_cwl:
-    image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.6
     environment: {}
   reana_workflow_engine_yadage:
-    image: docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.6
     environment: {}
   reana_workflow_engine_serial:
-    image: docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.6
     environment: {}
   reana_workflow_engine_snakemake:
-    image: docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.6
     environment: {}
   reana_workflow_validator:
     image: docker.io/reanahub/reana-workflow-validator:0.95.0-alpha.1
@@ -411,7 +449,7 @@ components:
     # are reserved by the sandbox and rejected by the chart.
     environment: {}
   reana_job_controller:
-    image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.6
     environment: {}
     uwsgi:
       threads: 2
@@ -506,6 +544,29 @@ traefik:
 kueue:
   enabled: false
 
+# When enabled, enforces a read-only root filesystem in the user containers of
+# workflow pods (reana-run-{batch|job|session}) and Dask scheduler/worker pods.
+# Container root and image directories become read-only while the mounted
+# workspace volume stays writable. Ephemeral emptyDir scratch volumes are
+# mounted at /tmp, at /.cache and at the session home directory, so that
+# software using these paths keeps working; those writes are per-pod, do not
+# count towards the user disk quota and are discarded when the pod stops.
+# Software that writes to other paths of its container image fails and needs
+# this option off. Host-path mounts inherit their per-mount readOnly setting
+# (defaulting to read-only when this option is enabled). The REANA job
+# controller and authentication helper containers keep a writable root
+# filesystem, so admission policies that check every container still need an
+# exception for these pods.
+kubernetes_jobs_read_only_root_filesystem: false
+
+# Size limit of each scratch volume mounted when
+# kubernetes_jobs_read_only_root_filesystem is enabled. Kubernetes measures the
+# usage periodically and evicts a pod that goes over the limit of one volume.
+# This reduces the risk that a pod fills the local disk of its node, but it is
+# not a hard quota: a pod can write more than the limit before the eviction.
+# Set to an empty string to disable the limit.
+kubernetes_jobs_scratch_volume_size_limit: 5Gi
+
 dask:
   enabled: false
   autoscaler_enabled: true
@@ -520,7 +581,7 @@ dask:
 dask-kubernetes-operator:
   image:
     name: docker.io/reanahub/reana-dask-kubernetes-operator
-    tag: 0.95.0-alpha.2
+    tag: 0.95.0-alpha.4
   serviceAccount:
     create: false
     # Change the reana prefix if you opted another prefix in your cluster

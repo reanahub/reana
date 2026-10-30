@@ -480,7 +480,8 @@ def run_ci(  # noqa: C901
         run_command(cmd, "reana")
     # deploy cluster
     cmd = (
-        f"reana-dev cluster-deploy --mode {mode} --namespace {namespace}"
+        f"reana-dev cluster-deploy --kubernetes {kubernetes} --mode {mode}"
+        f" --namespace {namespace}"
         f" --admin-email {admin_email} --admin-password {admin_password}"
     )
     if exclude_components:
