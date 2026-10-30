@@ -167,13 +167,20 @@ def run_tests(version: Optional[str], output: str) -> None:
         $ python run_cwl_conformance_tests.py --version v1.2  # to run tests for CWL v1.2 only
         $ python run_cwl_conformance_tests.py  # to run tests for all CWL versions
 
-    As of REANA 0.95, replace the two exports above with saved login:
+    As of REANA 0.95, install reana-client with the optional cwl-runner extra,
+    which provides the CWL tooling that reana-cwl-runner needs, and replace
+    the two exports above with saved login:
 
         .. code-block:: console
 
         \b
+        $ pip install 'reana-client[cwl-runner]'
         $ unset REANA_SERVER_URL REANA_SERVER_TLS_VERIFY REANA_ACCESS_TOKEN
         $ reana-client login --server https://your-reana-server
+
+    The same applies to a reana-client installed from a source checkout, for
+    example by `reana-dev client-install`; install the extra from that
+    checkout, e.g. `pip install -e '<path-to-reana-client>[cwl-runner]'`.
 
     For a self-signed local development cluster, add --no-tls-verify to login.
 

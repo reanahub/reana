@@ -49,6 +49,30 @@ stringData:
   reana-realm.json: |-
     {{- tpl (.Files.Get "reana-keycloak-realm.json.tpl") . | nindent 4 }}
 ---
+# Per-client slices of the realm file for the realm reconciler, which updates
+# existing clients in place. Kept out of the realm Secret because Keycloak's
+# startup import reads every file in the directory that one is mounted at.
+# Uses data rather than stringData so that upgrades remove keys that are no
+# longer rendered: Kubernetes stores only data, so Helm cannot delete a key
+# that the previous manifest wrote through stringData.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "reana.prefix" . }}-keycloak-realm-clients
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  {{- range $index, $client := (tpl (.Files.Get "reana-keycloak-realm.json.tpl") . | fromJson).clients }}
+  client-{{ $index }}.id: {{ $client.clientId | b64enc | quote }}
+  client-{{ $index }}.json: {{ $client | toJson | b64enc | quote }}
+  {{- range $kind := list "default" "optional" }}
+  {{- $field := printf "%sClientScopes" $kind }}
+  {{- if hasKey $client $field }}
+  client-{{ $index }}.{{ $kind }}-scopes: {{ join "\n" (get $client $field) | b64enc | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+---
 apiVersion: v1
 kind: Secret
 metadata:
@@ -149,7 +173,8 @@ spec:
                 --set=keycloak_database="${KEYCLOAK_DB_NAME}" \
                 --set=keycloak_user="${KEYCLOAK_DB_USERNAME}" <<'SQL'
               -- \getenv (reads an env var straight into a psql variable) only
-              -- exists from PostgreSQL 16; this image's psql is 14. \set with
+              -- exists from PostgreSQL 16, and operators may still override
+              -- components.reana_db.image with an older version. \set with
               -- a backtick-executed shell command reads KEYCLOAK_DB_PASSWORD
               -- the same way without ever putting the value in a process's
               -- own argv: the spawned "sh -c" only ever contains the literal
@@ -337,11 +362,83 @@ spec:
                 fi
                 sleep 2
               done
-              /opt/keycloak/bin/kcadm.sh create partialImport \
-                --config "${config}" \
-                -r "${KEYCLOAK_REALM}" \
-                -s ifResourceExists=OVERWRITE \
+              kcadm() {
+                /opt/keycloak/bin/kcadm.sh "$@" \
+                  --config "${config}" \
+                  -r "${KEYCLOAK_REALM}"
+              }
+              listed() {
+                local item
+                for item in "${@:2}"; do
+                  [ "${item}" != "$1" ] || return 0
+                done
+                return 1
+              }
+              # Reconciliation must be additive. Overwriting a role drops
+              # every user's mapping to it, and overwriting a client drops its
+              # sessions, offline tokens and consents, which would lock all
+              # users out and invalidate their CLI logins on each upgrade.
+              # So only create the roles and clients that are missing here...
+              kcadm create partialImport \
+                -s ifResourceExists=SKIP \
                 -f /opt/keycloak/data/import/reana-realm.json >/dev/null
+              # ...and bring the existing clients in line with the chart values
+              # in place: redirect URLs, credentials and protocol mappers...
+              scopes=$(kcadm get client-scopes \
+                --fields id,name --format csv --noquotes)
+              declare -A scope_ids
+              while IFS=, read -r id name; do
+                [ -z "${name}" ] || scope_ids["${name}"]="${id}"
+              done <<<"${scopes}"
+              for representation in /opt/keycloak/data/reconcile/client-*.json; do
+                files="${representation%.json}"
+                client_id=$(<"${files}.id")
+                client=$(kcadm get clients -q "clientId=${client_id}" \
+                  --fields id --format csv --noquotes)
+                if [ -z "${client}" ]; then
+                  echo "Keycloak client ${client_id} not found" >&2
+                  exit 1
+                fi
+                # Check all the wanted scopes before changing the client, so
+                # that a missing scope cannot leave it half-reconciled.
+                for kind in default optional; do
+                  [ -f "${files}.${kind}-scopes" ] || continue
+                  mapfile -t wanted <"${files}.${kind}-scopes"
+                  for scope in "${wanted[@]}"; do
+                    if [ -n "${scope}" ] && [ -z "${scope_ids[${scope}]:-}" ]; then
+                      echo "Keycloak client scope ${scope} not found" >&2
+                      exit 1
+                    fi
+                  done
+                done
+                kcadm update "clients/${client}" -f "${representation}"
+                # ...and client scopes, which updating a client leaves alone.
+                # Detach before attaching so that a scope can move between
+                # the default and the optional list.
+                for action in delete update; do
+                  for kind in default optional; do
+                    [ -f "${files}.${kind}-scopes" ] || continue
+                    mapfile -t wanted <"${files}.${kind}-scopes"
+                    current=$(
+                      kcadm get "clients/${client}/${kind}-client-scopes" \
+                        --fields name --format csv --noquotes
+                    )
+                    mapfile -t current <<<"${current}"
+                    if [ "${action}" = delete ]; then
+                      from=("${current[@]}") keep=("${wanted[@]}")
+                    else
+                      from=("${wanted[@]}") keep=("${current[@]}")
+                    fi
+                    for scope in "${from[@]}"; do
+                      if [ -z "${scope}" ] || listed "${scope}" "${keep[@]}"; then
+                        continue
+                      fi
+                      kcadm "${action}" \
+                        "clients/${client}/${kind}-client-scopes/${scope_ids[${scope}]}"
+                    done
+                  done
+                done
+              done
               # Both CLI clients request offline_access so their persisted
               # credentials survive ordinary SSO-session expiry. Keycloak
               # requires the user to hold this realm role in addition to the
@@ -350,17 +447,9 @@ spec:
               # (including identity brokering) behaves consistently. Posting
               # an existing composite is idempotent, so this also repairs
               # upgraded realms without special-case state detection.
-              offline_role=$(
-                /opt/keycloak/bin/kcadm.sh get roles/offline_access \
-                  --config "${config}" \
-                  -r "${KEYCLOAK_REALM}" \
-                  --compressed
-              )
+              offline_role=$(kcadm get roles/offline_access --compressed)
               printf '[%s]' "${offline_role}" | \
-                /opt/keycloak/bin/kcadm.sh create \
-                  "roles/default-roles-${KEYCLOAK_REALM}/composites" \
-                  --config "${config}" \
-                  -r "${KEYCLOAK_REALM}" \
+                kcadm create "roles/default-roles-${KEYCLOAK_REALM}/composites" \
                   -f - >/dev/null
           env:
             - name: KEYCLOAK_ADMIN_USER
@@ -383,9 +472,15 @@ spec:
             - name: realm
               mountPath: /opt/keycloak/data/import
               readOnly: true
+            - name: realm-clients
+              mountPath: /opt/keycloak/data/reconcile
+              readOnly: true
       volumes:
         - name: realm
           secret:
             secretName: {{ include "reana.prefix" . }}-keycloak-realm
+        - name: realm-clients
+          secret:
+            secretName: {{ include "reana.prefix" . }}-keycloak-realm-clients
 {{- end }}
 {{- end }}

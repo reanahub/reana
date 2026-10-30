@@ -85,6 +85,39 @@ def _rendered_documents(rendered):
             ["docker.io/reanahub/reana-server:0.8.1"],
             "image: docker.io/reanahub/reana-server:0.8.1\nenvironment:",
         ),
+        (
+            "dask-kubernetes-operator:\n"
+            "  image:\n"
+            "    name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "    tag: 0.95.0-alpha.2\n"
+            "  serviceAccount:\n",
+            ["reanahub/reana-dask-kubernetes-operator:0.95.0-alpha.4"],
+            "dask-kubernetes-operator:\n"
+            "  image:\n"
+            "    name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "    tag: 0.95.0-alpha.4\n"
+            "  serviceAccount:\n",
+        ),
+        (
+            "image:\n"
+            "  name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "  pullPolicy: IfNotPresent\n"
+            "tag: 0.95.0-alpha.2\n",
+            ["reanahub/reana-dask-kubernetes-operator:0.95.0-alpha.4"],
+            "image:\n"
+            "  name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "  pullPolicy: IfNotPresent\n"
+            "tag: 0.95.0-alpha.2\n",
+        ),
+        (
+            "image:\n"
+            "  name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "tag: 0.95.0-alpha.2\n",
+            ["reanahub/reana-dask-kubernetes-operator:0.95.0-alpha.4"],
+            "image:\n"
+            "  name: docker.io/reanahub/reana-dask-kubernetes-operator\n"
+            "tag: 0.95.0-alpha.2\n",
+        ),
     ],
 )
 def test_replace_docker_images(original, docker_images, expected):
@@ -95,6 +128,68 @@ def test_replace_docker_images(original, docker_images, expected):
     from reana.reana_dev.helm import _replace_docker_images
 
     assert _replace_docker_images(original, docker_images) == expected
+
+
+@pytest.mark.parametrize(
+    "name_line,tag_line,expected_tag_line",
+    [
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator ",
+            "tag: 0.95.0-alpha.2",
+            "tag: 0.95.0-alpha.4",
+        ),
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator  # ours",
+            "tag: 0.95.0-alpha.2",
+            "tag: 0.95.0-alpha.4",
+        ),
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator",
+            "tag: 0.95.0-alpha.2 ",
+            "tag: 0.95.0-alpha.4 ",
+        ),
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator",
+            "tag: 0.95.0-alpha.2  # pinned",
+            "tag: 0.95.0-alpha.4  # pinned",
+        ),
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator",
+            'tag: "0.95.0-alpha.2"  # pinned',
+            'tag: "0.95.0-alpha.4"  # pinned',
+        ),
+        (
+            "name: docker.io/reanahub/reana-dask-kubernetes-operator",
+            "tag: '0.95.0-alpha.2'",
+            "tag: '0.95.0-alpha.4'",
+        ),
+        (
+            'name: "docker.io/reanahub/reana-dask-kubernetes-operator"',
+            "tag: 0.95.0-alpha.2",
+            "tag: 0.95.0-alpha.4",
+        ),
+        (
+            "name:  docker.io/reanahub/reana-dask-kubernetes-operator",
+            "tag:  0.95.0-alpha.2",
+            "tag:  0.95.0-alpha.4",
+        ),
+    ],
+)
+def test_replace_docker_images_split_tag_formatting(
+    name_line, tag_line, expected_tag_line
+):
+    """Test that split image tags are bumped regardless of YAML formatting."""
+    from reana.reana_dev.helm import _replace_docker_images
+
+    original = f"image:\n  {name_line}\n  {tag_line}\n"
+    expected = f"image:\n  {name_line}\n  {expected_tag_line}\n"
+
+    assert (
+        _replace_docker_images(
+            original, ["reanahub/reana-dask-kubernetes-operator:0.95.0-alpha.4"]
+        )
+        == expected
+    )
 
 
 @pytest.mark.skipif(
@@ -157,6 +252,92 @@ def test_nginx_config_quoted_origins(tmp_path):
         r'add_header Permissions-Policy "geolocation=(self \"https://example.org\")" always;'
         in nginx_conf
     )
+
+
+def _render_ui_nginx_blocks(tmp_path, security_headers=None):
+    """Render the REANA-UI nginx config, split into server and viewer headers."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        {
+            "components": {
+                "reana_ui": {"nginx": {"security_headers": security_headers or {}}}
+            }
+        },
+    )
+    nginx_conf = next(
+        doc["data"]["reana-ui.conf"]
+        for doc in _rendered_documents(rendered)
+        if doc["kind"] == "ConfigMap"
+        and doc["metadata"]["name"].endswith("-ui-nginx-config")
+    )
+    server_block, viewer_block = nginx_conf.split("location /root-viewer/ {")
+    return (
+        [line.strip() for line in server_block.splitlines() if "add_header" in line],
+        [line.strip() for line in viewer_block.splitlines() if "add_header" in line],
+    )
+
+
+def _header(headers, name):
+    """Return the value of the given header, or ``None`` if it is not sent."""
+    prefix = f"add_header {name} "
+    values = [line[len(prefix) :] for line in headers if line.startswith(prefix)]
+    assert len(values) <= 1, f"{name} is sent more than once"
+    return values[0] if values else None
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_nginx_config_root_viewer_headers(tmp_path):
+    """The ROOT file viewer can be embedded and is sandboxed, while the UI cannot be framed."""
+    server, viewer = _render_ui_nginx_blocks(tmp_path)
+
+    assert "frame-ancestors 'none'" in _header(server, "Content-Security-Policy")
+    assert _header(server, "X-Frame-Options") == '"DENY" always;'
+    assert _header(server, "Cross-Origin-Resource-Policy") == '"same-origin" always;'
+
+    viewer_csp = _header(viewer, "Content-Security-Policy")
+    assert viewer_csp.startswith('"sandbox allow-scripts ')
+    assert "allow-same-origin" not in viewer_csp
+    assert "frame-ancestors 'self'" in viewer_csp
+    assert _header(viewer, "X-Frame-Options") == '"SAMEORIGIN" always;'
+    assert _header(viewer, "Cross-Origin-Resource-Policy") == '"cross-origin" always;'
+
+    # `add_header` in the viewer location replaces the server-level headers,
+    # so the viewer must repeat the other ones
+    shared = [
+        "Strict-Transport-Security",
+        "X-Content-Type-Options",
+        "Cross-Origin-Opener-Policy",
+        "Referrer-Policy",
+        "Permissions-Policy",
+    ]
+    for name in shared:
+        assert _header(server, name) is not None, name
+        assert _header(viewer, name) == _header(server, name), name
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    "value, header, removed_from_ui",
+    [
+        ("x_frame_options", "X-Frame-Options", True),
+        ("cross_origin_resource_policy", "Cross-Origin-Resource-Policy", True),
+        ("root_viewer_csp", "Content-Security-Policy", False),
+    ],
+)
+def test_nginx_config_root_viewer_empty_headers(
+    tmp_path, value, header, removed_from_ui
+):
+    """An empty value removes the header from the ROOT file viewer, without fallback."""
+    server, viewer = _render_ui_nginx_blocks(tmp_path, {value: ""})
+
+    assert _header(viewer, header) is None
+    assert (_header(server, header) is None) == removed_from_ui
 
 
 @pytest.mark.skipif(
@@ -668,3 +849,353 @@ def test_workflow_validator_reserved_environment_is_rejected():
 
     assert rendered.returncode != 0
     assert "PYTHONPATH is reserved by the validation sandbox" in rendered.stderr
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_mail_service_targets_the_ports_maildev_listens_on(tmp_path):
+    """The mail service must target the ports MailDev is configured to listen on."""
+    documents = _rendered_documents(
+        _render_helm_chart(tmp_path, {"debug": {"enabled": True}})
+    )
+
+    service = next(
+        document
+        for document in documents
+        if document["kind"] == "Service"
+        and document["metadata"]["name"].endswith("-mail")
+    )
+    deployment = next(
+        document
+        for document in documents
+        if document["kind"] == "Deployment"
+        and document["metadata"]["name"].endswith("-mail")
+    )
+
+    container = deployment["spec"]["template"]["spec"]["containers"][0]
+    listening_on = {
+        variable["name"]: int(variable["value"]) for variable in container["env"]
+    }
+    targeted = {port["name"]: port["targetPort"] for port in service["spec"]["ports"]}
+
+    assert targeted["smtp"] == listening_on["MAILDEV_SMTP_PORT"]
+    assert targeted["ui"] == listening_on["MAILDEV_WEB_PORT"]
+
+    # Node ports are part of the cluster contract and must not change.
+    assert {port["port"] for port in service["spec"]["ports"]} == {30025, 32580}
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_database_keeps_its_data_in_the_mounted_directory(tmp_path):
+    """PostgreSQL must store its data in the directory the chart mounts."""
+    documents = _rendered_documents(_render_helm_chart(tmp_path))
+
+    deployment = next(
+        document
+        for document in documents
+        if document["kind"] == "Deployment"
+        and document["metadata"]["name"].endswith("-db")
+    )
+
+    container = deployment["spec"]["template"]["spec"]["containers"][0]
+    environment = {
+        variable["name"]: variable.get("value") for variable in container["env"]
+    }
+    mount_paths = {mount["mountPath"] for mount in container["volumeMounts"]}
+
+    assert environment["PGDATA"] in mount_paths
+
+
+@pytest.mark.parametrize(
+    "exclude_components, exit_code",
+    [
+        ("", 1),
+        ("r-a-krb5,reana-datastore-s3fs", 0),
+    ],
+)
+def test_helm_upgrade_components_exclude_components(exclude_components, exit_code):
+    """Test helm-upgrade-components skips excluded untagged components."""
+    from click.testing import CliRunner
+    from unittest.mock import MagicMock, patch
+
+    from reana.reana_dev.helm import helm_upgrade_components
+
+    untagged = {"reana-auth-krb5", "reana-datastore-s3fs"}
+    upgrade_mock = MagicMock()
+    with patch(
+        "reana.reana_dev.helm.is_component_dockerised", return_value=True
+    ), patch(
+        "reana.reana_dev.helm.git_is_current_version_tagged",
+        side_effect=lambda component: component not in untagged,
+    ), patch(
+        "reana.reana_dev.helm.get_docker_tag", return_value="1.0.0"
+    ), patch(
+        "reana.reana_dev.helm.get_srcdir", return_value="/code/reana"
+    ), patch(
+        "reana.reana_dev.helm._upgrade_docker_images", upgrade_mock
+    ), patch(
+        "reana.reana_dev.helm.git_diff", MagicMock()
+    ):
+        result = CliRunner().invoke(
+            helm_upgrade_components,
+            ["--exclude-components", exclude_components],
+        )
+
+    assert result.exit_code == exit_code
+    if exit_code:
+        assert "reana-auth-krb5\nreana-datastore-s3fs" in result.output
+        upgrade_mock.assert_not_called()
+    else:
+        images = upgrade_mock.call_args_list[0].args[1]
+        assert "reanahub/reana-server:1.0.0" in images
+        assert not any("krb5" in i or "s3fs" in i for i in images)
+
+
+@pytest.mark.parametrize(
+    "values, expected_limit",
+    [
+        ({}, "5Gi"),
+        # Helm removes a null value, as with old values reused on upgrade
+        ({"kubernetes_jobs_scratch_volume_size_limit": None}, "5Gi"),
+        ({"kubernetes_jobs_scratch_volume_size_limit": ""}, ""),
+        ({"kubernetes_jobs_scratch_volume_size_limit": "10Gi"}, "10Gi"),
+    ],
+)
+def test_scratch_volume_size_limit_rendering(tmp_path, values, expected_limit):
+    """Test that only an explicit empty string disables the scratch limit."""
+    values = {"kubernetes_jobs_read_only_root_filesystem": True, **values}
+    rendered = _render_helm_chart(tmp_path, values)
+
+    controller = next(
+        document
+        for document in _rendered_documents(rendered)
+        if document["kind"] == "Deployment"
+        and document["metadata"]["name"] == "reana-workflow-controller"
+    )
+    container = next(
+        container
+        for container in controller["spec"]["template"]["spec"]["containers"]
+        if container["name"] == "rest-api"
+    )
+    environment = {item["name"]: item.get("value") for item in container["env"]}
+    assert environment["REANA_KUBERNETES_JOBS_READ_ONLY_ROOT_FILESYSTEM"] == "true"
+    assert (
+        environment["REANA_KUBERNETES_JOBS_SCRATCH_VOLUME_SIZE_LIMIT"] == expected_limit
+    )
+
+
+def _server_env_values(rendered, name):
+    """Return the value of env var ``name`` in every REANA-Server container."""
+    values = []
+    for document in _rendered_documents(rendered):
+        if document.get("kind") != "Deployment":
+            continue
+        if not document["metadata"]["name"].endswith("reana-server"):
+            continue
+        for container in document["spec"]["template"]["spec"]["containers"]:
+            for env_var in container.get("env", []):
+                if env_var["name"] == name:
+                    values.append(env_var["value"])
+    return values
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    "concurrency_limits,environment,expected",
+    [
+        # Nothing configured: the chart's own default applies.
+        pytest.param(None, None, "30", id="default"),
+        # The deprecated cluster-wide variable is honoured as the Kubernetes cap
+        # rather than being silently overridden by the chart default.
+        pytest.param(
+            None,
+            {"REANA_MAX_CONCURRENT_BATCH_WORKFLOWS": 10},
+            "10",
+            id="legacy-value",
+        ),
+        # An explicit limit wins over the deprecated variable.
+        pytest.param(
+            {"kubernetes": 7},
+            {"REANA_MAX_CONCURRENT_BATCH_WORKFLOWS": 10},
+            "7",
+            id="explicit-wins",
+        ),
+        # Zero means "backend closed" and must survive resolution: `default`
+        # would treat it as empty and fall back to the deprecated value.
+        pytest.param(
+            {"kubernetes": 0},
+            {"REANA_MAX_CONCURRENT_BATCH_WORKFLOWS": 10},
+            "0",
+            id="explicit-zero",
+        ),
+        # A deprecated value of 0 still renders the explicit limit; the legacy
+        # variable reaches the containers too, where it pauses all scheduling.
+        pytest.param(
+            {"kubernetes": 30},
+            {"REANA_MAX_CONCURRENT_BATCH_WORKFLOWS": 0},
+            "30",
+            id="explicit-with-legacy-zero",
+        ),
+    ],
+)
+def test_server_kubernetes_concurrency_limit(
+    tmp_path, concurrency_limits, environment, expected
+):
+    """The Kubernetes cap resolves explicit value > deprecated value > default."""
+    reana_server = {}
+    if concurrency_limits is not None:
+        reana_server["concurrency_limits"] = concurrency_limits
+    if environment is not None:
+        reana_server["environment"] = environment
+
+    rendered = _render_helm_chart(
+        tmp_path, values={"components": {"reana_server": reana_server}}
+    )
+
+    values = _server_env_values(rendered, "REANA_MAX_CONCURRENT_K8S_BATCH_WORKFLOWS")
+    # Both the REST API and the scheduler container must agree.
+    assert len(values) == 2
+    assert set(values) == {expected}
+    if environment is not None:
+        legacy = _server_env_values(rendered, "REANA_MAX_CONCURRENT_BATCH_WORKFLOWS")
+        assert legacy == [str(environment["REANA_MAX_CONCURRENT_BATCH_WORKFLOWS"])] * 2
+
+
+def _render_backend_limits(tmp_path, compute_backends, concurrency_limits):
+    """Render the chart with the given compute backends and concurrency limits."""
+    return _render_helm_chart(
+        tmp_path,
+        values={
+            "compute_backends": compute_backends,
+            "components": {"reana_server": {"concurrency_limits": concurrency_limits}},
+        },
+        check=False,
+    )
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    "concurrency_limits,expected",
+    [
+        # Each external backend gets its own limit.
+        (
+            {"htcondorcern": 3, "slurmcern": 4},
+            {"htcondorcern": 3, "slurmcern": 4},
+        ),
+        # An explicit 0 is kept and closes that backend.
+        (
+            {"htcondorcern": 0, "slurmcern": 4},
+            {"htcondorcern": 0, "slurmcern": 4},
+        ),
+    ],
+)
+def test_server_per_backend_concurrency_limits(tmp_path, concurrency_limits, expected):
+    """The limits of the enabled external backends reach both containers."""
+    rendered = _render_backend_limits(
+        tmp_path, ["kubernetes", "htcondorcern", "slurmcern"], concurrency_limits
+    )
+
+    assert rendered.returncode == 0, rendered.stderr
+    values = _server_env_values(
+        rendered, "REANA_MAX_CONCURRENT_BATCH_WORKFLOWS_PER_BACKEND"
+    )
+    assert len(values) == 2
+    assert [json.loads(value) for value in values] == [expected, expected]
+    assert (
+        _server_env_values(rendered, "REANA_MAX_CONCURRENT_EXTERNAL_BATCH_WORKFLOWS")
+        == []
+    )
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    "concurrency_limits,error_message",
+    [
+        # A missing limit of an enabled external backend.
+        (
+            {"htcondorcern": 3},
+            "concurrency_limits.slurmcern must be set",
+        ),
+        # A null limit counts as missing.
+        (
+            {"htcondorcern": 3, "slurmcern": None},
+            "concurrency_limits.slurmcern must be set",
+        ),
+        # A misspelt or disabled backend is refused instead of being ignored.
+        (
+            {"htcondorcern": 3, "slurmcern": 4, "htcondor-cern": 3},
+            '"htcondor-cern" is not one of the enabled compute_backends',
+        ),
+    ],
+)
+def test_server_per_backend_concurrency_limits_errors(
+    tmp_path, concurrency_limits, error_message
+):
+    """Missing or unknown backend limits fail the rendering, naming the key."""
+    rendered = _render_backend_limits(
+        tmp_path, ["kubernetes", "htcondorcern", "slurmcern"], concurrency_limits
+    )
+
+    assert rendered.returncode != 0
+    assert error_message in rendered.stderr
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_server_legacy_zero_with_explicit_backend_limits(tmp_path):
+    """A deprecated limit of 0 reaches the containers next to explicit limits."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        values={
+            "compute_backends": ["kubernetes", "htcondorcern"],
+            "components": {
+                "reana_server": {
+                    "concurrency_limits": {"kubernetes": 30, "htcondorcern": 200},
+                    "environment": {"REANA_MAX_CONCURRENT_BATCH_WORKFLOWS": 0},
+                }
+            },
+        },
+    )
+
+    assert _server_env_values(rendered, "REANA_MAX_CONCURRENT_BATCH_WORKFLOWS") == [
+        "0",
+        "0",
+    ]
+    assert set(
+        _server_env_values(rendered, "REANA_MAX_CONCURRENT_K8S_BATCH_WORKFLOWS")
+    ) == {"30"}
+    assert set(
+        _server_env_values(rendered, "REANA_MAX_CONCURRENT_BATCH_WORKFLOWS_PER_BACKEND")
+    ) == {'{"htcondorcern":200}'}
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_server_concurrency_limit_defaults_match_reana_commons(tmp_path):
+    """The chart defaults must match the defaults documented in reana-commons."""
+    rendered = _render_helm_chart(tmp_path)
+
+    assert set(_server_env_values(rendered, "REANA_MAX_CONCURRENT_DASK_WORKFLOWS")) == {
+        "5"
+    }
+    assert set(
+        _server_env_values(rendered, "REANA_MAX_CONCURRENT_BATCH_WORKFLOWS_PER_BACKEND")
+    ) == {"{}"}
