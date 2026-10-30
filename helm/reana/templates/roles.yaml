@@ -26,6 +26,11 @@ rules:
 - apiGroups: ["", "apps", "networking.k8s.io"]
   resources: ["deployments", "services", "ingresses"]
   verbs: ["get", "create", "delete"]
+# Eviction reasons of interactive-session and Dask pods, which Kubernetes
+# keeps only in events when the container exits cleanly
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["list"]
 # NetworkPolicy for the sandboxed workflow specification validator. The
 # controller creates the deny-egress policy and, on conflict, reads its
 # resourceVersion before replacing it.
