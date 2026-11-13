@@ -26,6 +26,7 @@ from reana.config import (
     COMPONENTS_USING_SHARED_MODULE_DB,
     DOCKER_VERSION_FILE,
     GIT_DEFAULT_BASE_BRANCH,
+    GO_VERSION_FILE,
     HELM_VERSION_FILE,
     JAVASCRIPT_VERSION_FILE,
     OPENAPI_VERSION_FILE,
@@ -184,36 +185,37 @@ def git_is_current_version_tagged(component):
 def git_create_release_branch(component: str, next_version: Optional[str]):
     """Create a feature branch for a new release."""
     version_files = get_component_version_files(component)
-    if not next_version:
-        # bump current version depending on whether it is semver2 or pep440
-        current_version = get_current_component_version_from_source_files(component)
-        if (
-            version_files.get(DOCKER_VERSION_FILE)
-            and component not in REPO_LIST_PYTHON_FIRST
-        ):
-            next_version = bump_semver2_version(current_version)
-        elif version_files.get(HELM_VERSION_FILE):
-            next_version = bump_semver2_version(current_version)
-        elif version_files.get(PYTHON_VERSION_FILE):
-            next_version = bump_pep440_version(current_version)
-        elif version_files.get(JAVASCRIPT_VERSION_FILE):
-            next_version = bump_semver2_version(current_version)
-        elif version_files.get(OPENAPI_VERSION_FILE):
-            next_version = bump_pep440_version(current_version)
+    # use the scheme of the file that the current version is read from
+    if (
+        version_files.get(DOCKER_VERSION_FILE)
+        and component not in REPO_LIST_PYTHON_FIRST
+    ):
+        is_semver2 = True
+    elif version_files.get(HELM_VERSION_FILE):
+        is_semver2 = True
+    elif version_files.get(PYTHON_VERSION_FILE):
+        is_semver2 = False
+    elif version_files.get(JAVASCRIPT_VERSION_FILE):
+        is_semver2 = True
+    elif version_files.get(GO_VERSION_FILE):
+        is_semver2 = True
+    elif version_files.get(OPENAPI_VERSION_FILE):
+        is_semver2 = False
     else:
-        # provided next_version is always in pep440 version
-        if (
-            DOCKER_VERSION_FILE in version_files
-            and component not in REPO_LIST_PYTHON_FIRST
-            or HELM_VERSION_FILE in version_files
-            or JAVASCRIPT_VERSION_FILE in version_files
-        ):
-            next_version = translate_pep440_to_semver2(next_version)
-        else:
-            next_version = str(parse_pep440_version(next_version))
-    if not next_version:
         display_message("Could not generate next version.", component)
         sys.exit(1)
+
+    if not next_version:
+        current_version = get_current_component_version_from_source_files(component)
+        if is_semver2:
+            next_version = bump_semver2_version(current_version)
+        else:
+            next_version = bump_pep440_version(current_version)
+    elif is_semver2:
+        # provided next_version is always in pep440 version
+        next_version = translate_pep440_to_semver2(next_version)
+    else:
+        next_version = str(parse_pep440_version(next_version))
     run_command(f"git checkout -b release-{next_version}", component)
     display_message(f"Release branch 'release-{next_version}' created.", component)
 

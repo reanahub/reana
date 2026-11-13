@@ -765,22 +765,12 @@ def get_current_component_version_from_source_files(
 
     elif all_version_files.get(GO_VERSION_FILE):
         with open(all_version_files.get(GO_VERSION_FILE)) as f:
-            inside_annotated_block = False
-            for line in f.readlines():
-                if "x-release-please-start-version" in line:
-                    inside_annotated_block = True
-                    continue
-                if "x-release-please-end" in line:
-                    inside_annotated_block = False
-                    continue
-                if not inside_annotated_block and (
-                    "x-release-please-version" not in line
-                ):
-                    continue
-                match = re.search(r'"v?(\d+\.\d+\.\d+[^"]*)"', line)
-                if match:
-                    version = match.group(1)
-                    break
+            lines = f.readlines()
+        for index in get_release_please_version_line_indexes(lines):
+            match = re.search(r'"v?(\d+\.\d+\.\d+[^"]*)"', lines[index])
+            if match:
+                version = match.group(1)
+                break
 
     elif all_version_files.get(OPENAPI_VERSION_FILE):
         with open(all_version_files.get(OPENAPI_VERSION_FILE)) as f:
@@ -814,16 +804,73 @@ def get_component_git_tag_name(component: str, version: str) -> str:
     if version.startswith("v"):
         return version
 
+    include_v_in_tag = get_release_please_config(component).get(
+        "include-v-in-tag", False
+    )
+    return f"v{version}" if include_v_in_tag else version
+
+
+def get_release_please_config(component: str) -> Dict:
+    """Return the component's Release Please configuration.
+
+    :param component: standard component name
+    :type component: str
+
+    :return: parsed configuration, empty if the component has none
+    :rtype: dict
+    """
     config_file = os.path.join(
         get_srcdir(component=component), RELEASE_PLEASE_CONFIG_FILE
     )
     try:
         with open(config_file) as f:
-            include_v_in_tag = json.load(f).get("include-v-in-tag", False)
+            return json.load(f)
     except (OSError, ValueError):
-        include_v_in_tag = False
+        return {}
 
-    return f"v{version}" if include_v_in_tag else version
+
+def get_release_please_extra_files(component: str) -> List[str]:
+    """Return the paths of the extra files Release Please bumps for a component.
+
+    Entries are either paths or objects with a ``path`` key, e.g. JSON files.
+
+    :param component: standard component name
+    :type component: str
+
+    :return: paths relative to the component's source directory
+    :rtype: list
+    """
+    packages = get_release_please_config(component).get("packages", {})
+    return [
+        entry["path"] if isinstance(entry, dict) else entry
+        for package in packages.values()
+        for entry in package.get("extra-files", [])
+    ]
+
+
+def get_release_please_version_line_indexes(lines: List[str]) -> List[int]:
+    """Return the indexes of the lines whose version Release Please updates.
+
+    These are lines annotated with ``x-release-please-version`` and lines
+    enclosed between ``x-release-please-start-version`` and
+    ``x-release-please-end``.
+
+    :param lines: lines of the file
+    :type lines: list
+
+    :return: indexes of the annotated lines
+    :rtype: list
+    """
+    indexes = []
+    inside_annotated_block = False
+    for index, line in enumerate(lines):
+        if "x-release-please-start-version" in line:
+            inside_annotated_block = True
+        elif "x-release-please-end" in line:
+            inside_annotated_block = False
+        elif inside_annotated_block or "x-release-please-version" in line:
+            indexes.append(index)
+    return indexes
 
 
 def bump_semver2_version(current_version: str, part=None) -> str:
@@ -999,7 +1046,7 @@ def bump_component_version(
     :type component: str
     :type next_version: str
 
-    :return: next_version and list of modified version files
+    :return: next_version and list of modified files
     :rtype: str, List[str]
     """
     version_files = get_component_version_files(component)
@@ -1021,6 +1068,45 @@ def bump_component_version(
             )
 
         current_version_per_file_type[file_type] = current_version
+
+    # depending on a component, choose the file holding the component version
+    if (
+        DOCKER_VERSION_FILE in current_version_per_file_type
+        and component not in REPO_LIST_PYTHON_FIRST
+    ):
+        component_version_file_type = DOCKER_VERSION_FILE
+    elif HELM_VERSION_FILE in current_version_per_file_type:
+        component_version_file_type = HELM_VERSION_FILE
+    elif JAVASCRIPT_VERSION_FILE in current_version_per_file_type:
+        component_version_file_type = JAVASCRIPT_VERSION_FILE
+    elif GO_VERSION_FILE in current_version_per_file_type:
+        component_version_file_type = GO_VERSION_FILE
+    else:
+        component_version_file_type = PYTHON_VERSION_FILE
+    component_current_version = current_version_per_file_type[
+        component_version_file_type
+    ]
+
+    # Release Please also bumps its `extra-files`, e.g. the README of Go
+    # components. Check those that are not version files before rewriting.
+    srcdir = get_srcdir(component=component)
+    extra_file_lines = {}
+    for path in get_release_please_extra_files(component):
+        if path in version_files.values():
+            continue
+
+        with open(os.path.join(srcdir, path)) as f:
+            lines = f.readlines()
+        if not any(
+            component_current_version in lines[index]
+            for index in get_release_please_version_line_indexes(lines)
+        ):
+            raise Exception(
+                f"Cannot find version {component_current_version} in the "
+                f"Release Please annotations of {component}'s {path}"
+            )
+
+        extra_file_lines[path] = lines
 
     updated_files = []
     next_version_per_file_type = {}
@@ -1067,20 +1153,18 @@ def bump_component_version(
                 component=component,
             )
 
-    # depending on a component, return proper component version
-    if (
-        DOCKER_VERSION_FILE in next_version_per_file_type.keys()
-        and component not in REPO_LIST_PYTHON_FIRST
-    ):
-        return next_version_per_file_type[DOCKER_VERSION_FILE], updated_files
-    elif HELM_VERSION_FILE in next_version_per_file_type.keys():
-        return next_version_per_file_type[HELM_VERSION_FILE], updated_files
-    elif JAVASCRIPT_VERSION_FILE in next_version_per_file_type:
-        return next_version_per_file_type[JAVASCRIPT_VERSION_FILE], updated_files
-    elif GO_VERSION_FILE in next_version_per_file_type:
-        return next_version_per_file_type[GO_VERSION_FILE], updated_files
-    else:
-        return next_version_per_file_type[PYTHON_VERSION_FILE], updated_files
+    component_next_version = next_version_per_file_type[component_version_file_type]
+
+    for path, lines in extra_file_lines.items():
+        for index in get_release_please_version_line_indexes(lines):
+            lines[index] = lines[index].replace(
+                component_current_version, component_next_version
+            )
+        with open(os.path.join(srcdir, path), "w") as f:
+            f.writelines(lines)
+        updated_files.append(path)
+
+    return component_next_version, updated_files
 
 
 def get_git_tag(component):
