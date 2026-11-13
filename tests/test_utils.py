@@ -328,3 +328,109 @@ class TestBumpComponentVersion:
 
         with pytest.raises(Exception, match="Cannot detect the current version"):
             utils.bump_component_version("reana-datastore-s3fs", next_version="0.0.1")
+
+    def test_go_readme_install_line_is_bumped(self, tmp_path, monkeypatch):
+        """Test that the extra files listed in the Release Please config follow."""
+        from reana.config import GO_VERSION_FILE, RELEASE_PLEASE_CONFIG_FILE
+        from reana.reana_dev import utils
+
+        (tmp_path / RELEASE_PLEASE_CONFIG_FILE).write_text(
+            json.dumps(
+                {"packages": {".": {"extra-files": ["cmd/version.go", "README.md"]}}}
+            )
+        )
+        go_file = tmp_path / "cmd" / "version.go"
+        go_file.parent.mkdir()
+        go_file.write_text(
+            'const version = "v0.95.0-alpha.2" // x-release-please-version\n'
+        )
+        readme = tmp_path / "README.md"
+        readme.write_text(
+            "Works with REANA 0.95.0-alpha.2 clusters.\n\n"
+            "<!-- x-release-please-start-version -->\n\n"
+            "$ go install github.com/reanahub/reana-client-go@v0.95.0-alpha.2\n\n"
+            "<!-- x-release-please-end -->\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(utils, "get_srcdir", lambda component="": str(tmp_path))
+        monkeypatch.setattr(
+            utils,
+            "get_component_version_files",
+            lambda component, abs_path=False: {GO_VERSION_FILE: "cmd/version.go"},
+        )
+
+        next_version, modified_files = utils.bump_component_version("reana-client-go")
+
+        assert next_version == "0.95.0-alpha.3"
+        assert modified_files == ["cmd/version.go", "README.md"]
+        assert '"v0.95.0-alpha.3"' in go_file.read_text()
+        assert "reana-client-go@v0.95.0-alpha.3" in readme.read_text()
+        # lines outside the Release Please annotations are left alone
+        assert "Works with REANA 0.95.0-alpha.2 clusters." in readme.read_text()
+
+    def test_extra_file_with_outdated_version_rewrites_nothing(
+        self, tmp_path, monkeypatch
+    ):
+        """Test that an extra file out of sync aborts before any file is written."""
+        from reana.config import GO_VERSION_FILE, RELEASE_PLEASE_CONFIG_FILE
+        from reana.reana_dev import utils
+
+        (tmp_path / RELEASE_PLEASE_CONFIG_FILE).write_text(
+            json.dumps({"packages": {".": {"extra-files": ["README.md"]}}})
+        )
+        (tmp_path / "README.md").write_text(
+            "<!-- x-release-please-start-version -->\n"
+            "$ go install github.com/reanahub/reana-client-go@v0.95.0-alpha.1\n"
+            "<!-- x-release-please-end -->\n"
+        )
+        monkeypatch.setattr(utils, "get_srcdir", lambda component="": str(tmp_path))
+        monkeypatch.setattr(
+            utils,
+            "get_component_version_files",
+            lambda component, abs_path=False: {GO_VERSION_FILE: "cmd/version.go"},
+        )
+        monkeypatch.setattr(
+            utils,
+            "get_current_component_version_from_source_files",
+            lambda component, version_file=None: "0.95.0-alpha.2",
+        )
+
+        def fail_on_write(*args, **kwargs):
+            raise AssertionError("no version file should have been rewritten")
+
+        monkeypatch.setattr(utils, "replace_string", fail_on_write)
+
+        with pytest.raises(Exception, match="Cannot find version 0.95.0-alpha.2"):
+            utils.bump_component_version("reana-client-go")
+
+
+class TestGetReleasePleaseExtraFiles:
+    def test_plain_and_object_entries(self, tmp_path, monkeypatch):
+        """Test that both forms of `extra-files` entries are understood."""
+        from reana.config import RELEASE_PLEASE_CONFIG_FILE
+        from reana.reana_dev import utils
+
+        (tmp_path / RELEASE_PLEASE_CONFIG_FILE).write_text(
+            json.dumps(
+                {
+                    "packages": {
+                        ".": {
+                            "extra-files": [
+                                "Dockerfile",
+                                {
+                                    "type": "json",
+                                    "path": "docs/openapi.json",
+                                    "jsonpath": "$.info.version",
+                                },
+                            ]
+                        }
+                    }
+                }
+            )
+        )
+        monkeypatch.setattr(utils, "get_srcdir", lambda component="": str(tmp_path))
+
+        assert utils.get_release_please_extra_files("reana-server") == [
+            "Dockerfile",
+            "docs/openapi.json",
+        ]
