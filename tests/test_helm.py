@@ -52,7 +52,7 @@ def _render_helm_chart(tmp_path, values=None, namespace="default", check=True):
             "--namespace",
             namespace,
             "--kube-version",
-            "1.29.0",
+            "1.30.0",
             "-f",
             str(values_file),
         ],
