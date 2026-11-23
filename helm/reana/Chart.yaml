@@ -31,7 +31,7 @@ version: 0.95.0-alpha.6
 kubeVersion: ">= 1.30.0-0"
 dependencies:
   - name: traefik
-    version: 31.1.0
+    version: 42.4.1
     repository: https://traefik.github.io/charts
     condition: traefik.enabled
     tags:

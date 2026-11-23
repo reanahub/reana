@@ -287,7 +287,7 @@ spec:
           - name: TRAEFIK_ENABLED
             value: {{ .Values.traefik.enabled | quote | default "true" }}
           - name: TRAEFIK_EXTERNAL
-            value: {{ .Values.traefik.external | quote | default "false" }}
+            value: {{ .Values.traefik.external | default false | quote }}
           - name: DASK_ENABLED
             value: {{ .Values.dask.enabled | quote }}
           {{- if .Values.dask.enabled }}

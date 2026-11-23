@@ -1169,3 +1169,70 @@ def test_server_concurrency_limit_defaults_match_reana_commons(tmp_path):
     assert set(
         _server_env_values(rendered, "REANA_MAX_CONCURRENT_BATCH_WORKFLOWS_PER_BACKEND")
     ) == {"{}"}
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    "traefik,enabled,external",
+    [
+        ({}, "true", "false"),
+        ({"enabled": False}, "false", "false"),
+        ({"enabled": False, "external": True}, "false", "true"),
+    ],
+)
+def test_traefik_environment(tmp_path, traefik, enabled, external):
+    """The Traefik settings must reach the workflow controller as strings."""
+    rendered = _render_helm_chart(tmp_path, values={"traefik": traefik})
+
+    controller = next(
+        document
+        for document in _rendered_documents(rendered)
+        if document["kind"] == "Deployment"
+        and document["metadata"]["name"] == "reana-workflow-controller"
+    )
+    environment = {
+        variable["name"]: variable.get("value")
+        for container in controller["spec"]["template"]["spec"]["containers"]
+        for variable in container.get("env", [])
+    }
+    assert environment["TRAEFIK_ENABLED"] == enabled
+    assert environment["TRAEFIK_EXTERNAL"] == external
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_bundled_traefik_service_and_tls(tmp_path):
+    """The bundled Traefik must be a NodePort service with TLS on websecure."""
+    rendered = _render_helm_chart(tmp_path)
+    documents = {
+        (document["kind"], document["metadata"]["name"]): document
+        for document in _rendered_documents(rendered)
+    }
+
+    service = documents[("Service", "reana-traefik")]["spec"]
+    assert service["type"] == "NodePort"
+    assert {port["name"]: port["nodePort"] for port in service["ports"]} == {
+        "web": 30080,
+        "websecure": 30443,
+    }
+
+    deployment = documents[("Deployment", "reana-traefik")]
+    # Catch a stale chart archive left in the charts directory.
+    dependencies = yaml.safe_load((HELM_CHART / "Chart.yaml").read_text())[
+        "dependencies"
+    ]
+    (version,) = [
+        dependency["version"]
+        for dependency in dependencies
+        if dependency["name"] == "traefik"
+    ]
+    assert deployment["metadata"]["labels"]["helm.sh/chart"] == f"traefik-{version}"
+    (container,) = deployment["spec"]["template"]["spec"]["containers"]
+    assert "--entryPoints.websecure.http.tls=true" in container["args"]
+    # The middleware references rely on the legacy naming scheme.
+    assert "--providers.kubernetescrd.safeNaming=false" in container["args"]

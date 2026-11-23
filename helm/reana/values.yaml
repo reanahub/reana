@@ -528,15 +528,23 @@ traefik:
       nodePort: 30080
     websecure:
       nodePort: 30443
-      tls:
-        # without additional configs will use default insecure one
-        enabled: true
+      http:
+        tls:
+          # without additional configs will use default insecure one
+          enabled: true
   enabled: true
-  external: false
+  # `external` is a REANA option that the Traefik chart does not know and whose
+  # schema rejects. Set it only together with `enabled: false`.
+  # external: true
+  providers:
+    kubernetesCRD:
+      # REANA refers to its middlewares by their legacy names.
+      safeNaming: false
   rbac:
     enabled: true
   service:
-    type: NodePort
+    spec:
+      type: NodePort
   ingressClass:
     enabled: true
     isDefaultClass: true
