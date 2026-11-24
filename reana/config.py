@@ -259,7 +259,7 @@ DOCKER_PREFETCH_IMAGES = {
         "docker.io/library/postgres:18.6",
         "docker.io/kozea/wdb:3.3.0",
         "docker.io/maildev/maildev:2.2.1",
-        "docker.io/library/redis:8.6.7",
+        "docker.io/library/redis:8.10.3",
     ],
     "reana-demo-helloworld": [
         "docker.io/library/python:2.7-slim",
