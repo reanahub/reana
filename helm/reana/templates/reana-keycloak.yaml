@@ -135,6 +135,9 @@ metadata:
   name: {{ include "reana.prefix" . }}-keycloak
   namespace: {{ .Release.Namespace }}
 spec:
+  # Never start two different Keycloak versions against the same database.
+  strategy:
+    type: Recreate
   replicas: {{ if .Values.maintenance.enabled -}} 0 {{- else -}} 1 {{- end }}
   selector:
     matchLabels:

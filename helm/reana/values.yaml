@@ -14,7 +14,7 @@ reana_hostport: 443
 # configure an external issuer under `auth` instead.
 keycloak:
   enabled: false
-  image: quay.io/keycloak/keycloak:26.7.0
+  image: quay.io/keycloak/keycloak:26.8.2-3
   imagePullPolicy: IfNotPresent
   # Unlike every other component in this chart, Keycloak's resources were
   # previously hardcoded in the template with no `limits` and no values.yaml
