@@ -798,10 +798,7 @@ def test_bundled_keycloak_uses_an_isolated_database_on_bundled_postgres():
     provisioner_environment = {item["name"]: item for item in provisioner["env"]}
 
     assert environment["KC_DB"]["value"] == "postgres"
-    assert database["spec"]["strategy"] == {
-        "type": "RollingUpdate",
-        "rollingUpdate": {"maxSurge": 0, "maxUnavailable": 1},
-    }
+    assert database["spec"]["strategy"] == {"type": "Recreate"}
     assert database["spec"]["template"]["spec"]["containers"][0]["readinessProbe"][
         "exec"
     ]["command"][-1] == (

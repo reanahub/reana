@@ -38,12 +38,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   # Never start two PostgreSQL processes against the same persistent data
-  # directory. With one replica this stops the old pod before starting the new.
+  # directory. A rolling update, even without any surge, would not wait for the
+  # old pod to terminate before starting the new one.
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
+    type: Recreate
   replicas: {{ if .Values.maintenance.enabled -}} 0 {{- else -}} 1 {{- end }}
   selector:
     matchLabels:
