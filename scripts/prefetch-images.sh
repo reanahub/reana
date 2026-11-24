@@ -15,7 +15,7 @@ fi
 
 for image in \
     docker.io/maildev/maildev:2.2.1 \
-    docker.io/library/postgres:18.6 \
+    docker.io/library/postgres:18.7 \
     docker.io/library/redis:8.10.3 \
     docker.io/reanahub/reana-job-controller:0.95.0-alpha.6 \
     docker.io/reanahub/reana-message-broker:0.95.0-alpha.3 \
