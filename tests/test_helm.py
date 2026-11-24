@@ -1236,3 +1236,86 @@ def test_bundled_traefik_service_and_tls(tmp_path):
     assert "--entryPoints.websecure.http.tls=true" in container["args"]
     # The middleware references rely on the legacy naming scheme.
     assert "--providers.kubernetescrd.safeNaming=false" in container["args"]
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_pgbouncer_configuration(tmp_path):
+    """PgBouncer must get its settings and its user list from mounted files."""
+    rendered = _render_helm_chart(
+        tmp_path,
+        values={
+            "pgbouncer": {
+                "enabled": True,
+                "max_client_conn": 2000000,
+                "max_db_connections": "25O",  # letter O, must not become zero
+                "settings": {
+                    "server_tls_sslmode": "require",
+                    "server_round_robin": True,
+                    "max_packet_size": 2147483647,
+                    "query_wait_timeout": 0.5,
+                },
+            }
+        },
+    )
+    documents = {
+        (document["kind"], document["metadata"]["name"]): document
+        for document in _rendered_documents(rendered)
+    }
+
+    config = documents[("Secret", "reana-pgbouncer-config")]["stringData"]
+    settings = [line.strip() for line in config["pgbouncer.ini"].splitlines()]
+    for setting in (
+        "reana = host=reana-db port=5432",
+        "listen_port = 6432",
+        "auth_type = scram-sha-256",
+        "auth_file = /etc/pgbouncer/userlist.txt",
+        "max_client_conn = 2000000",
+        "max_db_connections = 25O",
+        "default_pool_size = 25O",
+        "server_tls_sslmode = require",
+        "server_round_robin = 1",
+        "max_packet_size = 2147483647",
+        "query_wait_timeout = 0.5",
+    ):
+        assert setting in settings
+
+    pod = documents[("Deployment", "reana-pgbouncer")]["spec"]["template"]["spec"]
+    (container,) = pod["containers"]
+    assert "env" not in container and "envFrom" not in container
+    assert container["volumeMounts"][0]["mountPath"] == "/etc/pgbouncer"
+    config_source, secret_source = pod["volumes"][0]["projected"]["sources"]
+    assert config_source["secret"]["name"] == "reana-pgbouncer-config"
+    assert secret_source["secret"]["items"] == [
+        {"key": "userlist", "path": "userlist.txt"}
+    ]
+    assert "userlist" in documents[("Secret", "reana-pgbouncer-secrets")]["data"]
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+@pytest.mark.parametrize(
+    "values, error",
+    [
+        (
+            {"environment": {"PGBOUNCER_SERVER_TLS_SSLMODE": "require"}},
+            "pgbouncer.environment is no longer supported",
+        ),
+        (
+            {"image": "docker.io/bitnamilegacy/pgbouncer:1.24.1"},
+            "docker.io/bitnamilegacy/pgbouncer:1.24.1 is no longer supported",
+        ),
+    ],
+)
+def test_previous_pgbouncer_configuration_is_refused(tmp_path, values, error):
+    """The previous PgBouncer image and its settings must be refused clearly."""
+    rendered = _render_helm_chart(
+        tmp_path, values={"pgbouncer": {"enabled": True, **values}}, check=False
+    )
+
+    assert rendered.returncode != 0
+    assert error in rendered.stderr

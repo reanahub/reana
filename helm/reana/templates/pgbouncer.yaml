@@ -37,33 +37,25 @@ spec:
         image: {{ .Values.pgbouncer.image | quote }}
         ports:
         - containerPort: 6432
-        envFrom:
-          - configMapRef:
-              name: {{ include "reana.prefix" . }}-pgbouncer-config
-        env:
-        - name: POSTGRESQL_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "reana.prefix" . }}-db-secrets
-              key: user
-        - name: POSTGRESQL_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "reana.prefix" . }}-db-secrets
-              key: password
-        - name: PGBOUNCER_USERLIST
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "reana.prefix" . }}-pgbouncer-secrets
-              key: userlist
-        {{- range $key, $value := .Values.pgbouncer.environment }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
-        {{- end }}
         resources:
           {{- with .Values.pgbouncer.resources }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
+        volumeMounts:
+        - name: config
+          mountPath: /etc/pgbouncer
+          readOnly: true
+      volumes:
+      - name: config
+        projected:
+          sources:
+          - secret:
+              name: {{ include "reana.prefix" . }}-pgbouncer-config
+          - secret:
+              name: {{ include "reana.prefix" . }}-pgbouncer-secrets
+              items:
+              - key: userlist
+                path: userlist.txt
       {{- if .Values.node_label_infrastructuredb }}
       {{- $full_label := split "=" .Values.node_label_infrastructuredb }}
       nodeSelector:

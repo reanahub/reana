@@ -1,21 +1,41 @@
+{{- /* Write booleans as numbers and large numbers without any exponent. */}}
+{{- define "reana.pgbouncer_value" -}}
+{{- if kindIs "bool" . }}{{ ternary 1 0 . }}{{ else if kindIs "float64" . }}{{ toJson . }}{{ else }}{{ . }}{{ end }}
+{{- end -}}
 {{- if .Values.pgbouncer.enabled }}
+{{- if .Values.pgbouncer.environment }}
+{{- fail "pgbouncer.environment is no longer supported. Use pgbouncer.settings for the settings of the [pgbouncer] section of pgbouncer.ini, such as server_tls_sslmode. The other variables of the Bitnami image have no equivalent." }}
+{{- end }}
+{{- if contains "bitnami" .Values.pgbouncer.image }}
+{{- fail (printf "The PgBouncer image %s is no longer supported. Remove pgbouncer.image from your Helm values and do not use --reuse-values." .Values.pgbouncer.image) }}
+{{- end }}
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
   name: {{ include "reana.prefix" . }}-pgbouncer-config
   namespace: {{ .Release.Namespace }}
-data:
-  PGBOUNCER_POOL_MODE: {{ .Values.pgbouncer.pool_mode | quote }}
-  PGBOUNCER_MAX_CLIENT_CONN: {{ .Values.pgbouncer.max_client_conn | quote }}
-  PGBOUNCER_MAX_DB_CONNECTIONS: {{ .Values.pgbouncer.max_db_connections | quote }}
-  PGBOUNCER_DEFAULT_POOL_SIZE: {{ .Values.pgbouncer.max_db_connections | quote }}
-  {{- if .Values.components.reana_db.enabled }}
-  PGBOUNCER_DATABASE: reana
-  POSTGRESQL_HOST: {{ include "reana.prefix" . }}-db
-  POSTGRESQL_PORT: "5432"
-  {{- else }}
-  PGBOUNCER_DATABASE: {{ .Values.db_env_config.REANA_DB_NAME | quote }}
-  POSTGRESQL_HOST:  {{ .Values.db_env_config.REANA_DB_HOST | quote }}
-  POSTGRESQL_PORT:  {{ .Values.db_env_config.REANA_DB_PORT | quote }}
-  {{- end }}
+stringData:
+  pgbouncer.ini: |
+    [databases]
+    {{- if .Values.components.reana_db.enabled }}
+    reana = host={{ include "reana.prefix" . }}-db port=5432
+    {{- else }}
+    {{ .Values.db_env_config.REANA_DB_NAME }} = host={{ .Values.db_env_config.REANA_DB_HOST }} port={{ .Values.db_env_config.REANA_DB_PORT }}
+    {{- end }}
+
+    [pgbouncer]
+    listen_addr = 0.0.0.0
+    listen_port = 6432
+    unix_socket_dir =
+    auth_type = scram-sha-256
+    auth_file = /etc/pgbouncer/userlist.txt
+    admin_users = {{ .Values.secrets.database.user }}
+    ignore_startup_parameters = extra_float_digits
+    pool_mode = {{ .Values.pgbouncer.pool_mode }}
+    max_client_conn = {{ include "reana.pgbouncer_value" .Values.pgbouncer.max_client_conn }}
+    max_db_connections = {{ include "reana.pgbouncer_value" .Values.pgbouncer.max_db_connections }}
+    default_pool_size = {{ include "reana.pgbouncer_value" .Values.pgbouncer.max_db_connections }}
+    {{- range $key, $value := .Values.pgbouncer.settings }}
+    {{ $key }} = {{ include "reana.pgbouncer_value" $value }}
+    {{- end }}
 {{- end }}
