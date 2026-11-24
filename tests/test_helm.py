@@ -9,6 +9,7 @@
 """Tests for reana-dev helm-* commands."""
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -17,6 +18,10 @@ import pytest
 import yaml
 
 HELM_CHART = Path(__file__).parent.parent / "helm" / "reana"
+HELM_VALUES_DEV = (
+    Path(__file__).parent.parent / "helm" / "configurations" / "values-dev.yaml"
+)
+PREFETCH_SCRIPT = Path(__file__).parent.parent / "scripts" / "prefetch-images.sh"
 HELM_TEST_SECRETS = {
     "cache": {"user": "test", "password": "test"},
     "database": {"user": "test", "password": "test"},
@@ -1319,3 +1324,43 @@ def test_previous_pgbouncer_configuration_is_refused(tmp_path, values, error):
 
     assert rendered.returncode != 0
     assert error in rendered.stderr
+
+
+@pytest.mark.skipif(
+    not shutil.which("helm"),
+    reason="helm must be installed",
+)
+def test_prefetched_images_cover_local_deployment(tmp_path):
+    """The prefetch lists must contain the external images deployed locally."""
+    from reana.config import DOCKER_PREFETCH_IMAGES
+
+    rendered = _render_helm_chart(
+        tmp_path, values=yaml.safe_load(HELM_VALUES_DEV.read_text())
+    )
+    deployed = set()
+    for document in _rendered_documents(rendered):
+        pod = (document.get("spec") or {}).get("template", {}).get("spec", {})
+        for container in pod.get("initContainers", []) + pod.get("containers", []):
+            # official images may omit the `library` namespace
+            image = container["image"]
+            if image.startswith("docker.io/") and image.count("/") == 1:
+                image = image.replace("docker.io/", "docker.io/library/")
+            if not image.startswith("docker.io/reanahub/"):
+                deployed.add(image)
+
+    # run the prefetch script with a fake Docker that prints its arguments
+    docker = tmp_path / "docker"
+    docker.write_text('#!/bin/sh\necho "$@"\n')
+    docker.chmod(0o755)
+    commands = subprocess.run(
+        ["bash", str(PREFETCH_SCRIPT), "colima/k3s"],
+        env={**os.environ, "PATH": f"{tmp_path}:{os.environ['PATH']}"},
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    prefetched = {command.split()[-1] for command in commands}
+
+    assert "docker.io/library/postgres" in {image.split(":")[0] for image in deployed}
+    assert deployed <= set(DOCKER_PREFETCH_IMAGES["reana"])
+    assert deployed <= prefetched

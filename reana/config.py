@@ -260,6 +260,9 @@ DOCKER_PREFETCH_IMAGES = {
         "docker.io/kozea/wdb:3.3.0",
         "docker.io/maildev/maildev:2.2.1",
         "docker.io/library/redis:8.10.3",
+        "docker.io/library/traefik:v3.7.19",
+        "ghcr.io/cloudnative-pg/pgbouncer:1.26.1",
+        "quay.io/keycloak/keycloak:26.8.2-3",
     ],
     "reana-demo-helloworld": [
         "docker.io/library/python:2.7-slim",
