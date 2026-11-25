@@ -247,7 +247,7 @@ components:
     forum_url: https://forum.reana.io
     file_preview_size_limit: "5242880" # 5 * 1024**2 = 5 MiB
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-ui:0.95.0-alpha.5
+    image: docker.io/reanahub/reana-ui:0.95.0-alpha.6
     resources: {} # UI pod resources.
     #  limits:
     #    cpu: 1.8
@@ -308,7 +308,7 @@ components:
     #    memory: 6G
   reana_server:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-server:0.95.0-alpha.7
+    image: docker.io/reanahub/reana-server:0.95.0-alpha.8
     hostAliases: []
     environment:
       REANA_SCHEDULER_REQUEUE_SLEEP: 15
@@ -384,7 +384,7 @@ components:
       #    memory: 6G
   reana_workflow_controller:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.8
+    image: docker.io/reanahub/reana-workflow-controller:0.95.0-alpha.9
     pod_security_context: {}
     environment:
       SHARED_VOLUME_PATH: /var/reana
@@ -430,26 +430,26 @@ components:
       #    cpu: 1.8
       #    memory: 6G
   reana_workflow_engine_cwl:
-    image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.6
+    image: docker.io/reanahub/reana-workflow-engine-cwl:0.95.0-alpha.7
     environment: {}
   reana_workflow_engine_yadage:
-    image: docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.6
+    image: docker.io/reanahub/reana-workflow-engine-yadage:0.95.0-alpha.7
     environment: {}
   reana_workflow_engine_serial:
-    image: docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.6
+    image: docker.io/reanahub/reana-workflow-engine-serial:0.95.0-alpha.7
     environment: {}
   reana_workflow_engine_snakemake:
-    image: docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.6
+    image: docker.io/reanahub/reana-workflow-engine-snakemake:0.95.0-alpha.7
     environment: {}
   reana_workflow_validator:
-    image: docker.io/reanahub/reana-workflow-validator:0.95.0-alpha.1
+    image: docker.io/reanahub/reana-workflow-validator:0.95.0-alpha.2
     # Non-secret environment variables passed to each short-lived validation
     # Job. Workflow specifications execute as untrusted code in this container
     # and can read these values. Loader paths and interpreter startup variables
     # are reserved by the sandbox and rejected by the chart.
     environment: {}
   reana_job_controller:
-    image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.6
+    image: docker.io/reanahub/reana-job-controller:0.95.0-alpha.7
     environment: {}
     uwsgi:
       threads: 2
@@ -470,7 +470,7 @@ components:
     #    memory: 6G
   reana_message_broker:
     imagePullPolicy: IfNotPresent
-    image: docker.io/reanahub/reana-message-broker:0.95.0-alpha.3
+    image: docker.io/reanahub/reana-message-broker:0.95.0-alpha.4
     resources: {} # Message broker pod resources.
     #  limits:
     #    cpu: 1.8
@@ -589,7 +589,7 @@ dask:
 dask-kubernetes-operator:
   image:
     name: docker.io/reanahub/reana-dask-kubernetes-operator
-    tag: 0.95.0-alpha.4
+    tag: 0.95.0-alpha.5
   serviceAccount:
     create: false
     # Change the reana prefix if you opted another prefix in your cluster
