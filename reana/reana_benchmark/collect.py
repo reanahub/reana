@@ -1,5 +1,5 @@
 # This file is part of REANA.
-# Copyright (C) 2021, 2024 CERN.
+# Copyright (C) 2021, 2024, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -56,24 +56,17 @@ def _workflows_finished(df: pd.DataFrame) -> bool:
 def _clean_results(df: pd.DataFrame) -> pd.DataFrame:
     logger.info("Cleaning results...")
 
-    # fix "-" values for created status
-    df.loc[df["status"] == "created", "started"] = None
-    df.loc[df["status"] == "created", "ended"] = None
+    # fix "-" values of workflows that have not started or ended, whatever
+    # their status, e.g. queued, running or failed before starting
+    for column in ["started", "ended"]:
+        df[column] = df[column].mask(df[column] == "-")
+
     df["asked_to_start_date"] = df.apply(
         lambda row: (
             None if pd.isna(row["asked_to_start_date"]) else row["asked_to_start_date"]
         ),
         axis=1,
     )
-
-    # fix "-" values for running, pending, queued statuses
-    df.loc[df["status"] == "running", "ended"] = None
-
-    df.loc[df["status"] == "pending", "started"] = None
-    df.loc[df["status"] == "pending", "ended"] = None
-
-    df.loc[df["status"] == "queued", "started"] = None
-    df.loc[df["status"] == "queued", "ended"] = None
     return df
 
 

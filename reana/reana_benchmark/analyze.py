@@ -1,5 +1,5 @@
 # This file is part of REANA.
-# Copyright (C) 2021, 2022 CERN.
+# Copyright (C) 2021, 2022, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -22,6 +22,12 @@ from reana.reana_benchmark.collect import build_collected_results_path
 from reana.reana_benchmark.config import DATETIME_FORMAT, WorkflowStatus
 from reana.reana_benchmark.utils import logger
 
+# statuses are compared as plain strings, because pandas string columns
+# do not match enumeration members
+FINISHED = WorkflowStatus.finished.value
+FAILED = WorkflowStatus.failed.value
+RUNNING = WorkflowStatus.running.value
+
 STATUS_TO_COLOR = {
     WorkflowStatus.created: "grey",
     WorkflowStatus.queued: "darkgoldenrod",
@@ -30,6 +36,9 @@ STATUS_TO_COLOR = {
     WorkflowStatus.failed: "firebrick",
     WorkflowStatus.finished: "forestgreen",
 }
+
+# color of statuses not listed above, such as stopped workflows
+UNKNOWN_STATUS_COLOR = "black"
 
 
 def _get_workflow_number_from_name(name: str) -> int:
@@ -165,11 +174,15 @@ def _build_execution_progress_plot(
                         ended_date,
                         workflow_number,
                         ".",
-                        markerfacecolor=STATUS_TO_COLOR[workflow_status],
-                        markersize=4 if workflow_status == WorkflowStatus.failed else 3,
+                        markerfacecolor=STATUS_TO_COLOR.get(
+                            workflow_status, UNKNOWN_STATUS_COLOR
+                        ),
+                        markersize=4 if workflow_status == FAILED else 3,
                         # zorder, acts similar to z-index
-                        zorder=10 if workflow_status == WorkflowStatus.failed else 5,
-                        color=STATUS_TO_COLOR[workflow_status],
+                        zorder=10 if workflow_status == FAILED else 5,
+                        color=STATUS_TO_COLOR.get(
+                            workflow_status, UNKNOWN_STATUS_COLOR
+                        ),
                         label=f"6-{workflow_status}",
                     )
                 else:
@@ -235,12 +248,8 @@ def _build_execution_progress_plot(
         # remove leading number from label
         unique = [(h, l.split("-")[1]) for h, l in unique]
 
-        legends = ax.legend(*zip(*unique), loc="upper left")
-
         # increase size of points on the legend to be more visible
-        for handler in legends.legendHandles:
-            if hasattr(handler, "_legmarker"):
-                handler._legmarker.set_markersize(6)
+        ax.legend(*zip(*unique), loc="upper left", markerscale=2)
 
     _build_legend(ax)
     return "execution_progress", fig
@@ -264,7 +273,7 @@ def _build_execution_status_plot(
 
     for i, patch in enumerate(patches):
         status = texts[i]._text
-        color = STATUS_TO_COLOR[status]
+        color = STATUS_TO_COLOR.get(status, UNKNOWN_STATUS_COLOR)
         patch.set_color(color)
 
     plt.setp(pcts, color="white", fontsize=11, fontweight=600)
@@ -296,6 +305,10 @@ def _build_histogram_plot(
     ax.set(ylabel="Number of runs")
     ax.legend()
 
+    if series.empty:
+        ax.set(title=f"{title}\nno workflows to show")
+        return fig
+
     slowest, fastest, mean, median = _max_min_mean_median(series)
 
     ax.set(
@@ -309,8 +322,8 @@ def _build_total_time_histogram(
 ) -> Tuple[str, Figure]:
     title = plot_parameters["title"]
     title = f"{title}\n(only finished workflows are included)"
-    data = df[df["status"] == WorkflowStatus.finished]
-    series = data["runtime"] + data["pending_time"]
+    data = df[df["status"] == FINISHED]
+    series = (data["runtime"] + data["pending_time"]).dropna()
     return (
         "histogram_total_time",
         _build_histogram_plot(series, 10, "total_time", title),
@@ -322,8 +335,8 @@ def _build_runtime_histogram(
 ) -> Tuple[str, Figure]:
     title = plot_parameters["title"]
     title = f"{title}\n(only finished workflows are included)"
-    data = df[df["status"] == WorkflowStatus.finished]
-    series = data["runtime"]
+    data = df[df["status"] == FINISHED]
+    series = data["runtime"].dropna()
     return (
         "histogram_runtime",
         _build_histogram_plot(series, 10, "runtime", title),
@@ -335,11 +348,7 @@ def _build_pending_time_histogram(
 ) -> Tuple[str, Figure]:
     title = plot_parameters["title"]
     title = f"{title}\n(only finished, failed and running workflows are included)"
-    data = df[
-        df["status"].isin(
-            [WorkflowStatus.finished, WorkflowStatus.failed, WorkflowStatus.running]
-        )
-    ]
+    data = df[df["status"].isin([FINISHED, FAILED, RUNNING])]
     series = data["pending_time"].dropna()
     return (
         "histogram_pending_time",
