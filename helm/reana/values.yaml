@@ -167,6 +167,12 @@ interactive_sessions:
       allow_custom: false
   maximum_inactivity_period: forever
 
+# sidecar configurations - currently only for s3 mounts
+sidecars:
+  datastore:
+    enabled: false
+    image: "reanahub/reana-datastore-s3fs"
+
 compute_backends:
   - kubernetes
 
