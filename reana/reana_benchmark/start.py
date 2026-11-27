@@ -1,5 +1,5 @@
 # This file is part of REANA.
-# Copyright (C) 2021 CERN.
+# Copyright (C) 2021, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -11,10 +11,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from reana.reana_benchmark.config import REANA_ACCESS_TOKEN, WORKERS_DEFAULT_COUNT
+from reana.reana_benchmark.config import WORKERS_DEFAULT_COUNT
 from reana.reana_benchmark.utils import (
     logger,
     build_extended_workflow_name,
+    get_access_token,
     get_utc_now_timestamp,
 )
 from reana_client.api.client import start_workflow
@@ -30,7 +31,7 @@ def create_empty_dataframe_for_started_results() -> pd.DataFrame:  # noqa: D103
 
 def _start_single_workflow(workflow_name: str) -> (str, str):
     try:
-        start_workflow(workflow_name, REANA_ACCESS_TOKEN, {})
+        start_workflow(workflow_name, get_access_token(), {})
     except Exception as e:
         raise Exception(
             f"Workflow {workflow_name} failed during the start. Details: {e}"
@@ -44,7 +45,7 @@ def _start_workflows_and_record_start_time(
     workflow_name: str, workflow_range: (int, int), workers: int = WORKERS_DEFAULT_COUNT
 ) -> pd.DataFrame:
     logger.info(f"Starting {workflow_range} workflows...")
-    df = create_empty_dataframe_for_started_results()
+    started = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [
             executor.submit(
@@ -55,16 +56,15 @@ def _start_workflows_and_record_start_time(
         for future in concurrent.futures.as_completed(futures):
             try:
                 workflow_name, asked_to_start_datetime = future.result()
-                df = df.append(
+                started.append(
                     {
                         "name": workflow_name,
                         "asked_to_start_date": asked_to_start_datetime,
-                    },
-                    ignore_index=True,
+                    }
                 )
             except Exception as e:
                 logger.error(e)
-    return df
+    return pd.DataFrame(started, columns=["name", "asked_to_start_date"])
 
 
 def _append_to_existing_started_results(
@@ -73,13 +73,11 @@ def _append_to_existing_started_results(
     """Append new started results to existing started results and return them."""
     results_path = build_started_results_path(workflow_name)
 
-    existing_results = pd.DataFrame()
+    if not results_path.exists():
+        return new_results
 
-    if results_path.exists():
-        logger.info("Loading existing started results. Appending...")
-        existing_results = pd.read_csv(results_path)
-
-    return existing_results.append(new_results, ignore_index=True)
+    logger.info("Loading existing started results. Appending...")
+    return pd.concat([pd.read_csv(results_path), new_results], ignore_index=True)
 
 
 def _save_started_results(workflow_name: str, df: pd.DataFrame) -> None:

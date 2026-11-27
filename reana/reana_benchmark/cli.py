@@ -38,14 +38,10 @@ logging.basicConfig(
 def reana_benchmark():  # noqa: D301
     """reana-benchmark script - runs single workflow multiple times, collects results, analyzes them.
 
-    Legacy prerequisites (reana-client 0.8.x):
+    Prerequisites:
 
-        - install reana-client 0.8.x, pandas and matplotlib Python packages
-        - set REANA_ACCESS_TOKEN and REANA_SERVER_URL
-
-    REANA 0.95 compatibility is pending migration to the current workflow API
-    and saved authentication. The environment setup above is for legacy clients;
-    REANA 0.95 clients reject REANA_SERVER_URL and REANA_SERVER_TLS_VERIFY.
+        - install reana-client, pandas and matplotlib Python packages
+        - log in with ``reana-client login --server <url>``
 
     How to launch 50 concurrent workflows and collect results (option 1):
 
