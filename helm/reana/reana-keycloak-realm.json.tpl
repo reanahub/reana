@@ -23,10 +23,10 @@
       "secret": {{ .Values.secrets.auth.REANA_AUTH_WEB_CLIENT_SECRET | toJson }},
       "standardFlowEnabled": true,
       "redirectUris": [
-        "https://{{ .Values.reana_hostname }}{{ if ne (int .Values.reana_hostport) 443 }}:{{ .Values.reana_hostport }}{{ end }}/api/oauth/callback"
+        "{{ include "reana.public_url" . }}/api/oauth/callback"
       ],
       "attributes": {
-        "post.logout.redirect.uris": "https://{{ .Values.reana_hostname }}{{ if ne (int .Values.reana_hostport) 443 }}:{{ .Values.reana_hostport }}{{ end }}"
+        "post.logout.redirect.uris": "{{ include "reana.public_url" . }}"
       },
       "protocolMappers": [
         {

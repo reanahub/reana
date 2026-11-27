@@ -448,6 +448,76 @@ def test_bundled_keycloak_realm_tracks_chart_values_and_uses_secrets():
     assert "KEYCLOAK_ADMIN_PASSWORD" not in reconciler_environment
 
 
+@pytest.mark.parametrize(
+    ("overrides", "public_url", "frontend_url"),
+    (
+        (
+            ("reana_hostname=reana.example.org", "reana_hostport=443"),
+            "https://reana.example.org",
+            "https://reana.example.org/keycloak",
+        ),
+        (
+            ("reana_hostname=reana.example.org", "keycloak.relative_path=/auth"),
+            "https://reana.example.org:30443",
+            "https://reana.example.org:30443/auth",
+        ),
+        (
+            (
+                "reana_hostname=reana.example.org",
+                "keycloak.frontend_url=https://sso.example.org/keycloak",
+            ),
+            "https://reana.example.org:30443",
+            "https://sso.example.org/keycloak",
+        ),
+    ),
+)
+def test_bundled_keycloak_frontend_url_follows_reana_hostname(
+    overrides, public_url, frontend_url
+):
+    args = ["-f", str(VALUES_DEV)]
+    for override in overrides:
+        args += ["--set", override]
+    rendered = _helm_template(*args)
+    keycloak = _container_environment(
+        _rendered_resource(rendered, "Deployment", "reana-keycloak"), "keycloak"
+    )
+    server = _container_environment(
+        _rendered_resource(rendered, "Deployment", "reana-server"), "rest-api"
+    )
+    realm_secret = _rendered_resource(rendered, "Secret", "reana-keycloak-realm")
+    web_client = json.loads(realm_secret["stringData"]["reana-realm.json"])["clients"][
+        0
+    ]
+    issuer = f"{frontend_url}/realms/reana"
+    relative_path = keycloak["KC_HTTP_RELATIVE_PATH"]["value"]
+    backchannel = f"http://reana-keycloak:8080{relative_path}/realms/reana"
+
+    assert keycloak["KC_HOSTNAME"]["value"] == frontend_url
+    assert server["REANA_AUTH_ISSUER"]["value"] == issuer
+    assert server["REANA_AUTH_AUTHORIZATION_URL"]["value"] == (
+        f"{issuer}/protocol/openid-connect/auth"
+    )
+    assert server["REANA_AUTH_END_SESSION_URL"]["value"] == (
+        f"{issuer}/protocol/openid-connect/logout"
+    )
+    assert server["REANA_AUTH_BACKCHANNEL_BASE_URL"]["value"] == backchannel
+    assert server["REANA_AUTH_OPENID_CONFIG_URL"]["value"] == (
+        f"{backchannel}/.well-known/openid-configuration"
+    )
+    assert web_client["redirectUris"] == [f"{public_url}/api/oauth/callback"]
+    assert web_client["attributes"]["post.logout.redirect.uris"] == public_url
+
+
+def test_bundled_keycloak_requires_hostname_to_derive_frontend_url():
+    with pytest.raises(subprocess.CalledProcessError) as exc_info:
+        _helm_template("-f", str(VALUES_DEV), "--set", "reana_hostname=")
+
+    assert (
+        "reana_hostname is required to derive keycloak.frontend_url"
+        in exc_info.value.stderr
+    )
+
+
 # A stand-in for kcadm.sh that keeps the clients and their scopes in a JSON
 # state file and records every call that changes Keycloak.
 FAKE_KCADM = r"""
